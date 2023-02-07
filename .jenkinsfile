@@ -30,6 +30,7 @@ pipeline {
                 sh 'release-build/build-release.sh mega65r3 JENKINSGEN'
             }
         }
+        /*
         stage('Build MEGA65R2') {
             steps {
                 sh 'make bin/mega65r2.bit'
@@ -42,6 +43,7 @@ pipeline {
                 sh 'release-build/build-release.sh nexys4ddr-widget JENKINSGEN'
             }
         }
+        */
     }
     post {
         always {
