@@ -238,9 +238,9 @@ begin
 --          report "triggering write to I2C device $A2, register $" & to_hstring(fastio_addr(7 downto 0));
           write_addr <= x"A2";
           write_job_pending <= '1';
-        elsif to_integer(fastio_addr(7 downto 0)) >= 64 and to_integer(fastio_addr(7 downto 0)) < 80 then
-          -- RTC SRAM
-          write_reg <= to_unsigned(to_integer(fastio_addr(7 downto 0)) - 64 + 64,8);
+        elsif to_integer(fastio_addr(7 downto 0)) >= 64 and to_integer(fastio_addr(7 downto 0)) < 128 then
+          -- RTC $3x registers and NVRAM
+          write_reg <= to_unsigned(to_integer(fastio_addr(7 downto 0)) - 64 + 48,8);
 --          report "triggering write to $A2 SRAM area";
           write_addr <= x"A2";
           write_job_pending <= '1';
@@ -377,7 +377,9 @@ begin
           report "RTC SRAM (16 bytes)";
           command_en <= '1';
           i2c1_address <= "1010001"; -- 51 = I2C address of device;
-          i2c1_wdata <= x"40"; -- NVRAM starts at offset $40
+          i2c1_wdata <= x"30"; -- Some extra registers in the $3x range, and
+                               -- also 16 bytes of NVRAM starts at offset $40
+                               -- plus some more bytes, for no really good reason
           i2c1_rw <= '0';
         when 61 | 62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 | 90 | 91 | 92 | 93 | 94 | 95 | 96 | 97 | 98 | 99 | 100 | 101 | 102 | 103 | 104 | 105 | 106 | 107 | 108 | 109 | 110 | 111 | 112 | 113 | 114 | 115 | 116 | 117 | 118 | 119 | 120 | 121 | 122 | 123 | 124 | 125 =>
           -- Read the 64 bytes from the device
@@ -386,7 +388,7 @@ begin
           -- Make sure we send a STOP before the next command starts
           -- NOTE: This is done above in the incrementer for busy_count
           if busy_count > 61 then
-            bytes(busy_count - 1 - 61 + 64) <= i2c1_rdata;
+            bytes(busy_count - 1 - 61 + 48) <= i2c1_rdata;
           end if;
         when 126 =>
           i2c1_command_en <= '1';
@@ -404,7 +406,7 @@ begin
         when 147 =>
           i2c1_command_en <= '1';
           i2c1_address <= "1010001"; -- 51 = I2C address of device;
-          i2c1_wdata <= x"c0"; -- NVRAM starts at offset $40
+          i2c1_wdata <= x"c0"; -- EEPROM / PMU registers start at $C0
           i2c1_rw <= '0';
           report "Audio amplifier regs 0 - 18";
         when 148 | 149 | 150 | 151 | 152 | 153 | 154 | 155 | 156 | 157 | 158 | 159 | 160 | 161 | 162 | 163 | 164 | 165 | 166 | 167 =>
