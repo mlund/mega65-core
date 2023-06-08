@@ -113,7 +113,7 @@ architecture behavioural of mega65r4_i2c is
 
   subtype uint8 is unsigned(7 downto 0);
   type byte_array is array (0 to 255) of uint8;
-  signal bytes : byte_array := (others => x"00");
+  signal bytes : byte_array := (others => x"bd");
 
   signal write_job_pending : std_logic := '0';
   signal write_addr : unsigned(7 downto 0) := x"48";
@@ -413,8 +413,8 @@ begin
           -- Read the 19 bytes from the device
           i2c1_rw <= '1';
           i2c1_command_en <= '1';
-          if busy_count > 127 and i2c1_error='0' then
-            bytes(busy_count - 1 - 147 + 192) <= i2c1_rdata;
+          if busy_count > 148 and i2c1_error='0' then
+            bytes(busy_count - 1 - 148 + 192) <= i2c1_rdata;
           end if;
         --------------------------------------------------------------------
         -- End of Auto-Generated Content
