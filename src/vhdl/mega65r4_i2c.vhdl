@@ -388,11 +388,11 @@ begin
           -- Make sure we send a STOP before the next command starts
           -- NOTE: This is done above in the incrementer for busy_count
           if busy_count > 61 then
-            bytes(busy_count - 1 - 61 + 48) <= i2c1_rdata;
+            bytes(busy_count - 1 - 61 + 64) <= i2c1_rdata;
           end if;
         when 126 =>
           i2c1_command_en <= '1';
-          i2c1_address <= "0110100"; -- 0x68/2 = I2C address of device;
+          i2c1_address <= "0011001"; -- 0x19 = I2C address of device;
           i2c1_wdata <= x"00";
           i2c1_rw <= '0';
           report "Audio amplifier regs 0 - 18";
@@ -408,7 +408,7 @@ begin
           i2c1_address <= "1010001"; -- 51 = I2C address of device;
           i2c1_wdata <= x"c0"; -- EEPROM / PMU registers start at $C0
           i2c1_rw <= '0';
-          report "Audio amplifier regs 0 - 18";
+          report "RTC PMU/EEPROM registers";
         when 148 | 149 | 150 | 151 | 152 | 153 | 154 | 155 | 156 | 157 | 158 | 159 | 160 | 161 | 162 | 163 | 164 | 165 | 166 | 167 =>
           -- Read the 19 bytes from the device
           i2c1_rw <= '1';
