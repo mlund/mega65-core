@@ -226,25 +226,12 @@ begin
 
       -- Write to registers as required
       if cs='1' and fastio_write='1' then
-        if (to_integer(fastio_addr(7 downto 0)) >= 16 and to_integer(fastio_addr(7 downto 0)) < 64) then
+        if (to_integer(fastio_addr(7 downto 0)) >= 16 and to_integer(fastio_addr(7 downto 0)) < 220) then
           -- RTC
           write_reg <= to_unsigned(to_integer(fastio_addr(7 downto 0)) - 16,8);
 --          report "triggering write to I2C device $A2, register $" & to_hstring(fastio_addr(7 downto 0));
           write_addr <= x"A2";
           write_job_pending <= '1';
-        elsif (to_integer(fastio_addr(7 downto 0)) >= 192 and to_integer(fastio_addr(7 downto 0)) < 208) then
-          -- RTC PMU / EEPROM
-          write_reg <= to_unsigned(to_integer(fastio_addr(7 downto 0)) - 192 + 192,8);
---          report "triggering write to I2C device $A2, register $" & to_hstring(fastio_addr(7 downto 0));
-          write_addr <= x"A2";
-          write_job_pending <= '1';
-        elsif to_integer(fastio_addr(7 downto 0)) >= 64 and to_integer(fastio_addr(7 downto 0)) < 128 then
-          -- RTC $3x registers and NVRAM
-          write_reg <= to_unsigned(to_integer(fastio_addr(7 downto 0)) - 64 + 48,8);
---          report "triggering write to $A2 SRAM area";
-          write_addr <= x"A2";
-          write_job_pending <= '1';
-          write_reg <= to_unsigned(to_integer(fastio_addr(7 downto 0)),8);
         elsif to_integer(fastio_addr(7 downto 0)) >= 220 and to_integer(fastio_addr(7 downto 0)) < 239 then
           -- Audio Amplifier for internal speakers
           write_reg <= to_unsigned(to_integer(fastio_addr(7 downto 0)) - 220,8);
