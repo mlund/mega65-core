@@ -46,6 +46,7 @@ entity hyperram is
          rdata : out unsigned(7 downto 0);
          
          data_ready_strobe : out std_logic := '0';
+         data_ready_toggle_out : out std_logic := '0';
          busy : out std_logic := '0';
 
          -- Export current cache line for speeding up reads from slow_devices controller
@@ -308,6 +309,7 @@ architecture gothic of hyperram is
   
   signal last_rwds : std_logic := '0';
 
+  signal data_ready_toggle_int : std_logic := '0';
   signal fake_data_ready_strobe : std_logic := '0';
   signal fake_rdata : unsigned(7 downto 0) := x"00";
   signal fake_rdata_hi : unsigned(7 downto 0) := x"00";
@@ -1561,9 +1563,11 @@ begin
           rdata_hi <= fake_rdata_hi;
         end if;
       else
-        report "holding data_ready_strobe for an extra cycle";
+        report "data_ready_strobe delayed by 1 cycle to ensure data setup";
         report "asserting data_ready_strobe";
         data_ready_strobe <= '1';
+        data_ready_toggle_out <= not data_ready_toggle_int;
+        data_ready_toggle_int <= not data_ready_toggle_int;
       end if;
       data_ready_strobe_hold <= '0';
       

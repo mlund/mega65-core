@@ -799,6 +799,7 @@ begin
       write_request => expansionram_write,
       rdata => hyperram_rdata,
       data_ready_strobe => hyperram_data_ready_strobe,
+      data_ready_toggle_out => hyperram_data_ready_toggle,
       busy => hyperram_busy,
 
       current_cache_line => hyperram_cache_line,
