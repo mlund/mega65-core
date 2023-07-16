@@ -20,7 +20,7 @@ entity sdram_controller is
   port (pixelclock : in std_logic;      -- For slow devices bus interface is
         -- actually on pixelclock to reduce latencies
         -- Also pixelclock is the natural clock speed we apply to the HyperRAM.
-        clock162   : in std_logic;      -- Used for fast clock for HyperRAM
+        clock162   : in std_logic;      -- Used for fast clock for SDRAM
         
         clock162r  : in std_logic;      -- read register clock
 
@@ -376,6 +376,7 @@ begin
       end if;
       if read_complete_strobe = '1' then
         read_complete_strobe <= '0';
+        report "READCOMPLETE: Publishing cache line $" & to_hexstring(rdata_line);
         -- We also update the read cache line here
         for b in 0 to 7 loop
           current_cache_line(b) <= rdata_line((b*8+7) downto (b*8));
@@ -625,27 +626,22 @@ begin
           when READ_0 =>
             sdram_dqml <= '0'; sdram_dqmh <= '0';
             sdram_emit_command(CMD_NOP);
-          -- First word comes from transparent latch of SDRAM and has worse
-          -- setup time properties as a result.  As a result we use
-          -- sdram_dq_latched in the next cycle to capture it.
-          -- DONT DO rdata_line(15 downto 0) <= sdram_dq;
+            -- Data is latched on opposite phase clock, so it isn't available yet
+            -- but rather in the next cycle in READ_1
           when READ_1 =>
-            -- DO THIS INSTEAD: (see above)
-            -- i.e., capture first word that has marginal timing
             rdata_line(15 downto 0) <= sdram_dq_latched;
-
             sdram_dqml <= '0'; sdram_dqmh <= '0';
             sdram_emit_command(CMD_NOP);
-          -- rdata_line(31 downto 16) <= sdram_dq;
           when READ_2 =>
-            sdram_emit_command(CMD_NOP);
-            -- rdata_line(47 downto 32) <= sdram_dq;
+            sdram_dqml <= '0'; sdram_dqmh <= '0';
             rdata_line(31 downto 16) <= sdram_dq_latched;
+            sdram_emit_command(CMD_NOP);
           when READ_3 =>
             sdram_emit_command(CMD_NOP);
+            sdram_dqml <= '0'; sdram_dqmh <= '0';
             rdata_line(47 downto 32) <= sdram_dq_latched;
-          -- rdata_line(63 downto 48) <= sdram_dq;
           when READ_4 =>
+            report "READ4: sdram_dq_latched = $" & to_hexstring(sdram_dq_latched);
             rdata_line(63 downto 48) <= sdram_dq_latched;
             read_complete_strobe     <= '1';
             read_latched             <= '0';
