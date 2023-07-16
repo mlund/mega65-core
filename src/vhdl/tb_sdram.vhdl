@@ -99,6 +99,9 @@ begin
     port map (
         pixelclock => pixelclock,
         clock162 => clock162,
+        clock162r => not clock162,
+        identical_clocks => '1',   -- Assumes SDRAM at 162MHz and thus requires
+                                   -- one extra wait state on row read start.
 
         enforce_100us_delay => enforce_100usec_init,
 
@@ -165,6 +168,7 @@ begin
         end if;
       end if;
       wait for 6.173 ns;
+      report "SDRAMDQ: sdram_dq = $" & to_hexstring(sdram_dq);
 
     end procedure;
 
