@@ -259,7 +259,8 @@ begin
       -- case, as the xDQM bits are used to indicate which byte(s) should
       -- be written.
       if cas_read(cas_latency-1)='1' then
-        report "CAS_READ: Exporting data $" & to_hexstring(cas_pipeline(cas_latency - 1)) & ", cas_latency=" & integer'image(cas_latency);
+        report "CAS_READ: Exporting data $" & to_hexstring(cas_pipeline(cas_latency - 1)) & ", cas_latency=" & integer'image(cas_latency)
+          & ", udqm=" & std_logic'image(udqm) & ", ldqm=" & std_logic'image(ldqm);
         if udqm='0' then
           dq(15 downto 8) <= cas_pipeline(cas_latency - 1)(15 downto 8);
         end if;
