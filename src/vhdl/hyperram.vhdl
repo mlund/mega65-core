@@ -413,9 +413,13 @@ architecture gothic of hyperram is
 
   signal prefetch_when_idle : boolean := false;
 
-  signal read_publish_strobe  : std_logic              := '0';
+  signal read_publish_toggle  : std_logic              := '0';
+  signal last_read_publish_toggle : std_logic := '0';
   signal rdata_buf        : unsigned(7 downto 0);
   signal rdata_hi_buf     : unsigned(7 downto 0);
+  signal read_publish_strobe2  : std_logic              := '0';
+  signal rdata_buf2        : unsigned(7 downto 0);
+  signal rdata_hi_buf2     : unsigned(7 downto 0);
   signal last_data_ready_toggle_out : std_logic := '0';
   
 begin
@@ -660,7 +664,7 @@ begin
         -- must take priority over everything else
         if (block_valid='1') and (block_address_matches_address='1') then
           report "asserting read_publish_strobe";
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
           rdata_buf <= block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0)));
           if rdata_16en='1' then
             rdata_hi_buf <= block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0))+1);
@@ -696,7 +700,7 @@ begin
         elsif cache_enabled and rdata_16en='0' and (address(26 downto 3 ) = write_collect0_address and write_collect0_valids(to_integer(address(2 downto 0))) = '1') then
           -- Write cache read-back
           report "asserting read_publish_strobe";
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
           rdata_buf <= write_collect0_data(to_integer(address(2 downto 0)));
           report "DISPATCH: Returning data $"& to_hstring(write_collect0_data(to_integer(address(2 downto 0))))&" from write collect0";
         elsif cache_enabled and rdata_16en='1' and (address(26 downto 3 ) = write_collect0_address
@@ -704,41 +708,41 @@ begin
                                                     and write_collect0_valids(to_integer(address(2 downto 1)&"1")) = '1') then
           -- Write cache read-back
           report "asserting read_publish_strobe";
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
           rdata_buf <= write_collect0_data(to_integer(address(2 downto 1)&"0"));
           rdata_hi_buf <= write_collect0_data(to_integer(address(2 downto 1)&"1"));
           report "DISPATCH: Returning data $"& to_hstring(write_collect0_data(to_integer(address(2 downto 0))))&" from write collect0";
         elsif cache_enabled and rdata_16en='0' and (address(26 downto 3 ) = write_collect1_address and write_collect1_valids(to_integer(address(2 downto 0))) = '1') then
           -- Write cache read-back
           report "asserting read_publish_strobe";
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
           rdata_buf <= write_collect1_data(to_integer(address(2 downto 0)));
           report "DISPATCH: Returning data $"& to_hstring(write_collect1_data(to_integer(address(2 downto 0))))&" from write collect1";
         elsif cache_enabled and rdata_16en='1' and (address(26 downto 3 ) = write_collect1_address
                                                     and write_collect1_valids(to_integer(address(2 downto 1)&"0")) = '1'
                                                     and write_collect1_valids(to_integer(address(2 downto 1)&"1")) = '1') then
           -- Write cache read-back
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
           rdata_buf <= write_collect1_data(to_integer(address(2 downto 1)&"0"));
           rdata_hi_buf <= write_collect1_data(to_integer(address(2 downto 1)&"1"));
           report "DISPATCH: Returning data $"& to_hstring(write_collect1_data(to_integer(address(2 downto 0))))&" from write collect1";
         elsif cache_enabled and rdata_16en='0' and (address(26 downto 3 ) = cache_row0_address and cache_row0_valids(to_integer(address(2 downto 0))) = '1') then
           -- Cache reads
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
           rdata_buf <= cache_row0_data(to_integer(address(2 downto 0)));
           report "DISPATCH: Returning data $"& to_hstring(cache_row0_data(to_integer(address(2 downto 0))))&" from cache row0";
         elsif cache_enabled and rdata_16en='1' and (address(26 downto 3 ) = cache_row0_address
                                                     and cache_row0_valids(to_integer(address(2 downto 1)&"0")) = '1'
                                                     and cache_row0_valids(to_integer(address(2 downto 1)&"1")) = '1') then
           -- Cache reads
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
           rdata_buf <= cache_row0_data(to_integer(address(2 downto 1)&"0"));
           rdata_hi_buf <= cache_row0_data(to_integer(address(2 downto 1)&"1"));
           report "DISPATCH: Returning data $"& to_hstring(cache_row0_data(to_integer(address(2 downto 0))))&" from cache row0";
         elsif cache_enabled and rdata_16en='0' and (address(26 downto 3 ) = cache_row1_address and cache_row1_valids(to_integer(address(2 downto 0))) = '1') then
           -- Cache read
           report "asserting read_publish_strobe";
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
           rdata_buf <= cache_row1_data(to_integer(address(2 downto 0)));
           report "DISPATCH: Returning data $"& to_hstring(cache_row1_data(to_integer(address(2 downto 0))))&" from cache row1";
         elsif cache_enabled and rdata_16en='1' and (address(26 downto 3 ) = cache_row1_address
@@ -746,7 +750,7 @@ begin
                                                     and cache_row1_valids(to_integer(address(2 downto 1)&"1"))='1') then
 
           -- Cache read
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
           rdata_buf <= cache_row1_data(to_integer(address(2 downto 1)&"0"));
           rdata_hi_buf <= cache_row1_data(to_integer(address(2 downto 1)&"1"));
           report "DISPATCH: Returning data $"& to_hstring(cache_row1_data(to_integer(address(2 downto 0))))&" from cache row1";
@@ -899,7 +903,7 @@ begin
             when others => rdata_buf <= x"BF";
           end case;
           report "asserting read_publish_strobe";
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
           report "asserting read_publish_strobe for debug register read";                            
         elsif address(23 downto 4) = x"FFFFF" and address(25 downto 24) = "11" then
           -- Allow reading from dummy debug bitbash registers at $BFFFFFx
@@ -955,7 +959,7 @@ begin
               -- This seems to be what gets returned all the time
               rdata_buf <= x"42";
           end case;
-          read_publish_strobe <= '1';
+          read_publish_toggle <= not read_publish_toggle;
         elsif request_accepted = request_toggle then
           -- Normal RAM read.
           report "request_toggle flipped";
@@ -1534,8 +1538,8 @@ begin
         end if;
       end if;
 
-      if read_publish_strobe = '1' then
-        read_publish_strobe <= '0';
+      if read_publish_toggle /= last_read_publish_toggle then
+        read_publish_toggle <= last_read_publish_toggle;
         report "PUBLISH: rdata <= $" & to_hexstring(rdata_hi_buf) & to_hexstring(rdata_buf);
         
         rdata                  <= rdata_buf;
@@ -1543,6 +1547,14 @@ begin
         data_ready_toggle_out      <= not last_data_ready_toggle_out;
         last_data_ready_toggle_out <= not last_data_ready_toggle_out;
 
+      elsif read_publish_strobe2 = '1' then
+        read_publish_strobe2 <= '0';
+        report "PUBLISH: rdata <= $" & to_hexstring(rdata_hi_buf2) & to_hexstring(rdata_buf2);
+        
+        rdata                  <= rdata_buf2;
+        rdata_hi               <= rdata_hi_buf2;
+        data_ready_toggle_out      <= not last_data_ready_toggle_out;
+        last_data_ready_toggle_out <= not last_data_ready_toggle_out;
       end if;
       
       -- HyperRAM state machine
@@ -3067,11 +3079,11 @@ begin
             -- Timed out waiting for read -- so return anyway, rather
             -- than locking the machine hard forever.
             rdata_hi_buf <= x"DD";
-            rdata_buf <= x"DD";
-            rdata_buf(0) <= data_ready_toggle;
-            rdata_buf(1) <= busy_internal;
+            rdata_buf2 <= x"DD";
+            rdata_buf2(0) <= data_ready_toggle;
+            rdata_buf2(1) <= busy_internal;
             report "asserting read_publish_strobe";
-            read_publish_strobe <= '1';
+            read_publish_strobe2 <= '1';
             rwr_counter <= rwr_delay;
             rwr_waiting <= '1';
             hr_clk_phaseshift <= write_phase_shift;         
@@ -3122,10 +3134,10 @@ begin
                       & ")(" & integer'image(to_integer(address(2 downto 0)));
                     report "asserting read_publish_strobe";
                     read_request_delatch <= '1';
-                    read_publish_strobe <= '1';
-                    rdata_buf <= block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0)));
+                    read_publish_strobe2 <= '1';
+                    rdata_buf2 <= block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0)));
                     if rdata_16en='1' then
-                      rdata_hi_buf <= block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0))+1);
+                      rdata_hi_buf2 <= block_data(to_integer(address(4 downto 3)))(to_integer(address(2 downto 0))+1);
                     end if;
                     last_request_toggle <= request_toggle;
 
@@ -3302,25 +3314,25 @@ begin
                   & ", hyperram0_select="& std_logic'image(hyperram0_select) 
                   & ", hyperram1_select="& std_logic'image(hyperram1_select);
                 if rdata_16en='1' and byte_phase(0)='1' then
-                  rdata_hi_buf <= hr_d;
+                  rdata_hi_buf2 <= hr_d;
                 else
-                  rdata_buf <= hr_d;
+                  rdata_buf2 <= hr_d;
                 end if;
               else
                 report "DISPATCH: Returning freshly read data = $" & to_hstring(hr2_d)
                   & ", hyperram0_select="& std_logic'image(hyperram0_select) 
                   & ", hyperram1_select="& std_logic'image(hyperram1_select);
                 if rdata_16en='1' and byte_phase(0)='1' then
-                  rdata_hi_buf <= hr2_d;
+                  rdata_hi_buf2 <= hr2_d;
                 else
-                  rdata_buf <= hr2_d;
+                  rdata_buf2 <= hr2_d;
                 end if;
               end if;
               report "hr_return='1'";
               report "hr_return='0'";
               if rdata_16en='0' or byte_phase(0)='1' then
                 report "asserting read_publish_strobe";
-                read_publish_strobe <= '1';
+                read_publish_strobe2 <= '1';
               end if;
             end if;
             report "byte_phase = " & integer'image(to_integer(byte_phase));
@@ -3401,11 +3413,11 @@ begin
               -- Timed out waiting for read -- so return anyway, rather
               -- than locking the machine hard forever.
               rdata_hi_buf <= x"DD";
-              rdata_buf <= x"DD";
-              rdata(0) <= data_ready_toggle;
-              rdata(1) <= busy_internal;
+              rdata_buf2 <= x"DD";
+              rdata_buf2(0) <= data_ready_toggle;
+              rdata_buf2(1) <= busy_internal;
               report "asserting read_publish_strobe";
-              read_publish_strobe <= '1';
+              read_publish_strobe2 <= '1';
               rwr_counter <= rwr_delay;
               rwr_waiting <= '1';
               report "returning to idle";
@@ -3536,33 +3548,33 @@ begin
               if byte_phase = hyperram_access_address_read_time_adjusted and (not is_vic_fetch) then
                 if hyperram0_select='1' then
                   report "DISPATCH: Returning freshly read data = $" & to_hstring(hr_d);
-                  rdata_buf <= hr_d;
+                  rdata_buf2 <= hr_d;
                 else
                   report "DISPATCH: Returning freshly read data = $" & to_hstring(hr2_d)
                     & ", byte_phase=" & integer'image(to_integer(byte_phase));
-                  rdata_buf <= hr2_d;
+                  rdata_buf2 <= hr2_d;
                 end if;
                 report "hr_return='1'";
                 report "hr_return='0'";
                 if rdata_16en='0' then
                   report "asserting read_publish_strobe on low byte";
-                  read_publish_strobe <= '1';
+                  read_publish_strobe2 <= '1';
                 end if;
               end if;
               if byte_phase = (hyperram_access_address_read_time_adjusted+1) and (not is_vic_fetch) and (rdata_16en='1') then
                 if hyperram0_select='1' then
                   report "DISPATCH: Returning freshly read high-byte data = $" & to_hstring(hr_d);
-                  rdata_hi_buf <= hr_d;
+                  rdata_hi_buf2 <= hr_d;
                 else
                   report "DISPATCH: Returning freshly read data = $" & to_hstring(hr2_d)
                     & ", byte_phase=" & integer'image(to_integer(byte_phase));
-                  rdata_hi_buf <= hr2_d;
+                  rdata_hi_buf2 <= hr2_d;
                 end if;
                 report "hr_return='1'";
                 report "hr_return='0'";
 
                 report "asserting read_publish_strobe on high byte";
-                read_publish_strobe <= '1';
+                read_publish_strobe2 <= '1';
 
               end if;
               report "byte_phase = " & integer'image(to_integer(byte_phase));
