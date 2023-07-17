@@ -284,8 +284,8 @@ begin
         last_slow_prefetched_request_toggle <= slow_prefetched_request_toggle;
         if slow_prefetched_address(2 downto 0) /= "111" then
           -- Present the NEXT byte via the fast interface to the CPU
-          report "PREFETCH: Presenting $" & to_hstring(slow_prefetched_address(26 downto 0) + 1)
-            & " = $" & to_hstring(expansionram_current_cache_line(to_integer(slow_prefetched_address(2 downto 0))+1))
+          report "PREFETCH: Presenting $" & to_hexstring(slow_prefetched_address(26 downto 0) + 1)
+            & " = $" & to_hexstring(expansionram_current_cache_line(to_integer(slow_prefetched_address(2 downto 0))+1))
             & " due to CPU request toggle";
           slow_prefetched_address <= slow_prefetched_address(26 downto 0) + 1;
           slow_prefetched_data <= expansionram_current_cache_line(to_integer(slow_prefetched_address(2 downto 0))+1);
@@ -312,7 +312,7 @@ begin
           expansionram_write <= '0';
           
           if slow_access_last_request_toggle /= slow_access_request_toggle then
-            report "Access request for $" & to_hstring(slow_access_address) & ", toggle=" & std_logic'image(slow_access_request_toggle);
+            report "Access request for $" & to_hexstring(slow_access_address) & ", toggle=" & std_logic'image(slow_access_request_toggle);
             -- XXX do job, and acknowledge when done.
 
             -- CPU maps expansion port access to $7FF0000-$7FFFFFF for
@@ -392,18 +392,18 @@ begin
             end if;
           elsif slow_access_address(27)='1' then
             -- $8000000-$FFFFFFF = expansion RAM
-            report "Triaging Expansion RAM request to address $" & to_hstring(slow_access_address);
-            report "cachecs: address=$" & to_hstring(expansionram_current_cache_line_address&"000")
+            report "Triaging Expansion RAM request to address $" & to_hexstring(slow_access_address);
+            report "cachecs: address=$" & to_hexstring(expansionram_current_cache_line_address&"000")
               & ", valid=" & std_logic'image(expansionram_current_cache_line_valid)
               & ", data = "
-              & to_hstring(expansionram_current_cache_line(0)) & " "
-              & to_hstring(expansionram_current_cache_line(1)) & " "
-              & to_hstring(expansionram_current_cache_line(2)) & " "
-              & to_hstring(expansionram_current_cache_line(3)) & " "
-              & to_hstring(expansionram_current_cache_line(4)) & " "
-              & to_hstring(expansionram_current_cache_line(5)) & " "
-              & to_hstring(expansionram_current_cache_line(6)) & " "
-              & to_hstring(expansionram_current_cache_line(7)) & " ";
+              & to_hexstring(expansionram_current_cache_line(0)) & " "
+              & to_hexstring(expansionram_current_cache_line(1)) & " "
+              & to_hexstring(expansionram_current_cache_line(2)) & " "
+              & to_hexstring(expansionram_current_cache_line(3)) & " "
+              & to_hexstring(expansionram_current_cache_line(4)) & " "
+              & to_hexstring(expansionram_current_cache_line(5)) & " "
+              & to_hexstring(expansionram_current_cache_line(6)) & " "
+              & to_hexstring(expansionram_current_cache_line(7)) & " ";
             if expansionram_current_cache_line_valid='1' and
               expansionram_current_cache_line_address(26 downto 3) = slow_access_address(26 downto 3) and
               slow_access_write='0'
@@ -415,13 +415,13 @@ begin
               -- line, we process it so quickly, that the value doesn't have
               -- time to be updated. Thus we need to keep it on hand, return
               -- the new value ourselves.
-              report "CACHE: slow_access_address = $" & to_hstring(slow_access_address)
-                & ", last write addr $" & to_hstring(last_expansionram_write_address);
+              report "CACHE: slow_access_address = $" & to_hexstring(slow_access_address)
+                & ", last write addr $" & to_hexstring(last_expansionram_write_address);
               if slow_access_address = last_expansionram_write_address then
-                report "CACHE: Reading last-written byte $" & to_hstring(last_expansionram_write_data);
+                report "CACHE: Reading last-written byte $" & to_hexstring(last_expansionram_write_data);
                 slow_access_rdata <= last_expansionram_write_data;
               else
-                report "CACHE: Reading byte $" & to_hstring(expansionram_current_cache_line(to_integer(slow_access_address(2 downto 0))))
+                report "CACHE: Reading byte $" & to_hexstring(expansionram_current_cache_line(to_integer(slow_access_address(2 downto 0))))
                   & " from exposed hyperram current cache line";
                 slow_access_rdata <= expansionram_current_cache_line(to_integer(slow_access_address(2 downto 0)));
               end if;
@@ -437,8 +437,8 @@ begin
 
               if slow_access_address(2 downto 0) /= "111" then
                 -- Present the NEXT byte via the fast interface to the CPU
-                report "PREFETCH: Presenting $" & to_hstring(slow_access_address(26 downto 0) + 1)
-                  & " = $" & to_hstring(expansionram_current_cache_line(to_integer(slow_access_address(2 downto 0))+1))
+                report "PREFETCH: Presenting $" & to_hexstring(slow_access_address(26 downto 0) + 1)
+                  & " = $" & to_hexstring(expansionram_current_cache_line(to_integer(slow_access_address(2 downto 0))+1))
                   & " due to regular slow access read.";
                 slow_prefetched_address <= slow_access_address(26 downto 0) + 1;
                 slow_prefetched_data <= expansionram_current_cache_line(to_integer(slow_access_address(2 downto 0))+1);
@@ -510,7 +510,7 @@ begin
           elsif expansionram_busy = '0' then
             report "Preparing to access HyperRAM";
             -- Prepare request to HyperRAM
-            report "CACHE: remembering write to $" & to_hstring(slow_access_address);
+            report "CACHE: remembering write to $" & to_hexstring(slow_access_address);
             if slow_access_write = '1' then
               last_expansionram_write_address <= slow_access_address;
               last_expansionram_write_data <= slow_access_wdata;
@@ -550,15 +550,15 @@ begin
         expansionram_write <= '0';
       if (expansionram_data_ready_strobe='1') or (expansionram_data_ready_toggle /= last_expansionram_data_ready_toggle) then
         last_expansionram_data_ready_toggle <= expansionram_data_ready_toggle;
-        report "Saw data. Switching back to Idle state. byte = $" & to_hstring(expansionram_rdata);
+        report "Saw data. Switching back to Idle state. byte = $" & to_hexstring(expansionram_rdata);
         state <= Idle;
         slow_access_rdata <= expansionram_rdata;
         slow_access_ready_toggle <= slow_access_request_toggle;
         
         if slow_access_address(2 downto 0) /= "111" then
           -- Present the NEXT byte via the fast interface to the CPU
-          report "PREFETCH: Presenting $" & to_hstring(slow_access_address(26 downto 0) + 1)
-            & " = $" & to_hstring(expansionram_current_cache_line(to_integer(slow_access_address(2 downto 0))+1))
+          report "PREFETCH: Presenting $" & to_hexstring(slow_access_address(26 downto 0) + 1)
+            & " = $" & to_hexstring(expansionram_current_cache_line(to_integer(slow_access_address(2 downto 0))+1))
             & " due to slow access read that had to ask HyperRAM for data.";
           slow_prefetched_address(26 downto 3) <= expansionram_current_cache_line_address;
           slow_prefetched_address(2 downto 0) <= slow_access_address(2 downto 0)+1;

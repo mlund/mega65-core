@@ -18,10 +18,21 @@ lib = vu.add_library("lib")
 #lib.add_source_files("src/vhdl/frame_generator.vhdl")
 #lib.add_source_files("src/vhdl/ghdl_ram32x1024_sync.vhdl")
 
-lib.add_source_files("src/vhdl/tb_sdram.vhdl");
-lib.add_source_files("src/vhdl/sdram_controller.vhdl");
+# Uncomment below for testing SDRAM controller
+#lib.add_source_files("src/vhdl/tb_sdram.vhdl");
+#lib.add_source_files("src/vhdl/sdram_controller.vhdl");
+#lib.add_source_files("src/vhdl/debugtools.vhdl")
+#lib.add_source_files("src/vhdl/cputypes.vhdl")
+#lib.add_source_files("src/vhdl/is42s16320f_model.vhdl")
+
+# Uncomment below for testing slow_devices driving SDRAM
+lib.add_source_files("src/vhdl/tb_slow_drives_sdram.vhdl");
 lib.add_source_files("src/vhdl/debugtools.vhdl")
 lib.add_source_files("src/vhdl/cputypes.vhdl")
+lib.add_source_files("src/vhdl/slow_devices.vhdl");
+lib.add_source_files("src/vhdl/expansion_port_controller.vhdl");
+lib.add_source_files("src/vhdl/dummy_opl2.vhdl");
+lib.add_source_files("src/vhdl/sdram_controller.vhdl");
 lib.add_source_files("src/vhdl/is42s16320f_model.vhdl")
 
 vu.set_compile_option("ghdl.a_flags", ["-frelaxed-rules"])
