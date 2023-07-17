@@ -234,10 +234,24 @@ begin
         end if;
       end if;
       wait for 6.173 ns;
-      report "SDRAMDQ: sdram_dq = $" & to_hexstring(sdram_dq);
+      -- report "SDRAMDQ: sdram_dq = $" & to_hexstring(sdram_dq);
 
     end procedure;
 
+    procedure wait_for_sdram_ready is
+    begin
+      clock_tick;
+      for i in 1 to 1000 loop
+        clock_tick;
+        if init_sequence_done='1' then
+          report "SDRAM ready after " & integer'image(i) & " cycles.";
+          return;
+        end if;
+      end loop;
+      assert false report "SDRAM did not become ready";
+    end procedure;
+
+    
     procedure slowdev_write( addr : integer; val : unsigned(7 downto 0)) is
     begin
       report "SLOWWRITE: $" & to_hexstring(to_unsigned(addr,28)) & " <- $" & to_hexstring(val);
@@ -288,7 +302,8 @@ begin
 
     while test_suite loop
 
-    if run("Write and read back single bytes") then
+      if run("Write and read back single bytes") then
+        wait_for_sdram_ready;
         slowdev_write(0,x"12");
         slowdev_write(1,x"34");
         slowdev_write(2,x"56");

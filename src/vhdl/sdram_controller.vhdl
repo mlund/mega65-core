@@ -284,8 +284,8 @@ begin
       end if;
 
       -- Keep logic flat by pre-extracting read data
-      report "RDATA_BUF: Reading from offset " & to_string(std_logic_vector(latched_addr(2 downto 0))) &
-        ", = $" & to_hexstring(rdata_line);
+      -- report "RDATA_BUF: Reading from offset " & to_string(std_logic_vector(latched_addr(2 downto 0))) &
+      -- ", = $" & to_hexstring(rdata_line);
       case latched_addr(2 downto 0) is
         when "000" =>
           rdata_buf    <= rdata_line(7 downto 0);
