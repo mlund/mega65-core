@@ -22,3 +22,8 @@ entity opl2 is
     sample_clk_128 : out std_logic
     );
 end opl2;
+
+architecture cardboard_facade of opl2 is
+begin
+  
+end cardboard_facade;

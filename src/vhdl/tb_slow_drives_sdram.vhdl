@@ -242,7 +242,7 @@ begin
     begin
       report "SLOWWRITE: $" & to_hexstring(to_unsigned(addr,28)) & " <- $" & to_hexstring(val);
       slow_access_write <= '1';
-      slow_access_address <= to_unsigned(addr,27);
+      slow_access_address <= to_unsigned(addr,28);
       slow_access_wdata <= val;
       slow_access_request_toggle <= not slow_access_request_toggle;
       desired_slow_access_ready_toggle <= not slow_access_ready_toggle;
@@ -263,7 +263,7 @@ begin
     begin
 
       slow_access_write <= '0';
-      slow_access_address <= to_unsigned(addr,27);
+      slow_access_address <= to_unsigned(addr,28);
       slow_access_request_toggle <= not slow_access_request_toggle;
       desired_slow_access_ready_toggle <= not slow_access_ready_toggle;
 
