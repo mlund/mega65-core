@@ -896,6 +896,13 @@ $(UTILDIR)/jtagflash.prg:       $(UTILDIR)/jtagflash.c $(UTILDIR)/version.h $(UT
 		--add-source --listing $*.list --mapfile $*.map -DQSPI_VERBOSE $< \
 		$(UTILDIR)/qspicommon.c $(SRCDIR)/mega65-libc/cc65/src/memory.c $(SRCDIR)/mega65-libc/cc65/src/hal.c $(SRCDIR)/mega65-libc/cc65/src/time.c $(SRCDIR)/mega65-libc/cc65/src/targets.c
 
+$(UTILDIR)/autoflash.prg:       $(UTILDIR)/jtagflash-automatic.c $(UTILDIR)/version.h $(UTILDIR)/qspicommon-automatic.c $(UTILDIR)/qspicommon.h $(CC65_DEPEND)
+	$(info =============================================================)
+	$(info ~~~~~~~~~~~~~~~~> Making: $@)
+	$(CL65) -I $(SRCDIR)/mega65-libc/cc65/include -O -o $(UTILDIR)/jtagflash.prg \
+		--add-source --listing $*.list --mapfile $*.map -DQSPI_VERBOSE $< \
+		$(UTILDIR)/qspicommon-automatic.c $(SRCDIR)/mega65-libc/cc65/src/memory.c $(SRCDIR)/mega65-libc/cc65/src/hal.c $(SRCDIR)/mega65-libc/cc65/src/time.c $(SRCDIR)/mega65-libc/cc65/src/targets.c
+
 $(UTILDIR)/jtagdebug.prg:       $(UTILDIR)/jtagflash.c $(UTILDIR)/version.h $(UTILDIR)/qspicommon.c $(UTILDIR)/qspicommon.h $(CC65_DEPEND)
 	$(info =============================================================)
 	$(info ~~~~~~~~~~~~~~~~> Making: $@)
