@@ -292,7 +292,7 @@ reset_entry:
 	;; Clear 16-bit text mode
 	LDA #$00
 	STA $D054
-	
+
 	;; Ask FPGA to boot from part-way through slot 7
 	;; Slot 7 = 7x8MB = $3800000.
 	;; So we boot from $3810000.
@@ -311,3 +311,8 @@ reset_entry:
 loop:	
 	inc $D020
 	jmp loop
+
+	;; Make sure we pad to full size
+	* = Hyppo_End
+	!8 0
+	
