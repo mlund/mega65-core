@@ -61,6 +61,10 @@ entity viciv is
     all_pause : in std_logic;
 
     hypervisor_mode : in std_logic;
+
+    hw_errata_level : in unsigned(7 downto 0);
+    hw_errata_enable_toggle : inout std_logic := '0';
+    hw_errata_disable_toggle : inout std_logic := '0';
     
     xcounter_out : out integer range 0 to 4095 := 0;
     ycounter_out : out integer range 0 to 2047 := 0;
@@ -1347,18 +1351,6 @@ begin
           ) is
     variable bitplane_number : integer;
 
-    procedure enable_bug_compat is
-    begin
-      bug_compat_mode <= '1';
-      bug_compat_vic_iii_d016_delta <= 2;
-    end procedure;
-
-    procedure disable_bug_compat is
-    begin
-      bug_compat_mode <= '0';
-      bug_compat_vic_iii_d016_delta <= 0;
-    end procedure;
-
     procedure viciv_calculate_modeline_dimensions is
       constant w : integer := 400; -- was 320
     begin
@@ -2090,6 +2082,13 @@ begin
 
     if rising_edge(cpuclock) then
 
+      -- Apply variable HW errata level settings
+      if to_integer(hw_errata_level) > 0 then
+        bug_compat_vic_iii_d016_delta <= 2;
+      else
+        bug_compat_vic_iii_d016_delta <= 0;
+      end if;
+      
       upscale_enable <= upscale_enable_int;
       
       interlace_mode <= reg_interlace;
@@ -2172,8 +2171,6 @@ begin
 
       reset_drive <= reset;
       if reset_drive='0' then
-        -- Enable C65 bug compatibility mode on reset.
-        enable_bug_compat;
 
         -- Allow hyppo ROM to be visible on reset.
         rom_at_e000 <= '0';
@@ -2912,14 +2909,13 @@ begin
           vicii_raster_compare(10 downto 8) <= unsigned(fastio_wdata(2 downto 0));
           vicii_is_raster_source <= fastio_wdata(7);
 
-          if fastio_wdata(5)=bug_compat_mode then
-            if fastio_wdata(5)='1' then
-              disable_bug_compat;
-            else
-              enable_bug_compat;
-            end if;
-            viciv_legacy_mode_registers_touched <= '1';
+          if fastio_wdata(5)='1' then
+            hw_errata_disable_toggle <= not hw_errata_disable_toggle;
+          else 
+            hw_errata_enable_toggle <= not hw_errata_enable_toggle;
           end if;
+
+          viciv_legacy_mode_registers_touched <= '1';
         elsif register_number=123 then
           -- @IO:GS $D07B VIC-IV:DISP!ROWS Number of text rows to display
           display_row_count <= unsigned(fastio_wdata);
