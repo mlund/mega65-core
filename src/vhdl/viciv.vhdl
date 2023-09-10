@@ -2085,8 +2085,10 @@ begin
       -- Apply variable HW errata level settings
       if to_integer(hw_errata_level) > 0 then
         bug_compat_vic_iii_d016_delta <= 2;
+        bug_compat_mode <= '0';
       else
         bug_compat_vic_iii_d016_delta <= 0;
+        bug_compat_mode <= '1';
       end if;
       
       upscale_enable <= upscale_enable_int;
@@ -2903,7 +2905,6 @@ begin
           -- @IO:GS $D07A.6 VIC-IV:EXTIRQS Enable additional IRQ sources, e.g., raster X position.
           -- @IO:GS $D07A.7 VIC-IV:FNRST!CMP Raster compare is in physical rasters if clear, or VIC-II rasters if set
           irq_extras_enable <= fastio_wdata(6);
-          bug_compat_mode <= not fastio_wdata(5);
           reg_char_y16 <= fastio_wdata(4);          
           sprite_continuous_pointer_monitoring <= fastio_wdata(3);
           vicii_raster_compare(10 downto 8) <= unsigned(fastio_wdata(2 downto 0));
