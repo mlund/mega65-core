@@ -852,6 +852,13 @@ architecture behavioral of matrix_to_ascii is
   
   signal key_num : integer range 0 to 71 := 0;
 
+  signal prev_ascii_key : unsigned(7 downto 0) := x"00";
+  signal prev_petscii_key : unsigned(7 downto 0) := x"00";
+  signal ascii_key_timeout : integer := 0;
+  signal petscii_key_timeout : integer := 0;
+  -- Cherry key switches claim a 5ms debounce time = 1/200th of clock frequency.
+  constant cherry_mx_debounce_time : integer := clock_frequency / 200;
+  
 begin
   
   -- This is our first local copy that gets updated continuously by snooping
@@ -1032,17 +1039,31 @@ begin
         
         keyscan_counter <= keyscan_delay;
 
+        if petscii_key_timeout /= 0 then
+          petscii_key_timeout <= petscii_key_timeout - 1;
+        end if;
+        
         if (last_key_state = '1') and (debounce_key_state='0') then
           if petscii_matrix(key_num) /= x"00" then
-            petscii_key <= petscii_matrix(key_num);
-            petscii_key_valid <= '1';
+            if prev_petscii_key /= petscii_matrix(key_num) or petscii_key_timeout = 0 then
+              petscii_key <= petscii_matrix(key_num);
+              prev_petscii_key <= petscii_matrix(key_num);
+              petscii_key_valid <= '1';
+              petscii_key_timeout <= cherry_mx_debounce_time;
+            else
+              -- Identical key presses in short period of time = glitches /
+              -- bounce to be rejected
+              null;
+            end if;
           end if;
-          if key_matrix(key_num) /= x"00" then
+          if (key_matrix(key_num) /= x"00") and (prev_ascii_key /= key_matrix(key_num) or ascii_key_timeout = 0) then
             -- Key press event
             report "matrix = " & to_string(matrix);
             report "key press, ASCII code = " & to_hstring(key_matrix(key_num));
 
             ascii_key <= key_matrix(key_num);
+            prev_ascii_key <= key_matrix(key_num);
+            ascii_key_timeout <= cherry_mx_debounce_time;
             
             -- Make CAPS LOCK invert case of only letters
             if bucky_key_internal(6)='1'
