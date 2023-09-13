@@ -857,7 +857,8 @@ architecture behavioral of matrix_to_ascii is
   signal ascii_key_timeout : integer := 0;
   signal petscii_key_timeout : integer := 0;
   -- Cherry key switches claim a 5ms debounce time = 1/200th of clock frequency.
-  constant cherry_mx_debounce_time : integer := clock_frequency / 200;
+  -- Hmm... that was too long, so make it 0.5ms instead?
+  constant cherry_mx_debounce_time : integer := clock_frequency / 2000;
   
 begin
   
