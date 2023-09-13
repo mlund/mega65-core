@@ -857,8 +857,7 @@ architecture behavioral of matrix_to_ascii is
   signal ascii_key_timeout : integer := 0;
   signal petscii_key_timeout : integer := 0;
   -- Cherry key switches claim a 5ms debounce time = 1/200th of clock frequency.
-  -- Hmm... that was too long, so make it 0.5ms instead?
-  constant cherry_mx_debounce_time : integer := clock_frequency / 2000;
+  constant cherry_mx_debounce_time : integer := clock_frequency / 200;
   
 begin
   
@@ -1043,8 +1042,11 @@ begin
         if petscii_key_timeout /= 0 then
           petscii_key_timeout <= petscii_key_timeout - 1;
         end if;
+        if ascii_key_timeout /= 0 then
+          ascii_key_timeout <= ascii_key_timeout - 1;
+        end if;
         
-        if (last_key_state = '1') and (debounce_key_state='0') then
+        if (last_key_state = '1') then
           if petscii_matrix(key_num) /= x"00" then
             if prev_petscii_key /= petscii_matrix(key_num) or petscii_key_timeout = 0 then
               petscii_key <= petscii_matrix(key_num);
@@ -1093,7 +1095,7 @@ begin
             ascii_key_valid <= '0';
           elsif repeat_timer_expired = '1' then
             --repeat_key_timer <= repeat_again_timer;
-            if (repeat_key = key_num) and debounce_key_state='0' then
+            if (repeat_key = key_num) then
               ascii_key_valid <= '1';
               report "Repeating key held down";
               -- Republish the key, so that modifiers can change during repeat,
