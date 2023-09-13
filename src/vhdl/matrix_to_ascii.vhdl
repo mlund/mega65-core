@@ -1017,6 +1017,13 @@ begin
 
       bucky_key <= bucky_key_internal;
 
+      if petscii_key_timeout /= 0 then
+        petscii_key_timeout <= petscii_key_timeout - 1;
+      end if;
+      if ascii_key_timeout /= 0 then
+        ascii_key_timeout <= ascii_key_timeout - 1;
+      end if;
+      
       -- Check for key press events
       if keyscan_counter /= 0 then
         keyscan_counter <= keyscan_counter - 1;
@@ -1039,13 +1046,6 @@ begin
         
         keyscan_counter <= keyscan_delay;
 
-        if petscii_key_timeout /= 0 then
-          petscii_key_timeout <= petscii_key_timeout - 1;
-        end if;
-        if ascii_key_timeout /= 0 then
-          ascii_key_timeout <= ascii_key_timeout - 1;
-        end if;
-        
         if (last_key_state = '1') then
           if petscii_matrix(key_num) /= x"00" then
             if prev_petscii_key /= petscii_matrix(key_num) or petscii_key_timeout = 0 then
@@ -1053,6 +1053,7 @@ begin
               prev_petscii_key <= petscii_matrix(key_num);
               petscii_key_valid <= '1';
               petscii_key_timeout <= cherry_mx_debounce_time;
+              repeat_key_timer <= repeat_start_timer;
             else
               -- Identical key presses in short period of time = glitches /
               -- bounce to be rejected
