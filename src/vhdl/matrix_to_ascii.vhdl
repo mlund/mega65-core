@@ -1047,7 +1047,7 @@ begin
         keyscan_counter <= keyscan_delay;
 
         if (last_key_state = '1') then
-          if petscii_matrix(key_num) /= x"00" then
+          if petscii_matrix(key_num) /= x"00" and (debounce_key_state='0') then
             if prev_petscii_key /= petscii_matrix(key_num) or petscii_key_timeout = 0 then
               petscii_key <= petscii_matrix(key_num);
               prev_petscii_key <= petscii_matrix(key_num);
