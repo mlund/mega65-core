@@ -1096,7 +1096,7 @@ begin
             ascii_key_valid <= '0';
           elsif repeat_timer_expired = '1' then
             --repeat_key_timer <= repeat_again_timer;
-            if (repeat_key = key_num) then
+            if (repeat_key = key_num) and debounce_key_state='0' then
               ascii_key_valid <= '1';
               report "Repeating key held down";
               -- Republish the key, so that modifiers can change during repeat,
