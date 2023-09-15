@@ -421,6 +421,7 @@ architecture Behavioral of container is
   signal pixel_strobe : std_logic := '0';
   signal x_zero : std_logic := '0';
   signal y_zero : std_logic := '0';
+  signal y : integer := 0;
   
   signal audio_left : std_logic_vector(19 downto 0);
   signal audio_right : std_logic_vector(19 downto 0);
@@ -530,6 +531,12 @@ architecture Behavioral of container is
   signal ntsc_dec_fine_int : std_logic := '0';
   signal ntsc_inc_coarse_int : std_logic := '0';
   signal ntsc_dec_coarse_int : std_logic := '0';
+
+
+  signal trigger_reconfigure : std_logic := '0';
+  signal icape2_read_val : unsigned(31 downto 0);
+  signal green_i : unsigned(7 downto 0);
+  signal last_x_zero : std_logic := '0';
   
    type sine_t is array (0 to 8) of unsigned(7 downto 0);
    signal sine_table : sine_t := (
@@ -876,7 +883,7 @@ begin
 
       -- Show simple purple screen when test pattern is off
       red_i => to_unsigned(255,8),
-      green_i => to_unsigned(0,8),
+      green_i => green_i,
       blue_i => to_unsigned(255,8),
 
       -- The pixel for direct output to VGA pins
@@ -937,6 +944,16 @@ begin
       pixelvalid_out => upscale_de
 
       );
+
+  reconfig0: entity work.reconfig
+    port map (
+      clock => cpuclock,
+      reg_num => "10110",
+      trigger_reconfigure => trigger_reconfigure,
+      reconfigure_address => x"00008000",
+      boot_address => icape2_read_val
+      );
+
   
   expansionboard0: entity work.r3_expansion
     port map (
@@ -960,6 +977,8 @@ begin
       
       );
 
+
+  
   ODDR_inst : ODDR
     port map (
       Q => vdac_clk,   -- 1-bit DDR output
@@ -983,6 +1002,21 @@ begin
   begin
 
     if rising_edge(pcm_clk) then
+
+      last_x_zero <= x_zero;
+      if y_zero = '0' then
+        y <= 0;
+      elsif x_zero = '0' and last_x_zero = '1' then
+        y <= y + 1;
+      end if;
+      if y < 64 then
+        green_i <= x"80";
+      elsif y < (64 + 32*8) then
+        green_i <= (others => icape2_read_val( to_integer(to_unsigned(y-64,16)(12 downto 4) ) ) );
+      else
+        green_i <= x"40";
+      end if;
+      
       if audio_address < 9 then
         audio_data <= std_logic_vector(sine_table(audio_address) + 128);
       elsif audio_address < 18 then
@@ -1070,6 +1104,8 @@ begin
           when x"53" | x"73" => ntsc_inc_fine <= not ntsc_dec_fine_int; ntsc_dec_fine_int <= not ntsc_dec_fine_int;
           when x"44" | x"64" => ntsc_dec_coarse <= not ntsc_dec_coarse_int; ntsc_dec_coarse_int <= not ntsc_dec_coarse_int;
           when x"66" | x"66" => ntsc_inc_coarse <= not ntsc_inc_coarse_int; ntsc_inc_coarse_int <= not ntsc_inc_coarse_int;
+
+          when x"52" | x"72" => trigger_reconfigure <= '1';
                                 
           when others => null;                         
         end case;        
