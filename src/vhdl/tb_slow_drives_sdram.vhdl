@@ -245,6 +245,12 @@ begin
         clock_tick;
         if init_sequence_done='1' then
           report "SDRAM ready after " & integer'image(i) & " cycles.";
+          -- Now allow some more cycles for the SDRAM to do any initial reads
+          -- etc it wants
+          for i in 1 to 50 loop
+            clock_tick;
+          end loop;
+          report "SDRAM: Ready or not, here we come!";
           return;
         end if;
       end loop;
@@ -257,42 +263,63 @@ begin
       report "SLOWWRITE: $" & to_hexstring(to_unsigned(addr,28)) & " <- $" & to_hexstring(val);
       slow_access_write <= '1';
       slow_access_address <= to_unsigned(addr,28);
+      slow_access_address(27) <= '1'; -- force access into expansion RAM area
       slow_access_wdata <= val;
       slow_access_request_toggle <= not slow_access_request_toggle;
       desired_slow_access_ready_toggle <= not slow_access_ready_toggle;
-      clock_tick;
       for i in 1 to 100 loop
+        clock_tick;
         if slow_access_ready_toggle = desired_slow_access_ready_toggle then
           slow_access_write <= '0';
+          -- Now make sure no further toggles occur on the access ready toggle
+          -- after
+          for i in 1 to 20 loop
+            clock_tick;
+            if slow_access_ready_toggle /= desired_slow_access_ready_toggle then
+              assert false report "SLOWREADYTOGGLE: slow_access_ready_toggle toggled again after completion of write";
+            end if;
+          end loop;
           return;
         end if;
-        clock_tick;
       end loop;
 
       assert false report "SLOWWRITE: Write timed out after 100 cycles";
 
     end procedure;
 
-    procedure slowdev_read( addr : integer; expected_val : unsigned(7 downto 0)) is
+    procedure slowdev_read( addr : integer; expected_val : unsigned(7 downto 0); post_wait : boolean) is
     begin
 
       slow_access_write <= '0';
       slow_access_address <= to_unsigned(addr,28);
+      slow_access_address(27) <= '1'; -- force access into expansion RAM area
       slow_access_request_toggle <= not slow_access_request_toggle;
       desired_slow_access_ready_toggle <= not slow_access_ready_toggle;
+      report "SLOWREADTOGGLE: slow_access_ready_toggle = " & std_logic'image(slow_access_ready_toggle);
 
       report "SLOWREAD: $" & to_hexstring(to_unsigned(addr,28)) & " (looking for $" & to_hexstring(expected_val) & ").";
 
       for i in 1 to 100 loop
+        clock_tick;
         if slow_access_ready_toggle = desired_slow_access_ready_toggle then
+          report "SLOWREADTOGGLE: slow_access_ready_toggle = " & std_logic'image(slow_access_ready_toggle);
           if slow_access_rdata /= expected_val then
             assert false report "SLOWREAD: Read $" & to_hexstring(data_val) & ", but expected $" & to_hexstring(expected_val);
           else
-            report "SLOWREAD: Read correct value. Now waiting for data strobe to release";
+            report "SLOWREAD: Read correct value.";
+            if post_wait then
+              -- Now make sure no further toggles occur on the access ready toggle
+              -- after
+              for i in 1 to 20 loop
+                clock_tick;
+                if slow_access_ready_toggle /= desired_slow_access_ready_toggle then
+                  assert false report "SLOWREADYTOGGLE: slow_access_ready_toggle toggled again after completion of write";
+                end if;
+              end loop;
+            end if;
           end if;          
           return;
         end if;
-        clock_tick;
       end loop;
       assert false report "SLOWREAD: Failed to read value after 100 cycles.";
     end procedure;
@@ -312,12 +339,28 @@ begin
         slowdev_write(5,x"bc");
         slowdev_write(6,x"de");
         slowdev_write(7,x"f0");
-        slowdev_read(0,x"12");
-        slowdev_read(1,x"34");
-        slowdev_read(2,x"56");
-        slowdev_read(3,x"78");
-        slowdev_read(4,x"9a");
-        slowdev_read(5,x"bc");
+        slowdev_read(0,x"12",false);
+        slowdev_read(1,x"34",false);
+        slowdev_read(2,x"56",true);
+        slowdev_read(3,x"78",true);
+        slowdev_read(4,x"9a",true);
+        slowdev_read(5,x"bc",true);
+      elsif run("Write and read back single bytes from different cache lines") then
+        wait_for_sdram_ready;
+        slowdev_write(0,x"12");
+        slowdev_write(101,x"34");
+        slowdev_write(202,x"56");
+        slowdev_write(303,x"78");
+        slowdev_write(404,x"9a");
+        slowdev_write(505,x"bc");
+        slowdev_write(606,x"de");
+        slowdev_write(707,x"f0");
+        slowdev_read(0,x"12",false);
+        slowdev_read(101,x"34",false);
+        slowdev_read(202,x"56",true);
+        slowdev_read(303,x"78",true);
+        slowdev_read(404,x"9a",true);
+        slowdev_read(505,x"bc",true);
 
       end if;
     end loop;

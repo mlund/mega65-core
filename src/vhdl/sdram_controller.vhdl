@@ -177,8 +177,8 @@ architecture tacoma_narrows of sdram_controller is
   signal current_cache_line_valid_int : std_logic := '0';
   signal sdram_dq_latched             : unsigned(15 downto 0);
 
-  signal next_toggle_drive : std_logic;
-  signal prev_toggle_drive : std_logic;
+  signal next_toggle_drive : std_logic := '0';
+  signal prev_toggle_drive : std_logic := '0';
 
   signal prev_current_cache_line_next_toggle : std_logic := '0';
   signal prev_current_cache_line_prev_toggle : std_logic := '0';
@@ -337,6 +337,7 @@ begin
       -- Latch incoming requests (those come in on the 81MHz pixel clock)
       if read_request = '1' and write_request = '0' and write_latched = '0' and read_latched = '0' then
         report "Latching read request for $" & to_hexstring(address);
+        report "BUSY: Asserting busy";
         busy         <= '1';
         read_latched <= '1';
         latched_addr <= address;
@@ -344,6 +345,7 @@ begin
       end if;
       if read_request = '0' and write_request = '1' and write_latched = '0' and read_latched = '0' then
         report "Latching write request";
+        report "BUSY: Asserting busy";
         busy          <= '1';
         write_latched <= '1';
         latched_addr  <= address;
@@ -371,6 +373,7 @@ begin
           rdata_hi               <= rdata_hi_buf;
           data_ready_toggle      <= not last_data_ready_toggle;
           last_data_ready_toggle <= not last_data_ready_toggle;
+          report "BUSY: Clearing busy via read_publish_strobe";
           busy                   <= '0';
         end if;
       end if;
@@ -394,6 +397,10 @@ begin
       if read_request = '0' and write_request = '0' and write_latched = '0' and read_latched = '0' and
         (prev_toggle_drive /= prev_current_cache_line_prev_toggle) then
         -- Read previous cache line
+        report "Latching read or write request for previous cache line";
+        report "prev_toggle_drive = " & std_logic'image(prev_toggle_drive) & ", "
+          & "prev_current_cache_line_prev_toggle = " & std_logic'image(prev_current_cache_line_prev_toggle);
+        report "BUSY: Asserting busy";
         busy                                <= '1';
         read_latched                        <= '1';
         latched_addr(26 downto 3)           <= cache_line_prev_address;
@@ -405,6 +412,8 @@ begin
       if read_request = '0' and write_request = '0' and write_latched = '0' and read_latched = '0' and
         (next_toggle_drive /= prev_current_cache_line_next_toggle) then
         -- Read next cache line
+        report "Latching read or write request for next cache line";
+        report "BUSY: Asserting busy";
         busy                                <= '1';
         read_latched                        <= '1';
         latched_addr(26 downto 3)           <= cache_line_next_address;
@@ -463,6 +472,7 @@ begin
 
         if sdram_init_phase = 31 then
           sdram_prepped <= '1';
+          report "BUSY: Clearing busy";
           busy          <= '0';
           report "SDRAM: Clearing BUSY at end of initialisation sequence";
         elsif sdram_init_phase /= 0 then
@@ -480,11 +490,13 @@ begin
               report "REFRESH is DUE (and no row was open, so triggering immediately)";
               sdram_emit_command(CMD_AUTO_REFRESH);
               sdram_state <= REFRESH_1;
+              report "BUSY: Asserting busy";
               busy        <= '1';
             elsif refresh_due = '1' and active_row = '1' then
               report "REFRESH is DUE (a row is open, so precharging first)";
               sdram_emit_command(CMD_PRECHARGE);
               sdram_state <= CLOSE_FOR_REFRESH;
+              report "BUSY: Asserting busy";
               busy        <= '1';
             elsif read_latched = '1' or write_latched = '1' then
               if latched_addr(26) = '1' then
@@ -493,8 +505,15 @@ begin
                 sdram_emit_command(CMD_NOP);
               else
                 -- Activate the row
+                if read_latched = '1' then
+                  report "SDRAMREAD: Starting read from $" & to_hexstring(latched_addr);
+                end if;
+                if write_latched = '1' then
+                  report "SDRAMWRITE: Starting write: $" & to_hexstring(latched_addr) & " <= $" & to_hexstring(wdata_latched);
+                end if;
                 if active_row = '0' then
-                  report "ACTIVATEROW: No row open yet, so opening before read or write";
+                  report "ACTIVATEROW: No row open yet, so opening before read or write for row $" & to_hexstring(latched_addr)
+                    & " = %" & to_string(std_logic_vector(latched_addr));
                   -- If no active row, then activate one
                   sdram_emit_command(CMD_ACTIVATE_ROW);
                   sdram_ba    <= latched_addr(25 downto 24);
@@ -553,8 +572,10 @@ begin
             end if;
           when NON_RAM_READ =>
             read_latched              <= '0';
+            report "PUBLISH: non-RAM read";
             data_ready_toggle       <= not last_data_ready_toggle;
             last_data_ready_toggle       <= not last_data_ready_toggle;
+            report "BUSY: Clearing after non-ram read";
             busy <= '0';
             rdata                     <= nonram_val;
             rdata_hi                  <= nonram_val;
@@ -645,6 +666,7 @@ begin
             rdata_line(63 downto 48) <= sdram_dq_latched;
             read_complete_strobe     <= '1';
             read_latched             <= '0';
+            report "BUSY: Clearing after read";
             busy                     <= '0';
             sdram_state              <= IDLE;
           when WRITE_1 =>
@@ -663,6 +685,7 @@ begin
 
             -- Immediately complete write request if the correct row is
             -- already open
+            report "BUSY: Clearing after non-ram read";
             busy          <= '0';
             write_latched <= '0';
           when WRITE_2 =>
@@ -685,6 +708,7 @@ begin
           when REFRESH_8 => sdram_emit_command(CMD_NOP);
           when REFRESH_9 =>
             sdram_emit_command(CMD_NOP);
+            report "BUSY: Clearing BUSY after refresh";
             busy        <= '0';
             sdram_state <= IDLE;
           when others =>

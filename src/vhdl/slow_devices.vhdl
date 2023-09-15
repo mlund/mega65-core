@@ -150,7 +150,7 @@ architecture behavioural of slow_devices is
   signal cart_access_accept_strobe : std_logic;
   signal cart_access_read_strobe : std_logic;
 
-  signal slow_access_last_request_toggle : std_logic := '1';
+  signal slow_access_last_request_toggle : std_logic := '0';
 
   signal expansionram_eternally_busy : std_logic := '1';
   signal expansionram_read_timeout : unsigned(23 downto 0) := to_unsigned(0,24);
@@ -312,7 +312,13 @@ begin
           expansionram_write <= '0';
           
           if slow_access_last_request_toggle /= slow_access_request_toggle then
-            report "Access request for $" & to_hexstring(slow_access_address) & ", toggle=" & std_logic'image(slow_access_request_toggle);
+            if slow_access_write='1' then
+              report "SLOWWRITE request for $" & to_hexstring(slow_access_address)
+                & " <= $" & to_hexstring(slow_access_wdata)
+                & ", toggle=" & std_logic'image(slow_access_request_toggle);
+            else
+              report "SLOWREAD request for $" & to_hexstring(slow_access_address) & ", toggle=" & std_logic'image(slow_access_request_toggle);
+            end if;
             -- XXX do job, and acknowledge when done.
 
             -- CPU maps expansion port access to $7FF0000-$7FFFFFF for
@@ -355,21 +361,25 @@ begin
             slow_access_rdata(2) <= opl_sc_128;
             slow_access_rdata(7 downto 3) <= (others => '0');
             slow_access_ready_toggle <= slow_access_request_toggle;
+            report "PUBLISH: $7FEFFFF read";
             state <= Idle;
           elsif slow_access_address = x"7FFDF40" and sfx_emulation='1' then
             sfx_opl_adr <= slow_access_wdata;
             slow_access_ready_toggle <= slow_access_request_toggle;
+            report "PUBLISH: $7FFDF40 read";
             slow_access_rdata <= sfx_opl_adr;
             state <= Idle;
           elsif slow_access_address = x"7FFDF50" and sfx_emulation='1' then
             opl_adr <= sfx_opl_adr;
             opl_we <= slow_access_write;
             opl_data <= slow_access_wdata;
+            report "PUBLISH: $7FFDF50 read";
             slow_access_ready_toggle <= slow_access_request_toggle;
             state <= OPL2Request;
           elsif slow_access_address = x"7FFDF60" and sfx_emulation='1' then
             slow_access_rdata <= unsigned(opl_kon(7 downto 0));
             slow_access_ready_toggle <= slow_access_request_toggle;
+            report "PUBLISH: $7FFDF60 read";
             state <= Idle;            
           elsif slow_access_address(27 downto 20) = x"FE" then
             -- $FExxxxx = Slow IO peripherals
@@ -384,9 +394,11 @@ begin
                 slow_access_rdata(7 downto 1) <= (others => '1');
                 slow_access_rdata(0) <= opl_kon(8);
               end if;
+              report "PUBLISH: OPL2 read";
               slow_access_ready_toggle <= slow_access_request_toggle;
               state <= OPL2Request;
             else
+              report "PUBLISH: Slow IO peripheral read";
               slow_access_ready_toggle <= slow_access_request_toggle;
               state <= Idle;
             end if;
@@ -427,6 +439,7 @@ begin
               end if;
               state <= Idle;
               
+              report "PUBLISH: expansionram_current_cache_line read";
               slow_access_ready_toggle <= slow_access_request_toggle;
               -- If we are reading the last byte in the set we have, then tell
               -- hyperram controller to present the next data, if possible.
@@ -477,6 +490,7 @@ begin
               when others => slow_access_rdata <= x"55";
             end case;
             state <= Idle;
+            report "PUBLISH: Unmapped memory read";
             slow_access_ready_toggle <= slow_access_request_toggle;
           end if;        
         end if;
@@ -506,6 +520,7 @@ begin
               when others => slow_access_rdata <= x"45";
             end case;
             state <= Idle;
+            report "PUBLISH: Externally busy expansion RAM read";
             slow_access_ready_toggle <= slow_access_request_toggle;
           elsif expansionram_busy = '0' then
             report "Preparing to access HyperRAM";
@@ -526,6 +541,7 @@ begin
               -- Write can be delivered, and then ignored, since we aren't
               -- waiting for anything. So just return to the Idle state;
               state <= Idle;
+              report "PUBLISH: Instant-acknowledgement of write";
               slow_access_ready_toggle <= slow_access_request_toggle;
 
               -- Update pre-fetched data when writing
@@ -553,6 +569,7 @@ begin
         report "Saw data. Switching back to Idle state. byte = $" & to_hexstring(expansionram_rdata);
         state <= Idle;
         slow_access_rdata <= expansionram_rdata;
+        report "PUBLISH: Expansion RAM completion of read";        
         slow_access_ready_toggle <= slow_access_request_toggle;
         
         if slow_access_address(2 downto 0) /= "111" then
@@ -584,7 +601,7 @@ begin
         if cart_access_accept_strobe = '1' then
           cart_access_request <= '0';
           if slow_access_write = '1' then
-            report "C64 cartridge port write dispatched asynchronously.";
+            report "PUBLISH: C64 cartridge port write dispatched asynchronously.";
             slow_access_ready_toggle <= slow_access_request_toggle;
             state <= Idle;
           else
@@ -597,7 +614,7 @@ begin
       when CartridgePortAcceptWait =>        
         if cart_access_read_strobe = '1' then
           cart_access_request <= '0';
-          report "C64 cartridge port access complete"; 
+          report "PUBLISH: C64 cartridge port access complete"; 
           slow_access_rdata <= cart_access_rdata;
           slow_access_ready_toggle <= slow_access_request_toggle;
           state <= Idle;
@@ -614,6 +631,7 @@ begin
           slow_access_rdata(5 downto 0) <= expansionram_rdata(5 downto 0);
           slow_access_rdata(6) <= expansionram_busy;
           slow_access_rdata(7) <= expansionram_data_ready_toggle;
+          report "PUBLISH: HyperRAM timeout debug read";
           slow_access_ready_toggle <= slow_access_request_toggle;
         end if;
       end if;
