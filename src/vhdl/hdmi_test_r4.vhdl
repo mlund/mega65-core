@@ -537,6 +537,11 @@ architecture Behavioral of container is
   signal icape2_read_val : unsigned(31 downto 0);
   signal green_i : unsigned(7 downto 0);
   signal last_x_zero : std_logic := '0';
+  signal uart_tx_trigger : std_logic := '0';
+  signal uart_txready : std_logic;
+  signal uart_txready_last : std_logic;
+  signal uart_msg_offset : integer := 0;
+  signal uart_txdata : unsigned(7 downto 0) := x"00";
   
    type sine_t is array (0 to 8) of unsigned(7 downto 0);
    signal sine_table : sine_t := (
@@ -847,11 +852,11 @@ begin
 
   uart_tx0: entity work.UART_TX_CTRL
     port map (
-      send    => ascii_key_valid,
+      send    => uart_tx_trigger,
       BIT_TMR_MAX => to_unsigned((40500000/2000000) - 1,24),
       clk     => cpuclock,
-      data    => ascii_key,
---      ready   => tx0_ready,
+      data    => uart_txdata,
+      ready   => uart_txready,
       uart_tx => UART_TXD);
 
   
@@ -1079,6 +1084,27 @@ begin
     -- Drive most ports, to relax timing
     if rising_edge(cpuclock) then      
 
+      uart_txready_last <= uart_tx_ready;
+      uart_tx_trigger <= '0';
+      if uart_txready = '1' and uart_txready_last='0' then
+        uart_msg_offset <= uart_msg_offset + 1;
+        uart_tx_trigger <= '1';
+        case uart_msg_offset is
+          when 0 => uart_txdata <= x"20";
+          when 1 => uart_txdata <= nybl2char(icape2_read_val(31 downto 28));
+          when 2 => uart_txdata <= nybl2char(icape2_read_val(27 downto 24));
+          when 3 => uart_txdata <= nybl2char(icape2_read_val(23 downto 20));
+          when 4 => uart_txdata <= nybl2char(icape2_read_val(19 downto 16));
+          when 5 => uart_txdata <= nybl2char(icape2_read_val(15 downto 12));
+          when 6 => uart_txdata <= nybl2char(icape2_read_val(11 downto 8));
+          when 7 => uart_txdata <= nybl2char(icape2_read_val(7 downto 4));
+          when 8 => uart_txdata <= nybl2char(icape2_read_val(3 downto 0));
+          when 9 => uart_tx_data <= x"0d";
+          when 10 => uart_tx_data <= x"0a";     uart_msg_offset <= 0;
+          when others => uart_tx_data <= x"00"; uart_msg_offset <= 0;            
+        end case;
+      end if;
+      
       if ascii_key_valid='1' then
         case ascii_key is
           when x"21" => upscale_en <= '1';
