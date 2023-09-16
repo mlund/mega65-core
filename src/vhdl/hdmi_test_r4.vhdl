@@ -1133,10 +1133,10 @@ begin
         case uart_msg_offset is
           when 0 => uart_txdata <= x"20";
 
-          when 1 => uart_txdata <= nybl2char(icape2_reg_int(3 downto 0));
-          when 2 => uart_txdata <= nybl2char(icape2_reg_int(7 downto 4));
+          when 1 => uart_txdata <= nybl2char(icape2_reg_int(7 downto 4));
+          when 2 => uart_txdata <= nybl2char(icape2_reg_int(3 downto 0));
 
-          when 3 => uart_txdata <= x"3e";
+          when 3 => uart_txdata <= x"3d"; -- = 
                     
           when 4 => uart_txdata <= nybl2char(icape2_read_val(31 downto 28));
           when 5 => uart_txdata <= nybl2char(icape2_read_val(27 downto 24));
@@ -1181,8 +1181,8 @@ begin
           -- R = reconfigure
           when x"52" | x"72" => trigger_reconfigure <= '1';
           -- +/- to select ICAPE2 register
-          when x"2b" => icape2_reg <= icape2_reg - 1;
-          when x"2d" => icape2_reg <= icape2_reg + 1;
+          when x"2d" => icape2_reg_int <= icape2_reg_int - 1;
+          when x"2b" => icape2_reg_int <= icape2_reg_int + 1;
                                 
           when others => null;                         
         end case;        
