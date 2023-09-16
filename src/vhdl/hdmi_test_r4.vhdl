@@ -547,6 +547,9 @@ architecture Behavioral of container is
   signal uart_msg_offset : integer := 0;
   signal uart_txdata : unsigned(7 downto 0) := x"00";
 
+  signal icape2_reg : unsigned(4 downto 0) := "10110";
+  signal icape2_reg_int : unsigned(7 downto 0) := x"16";
+  
    type sine_t is array (0 to 8) of unsigned(7 downto 0);
    signal sine_table : sine_t := (
      0 => to_unsigned(0,8),
@@ -965,7 +968,7 @@ begin
   reconfig0: entity work.reconfig
     port map (
       clock => cpuclock,
-      reg_num => "10110",
+      reg_num => icape2_reg,
       trigger_reconfigure => trigger_reconfigure,
       reconfigure_address => x"00008000",
       boot_address => icape2_read_val
@@ -1120,6 +1123,8 @@ begin
     -- Drive most ports, to relax timing
     if rising_edge(cpuclock) then      
 
+      icape2_reg <= icape2_reg_int(4 downto 0);
+      
       uart_txready_last <= uart_txready;
       uart_tx_trigger <= '0';
       if uart_txready = '1' and uart_txready_last='0' then
@@ -1127,16 +1132,22 @@ begin
         uart_tx_trigger <= '1';
         case uart_msg_offset is
           when 0 => uart_txdata <= x"20";
-          when 1 => uart_txdata <= nybl2char(icape2_read_val(31 downto 28));
-          when 2 => uart_txdata <= nybl2char(icape2_read_val(27 downto 24));
-          when 3 => uart_txdata <= nybl2char(icape2_read_val(23 downto 20));
-          when 4 => uart_txdata <= nybl2char(icape2_read_val(19 downto 16));
-          when 5 => uart_txdata <= nybl2char(icape2_read_val(15 downto 12));
-          when 6 => uart_txdata <= nybl2char(icape2_read_val(11 downto 8));
-          when 7 => uart_txdata <= nybl2char(icape2_read_val(7 downto 4));
-          when 8 => uart_txdata <= nybl2char(icape2_read_val(3 downto 0));
-          when 9 => uart_txdata <= x"0d";
-          when 10 => uart_txdata <= x"0a";     uart_msg_offset <= 0;
+
+          when 1 => uart_txdata <= nybl2char(icape2_reg_int(3 downto 0));
+          when 2 => uart_txdata <= nybl2char(icape2_reg_int(7 downto 4));
+
+          when 3 => uart_txdata <= x"3e";
+                    
+          when 4 => uart_txdata <= nybl2char(icape2_read_val(31 downto 28));
+          when 5 => uart_txdata <= nybl2char(icape2_read_val(27 downto 24));
+          when 6 => uart_txdata <= nybl2char(icape2_read_val(23 downto 20));
+          when 7 => uart_txdata <= nybl2char(icape2_read_val(19 downto 16));
+          when 8 => uart_txdata <= nybl2char(icape2_read_val(15 downto 12));
+          when 9 => uart_txdata <= nybl2char(icape2_read_val(11 downto 8));
+          when 10 => uart_txdata <= nybl2char(icape2_read_val(7 downto 4));
+          when 11 => uart_txdata <= nybl2char(icape2_read_val(3 downto 0));
+          when 12 => uart_txdata <= x"0d";
+          when 13 => uart_txdata <= x"0a";     uart_msg_offset <= 0;
           when others => uart_txdata <= x"00"; uart_msg_offset <= 0;            
         end case;
       end if;
@@ -1167,7 +1178,11 @@ begin
           when x"44" | x"64" => ntsc_dec_coarse <= not ntsc_dec_coarse_int; ntsc_dec_coarse_int <= not ntsc_dec_coarse_int;
           when x"66" | x"66" => ntsc_inc_coarse <= not ntsc_inc_coarse_int; ntsc_inc_coarse_int <= not ntsc_inc_coarse_int;
 
+          -- R = reconfigure
           when x"52" | x"72" => trigger_reconfigure <= '1';
+          -- +/- to select ICAPE2 register
+          when x"2b" => icape2_reg <= icape2_reg - 1;
+          when x"2d" => icape2_reg <= icape2_reg + 1;
                                 
           when others => null;                         
         end case;        
