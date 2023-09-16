@@ -246,6 +246,10 @@ end container;
 
 architecture Behavioral of container is
 
+  constant with_video : boolean := false;
+  constant with_upscaler : boolean := false;
+  constant with_expansionboard : boolean := false;
+    
   signal irq : std_logic := '1';
   signal nmi : std_logic := '1';
   signal irq_combined : std_logic := '1';
@@ -542,7 +546,7 @@ architecture Behavioral of container is
   signal uart_txready_last : std_logic;
   signal uart_msg_offset : integer := 0;
   signal uart_txdata : unsigned(7 downto 0) := x"00";
-  
+
    type sine_t is array (0 to 8) of unsigned(7 downto 0);
    signal sine_table : sine_t := (
      0 => to_unsigned(0,8),
@@ -613,7 +617,8 @@ begin
                clock325  => clock325    --  325     MHz
                );
 
-    -- Feed audio into digital video feed
+  -- Feed audio into digital video feed
+  at0: if with_video generate
     AUDIO_TONE: entity work.audio_out_test_tone
       generic map (
         -- You have to update audio_clock if you change this
@@ -639,10 +644,12 @@ begin
             pcm_l     => pcm_l,
             pcm_r     => pcm_r
         );
+  end generate;
   
     pcm_n <= std_logic_vector(to_unsigned(6144,pcm_n'length));
     pcm_cts <= std_logic_vector(to_unsigned(27000,pcm_cts'length));
-    
+
+  h0: if with_video generate
     hdmi0: entity work.vga_to_hdmi
       port map (
         select_44100 => portp(3),
@@ -677,6 +684,7 @@ begin
 
         tmds => tmds
         );
+    end generate;
     
      -- serialiser: in this design we use TMDS SelectIO outputs
     GEN_HDMI_DATA: for i in 0 to 2 generate
@@ -859,7 +867,8 @@ begin
       ready   => uart_txready,
       uart_tx => UART_TXD);
 
-  
+
+  p0: if with_video generate
   pixel0: entity work.pixel_driver
     port map (
       clock81 => pixelclock, -- 80MHz
@@ -917,8 +926,10 @@ begin
 --      vga_inletterbox => vga_inletterbox
 
       );
+  end generate;
 
-  upscaler0: entity work.upscaler
+  u0: if with_upscaler generate
+    upscaler0: entity work.upscaler
     port map (
       clock27 => clock27,
       clock74p22 => clock74p22,
@@ -949,7 +960,8 @@ begin
       pixelvalid_out => upscale_de
 
       );
-
+  end generate;
+    
   reconfig0: entity work.reconfig
     port map (
       clock => cpuclock,
@@ -959,7 +971,8 @@ begin
       boot_address => icape2_read_val
       );
 
-  
+
+  e0: if with_expansionboard generate
   expansionboard0: entity work.r3_expansion
     port map (
       cpuclock => cpuclock,
@@ -981,7 +994,7 @@ begin
       audio => luma
       
       );
-
+  end generate;
 
   
   ODDR_inst : ODDR
@@ -1004,6 +1017,29 @@ begin
 --  led <= pcm_acr;  
   
   process (pixelclock,cpuclock,pcm_clk,clock270,dipsw,clock27,clock74p22) is
+    function nybl2char(n : unsigned(3 downto 0)) return unsigned is
+    begin
+      case n is
+        when x"0" => return x"30";
+        when x"1" => return x"31";
+        when x"2" => return x"32";
+        when x"3" => return x"33";
+        when x"4" => return x"34";
+        when x"5" => return x"35";
+        when x"6" => return x"36";
+        when x"7" => return x"37";
+        when x"8" => return x"38";
+        when x"9" => return x"39";
+        when x"A" => return x"41";
+        when x"B" => return x"42";
+        when x"C" => return x"43";
+        when x"D" => return x"44";
+        when x"E" => return x"45";
+        when x"F" => return x"46";
+        when others => return x"3F";
+      end case;
+    end function;
+    
   begin
 
     if rising_edge(pcm_clk) then
@@ -1084,7 +1120,7 @@ begin
     -- Drive most ports, to relax timing
     if rising_edge(cpuclock) then      
 
-      uart_txready_last <= uart_tx_ready;
+      uart_txready_last <= uart_txready;
       uart_tx_trigger <= '0';
       if uart_txready = '1' and uart_txready_last='0' then
         uart_msg_offset <= uart_msg_offset + 1;
@@ -1099,9 +1135,9 @@ begin
           when 6 => uart_txdata <= nybl2char(icape2_read_val(11 downto 8));
           when 7 => uart_txdata <= nybl2char(icape2_read_val(7 downto 4));
           when 8 => uart_txdata <= nybl2char(icape2_read_val(3 downto 0));
-          when 9 => uart_tx_data <= x"0d";
-          when 10 => uart_tx_data <= x"0a";     uart_msg_offset <= 0;
-          when others => uart_tx_data <= x"00"; uart_msg_offset <= 0;            
+          when 9 => uart_txdata <= x"0d";
+          when 10 => uart_txdata <= x"0a";     uart_msg_offset <= 0;
+          when others => uart_txdata <= x"00"; uart_msg_offset <= 0;            
         end case;
       end if;
       
