@@ -503,6 +503,15 @@ begin
                 report "NONRAMACCESS: Non-RAM access detected";
                 sdram_state <= NON_RAM_READ;
                 sdram_emit_command(CMD_NOP);
+                if write_latched = '1' then
+                  -- Repeat SDRAM initialisation sequence whenver a non-RAM
+                  -- address is written.
+                  -- XXX Used to debug whether SDRAM initialisation is sometimes
+                  -- failing.
+                  sdram_prepped <= '0';
+                  sdram_init_phase <= 0;
+                  sdram_do_init <= '1';
+                end if;
               else
                 -- Activate the row
                 if read_latched = '1' then
