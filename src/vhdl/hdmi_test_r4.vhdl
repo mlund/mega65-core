@@ -50,6 +50,21 @@ entity container is
          kb_io2 : in std_logic;
 
          ----------------------------------------------------------------------
+         -- IEC Serial interface
+         ----------------------------------------------------------------------
+         iec_reset : out std_logic;
+         iec_atn : out std_logic;
+         iec_clk_en : out std_logic;
+         iec_data_en : out std_logic;
+         iec_srq_en : out std_logic;
+         iec_clk_o : out std_logic;
+         iec_data_o : out std_logic;
+         iec_srq_o : out std_logic;
+         iec_clk_i : in std_logic;
+         iec_data_i : in std_logic;
+         iec_srq_i : in std_logic;
+
+         ----------------------------------------------------------------------
          -- Serial monitor interface
          ----------------------------------------------------------------------
          UART_TXD : out std_logic;
@@ -129,6 +144,12 @@ architecture Behavioral of container is
 
   signal icape2_reg : unsigned(4 downto 0) := "10110";
   signal icape2_reg_int : unsigned(7 downto 0) := x"16";
+
+  signal fastio_write : std_logic := '0';
+  signal fastio_read : std_logic := '0';
+  signal fastio_addr : unsigned(19 downto 0) := x"00000";
+  signal fastio_wdata : unsigned(7 downto 0) := x"00";
+  signal fastio_rdata : unsigned(7 downto 0);
   
    type sine_t is array (0 to 8) of unsigned(7 downto 0);
    signal sine_table : sine_t := (
@@ -143,6 +164,10 @@ architecture Behavioral of container is
      8 => to_unsigned(126,8)
      );
 
+  signal iec_irq : unsigned(7 downto 0) := x"00";
+  signal iec_status : unsigned(7 downto 0) := x"00";
+  signal iec_data : unsigned(7 downto 0) := x"00";
+  signal iec_devinfo : unsigned(7 downto 0) := x"00";
   
 begin
 
@@ -365,8 +390,32 @@ begin
       clock => cpuclock,
       reg_num => icape2_reg,
       trigger_reconfigure => trigger_reconfigure,
-      reconfigure_address => x"00008000",
+      reconfigure_address => x"00000000",
       boot_address => icape2_read_val
+      );
+
+  iec0: entity work.iec_serial
+    generic map ( cpu_frequency => cpu_frequency )
+    port map (
+      clock => cpuclock,
+
+      fastio_addr => fastio_addr,
+      fastio_write => fastio_write,
+      fastio_read => fastio_read,
+      fastio_wdata => fastio_wdata,
+      fastio_rdata => fastio_rdata,
+
+      iec_reset => iec_reset,
+      iec_atn => iec_atn,
+      iec_clk_en => iec_clk_en,
+      iec_data_en => iec_data_en,
+      iec_srq_en => iec_srq_en,
+      iec_clk_o => iec_clk_o,
+      iec_data_o => iec_data_o,
+      iec_srq_o => iec_srq_o,
+      iec_clk_i => iec_clk_i,
+      iec_data_i => iec_data_i,
+      iec_srq_i => iec_srq_i
       );
   
   process (pixelclock,cpuclock,clock270,clock27,clock74p22) is
@@ -421,8 +470,29 @@ begin
           when 9 => uart_txdata <= nybl2char(icape2_read_val(11 downto 8));
           when 10 => uart_txdata <= nybl2char(icape2_read_val(7 downto 4));
           when 11 => uart_txdata <= nybl2char(icape2_read_val(3 downto 0));
-          when 12 => uart_txdata <= x"0d";
-          when 13 => uart_txdata <= x"0a";     uart_msg_offset <= 0;
+
+          when 12 => uart_txdata <= x"20";
+          when 13 => uart_txdata <= x"20";
+
+          when 14 => uart_txdata <= nybl2char(iec_irq(7 downto 4));
+          when 15 => uart_txdata <= nybl2char(iec_irq(3 downto 0));                     
+          when 16 => uart_txdata <= x"20";
+                     
+          when 17 => uart_txdata <= nybl2char(iec_status(7 downto 4));
+          when 18 => uart_txdata <= nybl2char(iec_status(3 downto 0));                     
+          when 19 => uart_txdata <= x"20";
+                     
+          when 20 => uart_txdata <= nybl2char(iec_data(7 downto 4));
+          when 21 => uart_txdata <= nybl2char(iec_data(3 downto 0));                     
+          when 22 => uart_txdata <= x"20";
+                     
+          when 23 => uart_txdata <= nybl2char(iec_devinfo(7 downto 4));
+          when 24 => uart_txdata <= nybl2char(iec_devinfo(3 downto 0));                     
+          when 25 => uart_txdata <= x"20";
+                     
+          when 26 => uart_txdata <= x"0d";
+          when 27 => uart_txdata <= x"0a";     uart_msg_offset <= 0;          
+
           when others => uart_txdata <= x"00"; uart_msg_offset <= 0;            
         end case;
       end if;
