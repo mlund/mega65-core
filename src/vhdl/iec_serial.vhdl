@@ -152,15 +152,27 @@ begin
         case iec_cmd is
           -- Low-level / bitbashing commands
           when x"" => -- Assert ATN
+            iec_atn_o <= '0';              
           when x"" => -- Release ATN
+            iec_atn_o <= '1';              
           when x"" => -- Assert CLK (bitbashing)
+            iec_clk_o <= '1'; iec_clk_en <= '1';
           when x"" => -- Release CLK (bitbashing)
+            iec_clk_o <= '0'; iec_clk_en <= '0';
           when x"" => -- Assert DATA (bitbashing)
+            iec_data_o <= '1'; iec_data_en <= '1';
           when x"" => -- Release DATA (bitbashing)
-            
+            iec_data_o <= '0'; iec_data_en <= '0';
+          when x"" => -- Assert SRQ (bitbashing)
+            iec_srq_o <= '1'; iec_srq_en <= '1';
+          when x"" => -- Release SRQ (bitbashing)
+            iec_srq_o <= '0'; iec_srq_en <= '0';
+
+          -- Protocol level commands
           when x"" => -- Send LISTEN Secondary address (= KERNAL $FF93)
           when x"" => -- Send TALK Secondary address (= KERNAL $FF96)
           when x"" => -- Set 64ms timeout on bus actions (=KERNAL $FFA2)
+          when x"" => -- Disable 64ms timeout on bus actions (=KERNAL $FFA2)
           when x"" => -- Read byte from IEC bus (assumes TALK, TALKSA
                       -- already done) (=KERNAL $FFA5)
           when x"" => -- Write byte to IEC bus (assumes LISTEN, LISTENSA
