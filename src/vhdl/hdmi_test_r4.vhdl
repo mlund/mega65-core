@@ -574,19 +574,19 @@ begin
           when 0 => fastio_addr <= x"d3697"; fastio_read <= '1';
           when 1 => null;
           when 2 => iec_irq <= fastio_rdata;
-                    fastio_addr <= x"d3698"; fastio_read <= '1';
-          when 3 => null;
-          when 4 => iec_status <= fastio_rdata;
-                    fastio_addr <= x"d3699"; fastio_read <= '1';
-          when 5 => null;
-          when 6 => iec_data <= fastio_rdata;
-                    fastio_addr <= x"d369a"; fastio_read <= '1';
+          when 3 => fastio_addr <= x"d3698"; fastio_read <= '1';
+          when 4 => null;
+          when 5 => iec_status <= fastio_rdata;
+          when 6 => fastio_addr <= x"d3699"; fastio_read <= '1';
           when 7 => null;
-          when 8 => iec_devinfo <= fastio_rdata;
+          when 8 => iec_data <= fastio_rdata;
+          when 9 => fastio_addr <= x"d369a"; fastio_read <= '1';
+          when 10 => null;
+          when 11 => iec_devinfo <= fastio_rdata;
                     fastio_addr <= x"00000"; fastio_read <= '0';
 
-          when 9 => null;
-          when 10 =>
+          when 12 => null;
+          when 13 =>
             if do_write = '1' then
               fastio_write <= '1';
               fastio_addr(19 downto 4) <= x"d369";
