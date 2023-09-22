@@ -283,9 +283,9 @@ set_property -dict {PACKAGE_PIN F18 IOSTANDARD LVCMOS33} [get_ports audio_powerd
 # SMUTE/CSN/I2CFIL
 set_property -dict {PACKAGE_PIN F4 IOSTANDARD LVCMOS33} [get_ports audio_smute]
 # ACKS/CCLK/SCL
-set_property -dict {PACKAGE_PIN L6 IOSTANDARD LVCMOS33} [get_ports audio_acks]
+set_property -dict {PACKAGE_PIN L6 IOSTANDARD LVCMOS33} [get_ports audio_scl]
 # DIF/CDTI/SDA
-set_property -dict {PACKAGE_PIN W9 IOSTANDARD LVCMOS33} [get_ports audio_cdti]
+set_property -dict {PACKAGE_PIN W9 IOSTANDARD LVCMOS33} [get_ports audio_sda]
 
 
 # PWM Audio
