@@ -249,7 +249,7 @@ entity container is
          audio_bick : out std_logic := '1';
          audio_lrclk : out std_logic := '1';
          audio_sdata : out std_logic := '1';
-         audio_powerdown_n : out std_logic := reset_out;
+         audio_powerdown_n : out std_logic;
          audio_smute : out std_logic := '0'; -- do not mute Audio DAC / also
                                              -- means I2C low-speed mode
          audio_scl : out std_logic := '1';
@@ -1320,6 +1320,9 @@ begin
 
       btncpureset <= not reset_button;
       reset_high <= reset_button;
+      -- Reset button also resets 3.5mm audio ADC
+      audio_powerdown_n <= reset_out;
+      
 
       -- Provide and clear single reset impulse to digital video output modules
       if reset_high='0' then
