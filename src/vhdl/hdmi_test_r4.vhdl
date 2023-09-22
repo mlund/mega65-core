@@ -570,6 +570,8 @@ begin
         else
           fastio_state <= 0;
         end if;
+        fastio_write <= '0';
+
         case fastio_state is
           when 0 => fastio_addr <= x"d3697"; fastio_read <= '1';
           when 1 => null;
