@@ -86,13 +86,8 @@ begin
   
   -- @IO:GS $D699 AUTOIEC:DATA Data byte read from IEC bus
   -- @IO:GS $D69A.7 AUTOIEC:DIPRESENT Device is present
-  -- @IO:GS $D69A.6 AUTOIEC:DIFAST Device fast serial mode selected
-  -- @IO:GS $D69A.5 AUTOIEC:DIJDOS Device JiffyDOS(tm) serial mode selected
-  -- @IO:GS $D69A.4 AUTOIEC:DIPORPOSE Device DolphinDOS(tm) serial mode selected
-  -- @IO:GS $D69A.3 AUTOIEC:DI3 Reserved
-  -- @IO:GS $D69A.2 AUTOIEC:DI2 Reserved
-  -- @IO:GS $D69A.1 AUTOIEC:DI1 Reserved
-  -- @IO:GS $D69A.0 AUTOIEC:DI0 Reserved
+  -- @IO:GS $D69A.5-6 AUTOIEC:DIPROT Device protocol (00=1541,01=C128/C65 FAST, 10 = JiffyDOS(tm), 11=DolphinDOS)
+  -- @IO:GS $D69A.0-4 AUTOIEC:DIDEVNUM Currently selected device number
   
   process (clock) is
   begin
