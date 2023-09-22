@@ -37,7 +37,7 @@ entity iec_serial is
     iec_srq_o : out std_logic;
     iec_clk_i : in std_logic;
     iec_data_i : in std_logic;
-    iec_srq_i : in std_logic;
+    iec_srq_i : in std_logic
     
     );
 end iec_serial;
@@ -48,6 +48,10 @@ architecture questionable of iec_serial is
   signal iec_status : unsigned(7 downto 0) := x"00";
   signal iec_data : unsigned(7 downto 0) := x"00";
   signal iec_devinfo : unsigned(7 downto 0) := x"00";
+
+  signal iec_cmd : unsigned(7 downto 0) := x"00";
+  signal iec_new_cmd : std_logic := '0';
+  
 begin
 
   -- Note that we put RX on bit 6, so that the common case of LOADing can be a
@@ -86,7 +90,8 @@ begin
   begin
 
     if fastio_addr(19 downto 4) = x"d369"
-      and (to_integer(fastio_addr(3 downto 0))>6 and to_integer(fastio_addr(3 downto 0)<11)) 
+      and (to_integer(fastio_addr(3 downto 0))>6)
+      and (to_integer(fastio_addr(3 downto 0))<11)
       and fastio_read='1' then
       case fastio_addr(3 downto 0) is
         when x"7" => -- Read IRQ register
@@ -120,14 +125,15 @@ begin
       if (iec_irq(4) and iec_irq(4-4)) = '1' then
         iec_irq(7) <= '1';
       end if;
-      if iec_irq(7) and iec_irq(7-4) = '1' then
+      if (iec_irq(7) and iec_irq(7-4)) = '1' then
         irq <= '0';
       else
         irq <= '1';
       end if;
       
       if fastio_addr(19 downto 4) = x"d369"
-        and (to_integer(fastio_addr(3 downto 0))>6 and to_integer(fastio_addr(3 downto 0)<11)) then
+        and (to_integer(fastio_addr(3 downto 0))>6)
+        and (to_integer(fastio_addr(3 downto 0))<11) then
         if fastio_write='1' then
           case fastio_addr(3 downto 0) is
             when x"7" => -- Write to IRQ register
@@ -151,36 +157,38 @@ begin
         iec_new_cmd <= '0';
         case iec_cmd is
           -- Low-level / bitbashing commands
-          when x"" => -- Assert ATN
-            iec_atn_o <= '0';              
-          when x"" => -- Release ATN
-            iec_atn_o <= '1';              
-          when x"" => -- Assert CLK (bitbashing)
+          when x"41" => -- Assert ATN
+            iec_atn <= '0';              
+          when x"61" => -- Release ATN
+            iec_atn <= '1';              
+          when x"43" => -- Assert CLK (bitbashing)
             iec_clk_o <= '1'; iec_clk_en <= '1';
-          when x"" => -- Release CLK (bitbashing)
+          when x"63" => -- Release CLK (bitbashing)
             iec_clk_o <= '0'; iec_clk_en <= '0';
-          when x"" => -- Assert DATA (bitbashing)
+          when x"44" => -- Assert DATA (bitbashing)
             iec_data_o <= '1'; iec_data_en <= '1';
-          when x"" => -- Release DATA (bitbashing)
+          when x"64" => -- Release DATA (bitbashing)
             iec_data_o <= '0'; iec_data_en <= '0';
-          when x"" => -- Assert SRQ (bitbashing)
+          when x"53" => -- Assert SRQ (bitbashing)
             iec_srq_o <= '1'; iec_srq_en <= '1';
-          when x"" => -- Release SRQ (bitbashing)
+          when x"73" => -- Release SRQ (bitbashing)
             iec_srq_o <= '0'; iec_srq_en <= '0';
 
           -- Protocol level commands
-          when x"" => -- Send LISTEN Secondary address (= KERNAL $FF93)
-          when x"" => -- Send TALK Secondary address (= KERNAL $FF96)
-          when x"" => -- Set 64ms timeout on bus actions (=KERNAL $FFA2)
-          when x"" => -- Disable 64ms timeout on bus actions (=KERNAL $FFA2)
-          when x"" => -- Read byte from IEC bus (assumes TALK, TALKSA
+          when x"49" => -- Send L(I)STEN Secondary address (= KERNAL $FF93)
+          when x"4b" => -- Send TAL(K) Secondary address (= KERNAL $FF96)
+          when x"4d" => -- Set 64ms timeout on bus actions (=KERNAL $FFA2)
+          when x"6d" => -- Disable 64ms timeout on bus actions (=KERNAL $FFA2)
+          when x"52" => -- Read byte from IEC bus (assumes TALK, TALKSA
                       -- already done) (=KERNAL $FFA5)
-          when x"" => -- Write byte to IEC bus (assumes LISTEN, LISTENSA
+          when x"57" => -- Write byte to IEC bus (assumes LISTEN, LISTENSA
                       -- already done) (=KERNAL $FFA8)
-          when x"" => -- Send UNTALK command to IEC bus (=KERNAL $FFAB)
-          when x"" => -- Send UNLISTEN command to IEC bus (=KERNAL $FFAE)
-          when x"" => -- Send LISTEN command to IEC bus (=KERNAL $FFB1)
-          when x"" => -- Send TALK command to IEC bus (=KERNAL $FFB4)
+          when x"74" => -- Send UNTALK command to IEC bus (=KERNAL $FFAB)
+          when x"6c" => -- Send UNLISTEN command to IEC bus (=KERNAL $FFAE)
+          when x"4c" => -- Send LISTEN command to IEC bus (=KERNAL $FFB1)
+          when x"54" => -- Send TALK command to IEC bus (=KERNAL $FFB4)
+          when x"55" => -- Turn around from TALK to LISTEN (should this just
+                        -- happen as part of the TALK command?)
           when others => null;
         end case;
       end if;
