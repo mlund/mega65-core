@@ -157,21 +157,21 @@ begin
         iec_new_cmd <= '0';
         case iec_cmd is
           -- Low-level / bitbashing commands
-          when x"41" => -- Assert ATN
-            iec_atn <= '0';              
-          when x"61" => -- Release ATN
+          when x"41" => -- ATN to +5V
             iec_atn <= '1';              
-          when x"43" => -- Assert CLK (bitbashing)
+          when x"61" => -- ATN low to 0V
+            iec_atn <= '0';              
+          when x"43" => -- CLK line +5V (bitbashing)
             iec_clk_o <= '1'; iec_clk_en <= '1';
-          when x"63" => -- Release CLK (bitbashing)
+          when x"63" => -- Pull CLK line low to 0V (bitbashing)
             iec_clk_o <= '0'; iec_clk_en <= '0';
-          when x"44" => -- Assert DATA (bitbashing)
+          when x"44" => -- DATA line to +5V (bitbashing)
             iec_data_o <= '1'; iec_data_en <= '1';
-          when x"64" => -- Release DATA (bitbashing)
+          when x"64" => -- Pull DATA line low to 0V (bitbashing)
             iec_data_o <= '0'; iec_data_en <= '0';
-          when x"53" => -- Assert SRQ (bitbashing)
+          when x"53" => -- SRQ line to +5V (bitbashing)
             iec_srq_o <= '1'; iec_srq_en <= '1';
-          when x"73" => -- Release SRQ (bitbashing)
+          when x"73" => -- Pull SRQ line low to 0V (bitbashing)
             iec_srq_o <= '0'; iec_srq_en <= '0';
 
           -- Protocol level commands

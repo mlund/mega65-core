@@ -174,6 +174,12 @@ architecture Behavioral of container is
   signal val : unsigned(11 downto 0) := x"000";
   signal write_reg : unsigned(3 downto 0) := x"0";
   signal write_val : unsigned(7 downto 0) := x"00";
+  signal wcount : unsigned(7 downto 0) := x"00";
+
+  signal uartrx_data : unsigned(7 downto 0);
+  signal uartrx_ready : std_logic;
+  signal uartrx_ack : std_logic := '0';
+  signal last_uartrx_ready : std_logic := '0';
   
 begin
 
@@ -390,7 +396,16 @@ begin
       data    => uart_txdata,
       ready   => uart_txready,
       uart_tx => UART_TXD);
-    
+
+  uart_rx0:     entity work.uart_rx port map (
+    clk => cpuclock,
+    bit_rate_divisor => to_unsigned((40_500_000/2_000_000) - 1,24),
+    uart_rx => rsrx,
+    data => uartrx_data,
+    data_ready => uartrx_ready,
+    data_acknowledge => uartrx_ack
+    );
+  
   reconfig0: entity work.reconfig
     port map (
       clock => cpuclock,
@@ -495,14 +510,30 @@ begin
           when 23 => uart_txdata <= nybl2char(iec_devinfo(7 downto 4));
           when 24 => uart_txdata <= nybl2char(iec_devinfo(3 downto 0));                     
           when 25 => uart_txdata <= x"20";
+
+          when 26 => uart_txdata <= nybl2char(val(11 downto 8));
+          when 27 => uart_txdata <= nybl2char(val(7 downto 4));
+          when 28 => uart_txdata <= nybl2char(val(3 downto 0));                     
+          when 29 => uart_txdata <= x"20";
+
+          when 30 => uart_txdata <= nybl2char(wcount(7 downto 4));
+          when 31 => uart_txdata <= nybl2char(wcount(3 downto 0));                     
+          when 32 => uart_txdata <= x"20";
+
+          when 33 => uart_txdata <= nybl2char(write_reg(3 downto 0));
+          when 34 => uart_txdata <= nybl2char(write_val(7 downto 4));
+          when 35 => uart_txdata <= nybl2char(write_val(3 downto 0));                     
+          when 36 => uart_txdata <= x"20";
                      
-          when 26 => uart_txdata <= x"0d";
-          when 27 => uart_txdata <= x"0a";     uart_msg_offset <= 0;          
+          when 37 => uart_txdata <= x"0d";
+          when 38 => uart_txdata <= x"0a";     uart_msg_offset <= 0;          
 
           when others => uart_txdata <= x"00"; uart_msg_offset <= 0;            
         end case;
       end if;
-      
+
+      uartrx_ack <= '0';
+      last_uartrx_ready <= uartrx_ready;
       if ascii_key_valid='1' then
         case ascii_key is
           -- R = reconfigure
@@ -511,20 +542,28 @@ begin
           when x"2d" => icape2_reg_int <= icape2_reg_int - 1;
           when x"2b" => icape2_reg_int <= icape2_reg_int + 1;
 
+          when others => null;
+        end case;
+      elsif uartrx_ready='1' and last_uartrx_ready='0' then
+        uartrx_ack <= '1';
+
+        case uartrx_data is
           -- Write to IEC registers
           when x"30" | x"31" | x"32" | x"33" | x"34" | x"35" | x"36" | x"37" | x"38" | x"39" =>
-            val(11 downto 8) <= val(7 downto 0) + to_integer(ascii_key(3 downto 0));
-            when x"41" | x"42" | x"43" | x"44" | x"45" | x"46"
-              |  x"61" | x"62" | x"63" | x"64" | x"65" | x"66" =>
-            val(11 downto 8) <= val(7 downto 0) + 9 + to_integer(ascii_key(3 downto 0));
-          when x"0d" | x"0a" =>
-            val <= x"000";
+            val(11 downto 4) <= val(7 downto 0);
+            val(3 downto 0) <= uartrx_data(3 downto 0);
+          when x"41" | x"42" | x"43" | x"44" | x"45" | x"46"
+            |  x"61" | x"62" | x"63" | x"64" | x"65" | x"66" =>
+            val(11 downto 4) <= val(7 downto 0);
+            val(3 downto 0) <= to_unsigned(9 + to_integer(uartrx_data(3 downto 0)),4);
+          when x"0d" =>
             do_write <= '1';
             write_reg <= val(11 downto 8);
             write_val <= val(7 downto 0);
+            wcount <= wcount + 1;
 
           when others => null;                         
-        end case;
+        end case;        
       else
         if fastio_state < 99 then
           fastio_state <= fastio_state + 1;
