@@ -51,6 +51,14 @@ architecture questionable of iec_serial is
 
   signal iec_cmd : unsigned(7 downto 0) := x"00";
   signal iec_new_cmd : std_logic := '0';
+
+  signal iec_state : integer := 0;
+  signal wait_clk_high : std_logic := '0';
+  signal wait_clk_low : std_logic := '0';
+  signal wait_data_high : std_logic := '0';
+  signal wait_data_low : std_logic := '0';
+  signal wait_srq_high : std_logic := '0';
+  signal wait_srq_low : std_logic := '0';
   
 begin
 
@@ -192,6 +200,23 @@ begin
           when others => null;
         end case;
       end if;
+
+      -- Advance state in IEC protocol transaction if the requirements are met
+      if (iec_state >0)
+        and (wait_clk_low='0' or iec_clk_i='0')
+        and (wait_clk_high='0' or iec_clk_i='1')
+        and (wait_data_low='0' or iec_data_i='0')
+        and (wait_data_high='0' or iec_data_i='1')
+        and (wait_srq_low='0' or iec_srq_i='0')
+        and (wait_srq_high='0' or iec_srq_i='1') then
+        iec_state <= iec_state + 1;
+      end if;
+      case iec_state is
+        -- IDLE state
+        when 0 => null;
+
+        when others => iec_state <= 0;
+      end case;  
       
     end if;
   end process;
