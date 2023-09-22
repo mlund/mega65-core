@@ -250,9 +250,10 @@ entity container is
          audio_lrclk : out std_logic := '1';
          audio_sdata : out std_logic := '1';
          audio_powerdown_n : out std_logic := '1';
-         audio_smute : out std_logic := '0'; -- do not mute Audio DAC
-         audio_acks : out std_logic := '1';
-         audio_cdti : out std_logic := '1';
+         audio_smute : out std_logic := '0'; -- do not mute Audio DAC / also
+                                             -- means I2C low-speed mode
+         audio_scl : out std_logic := '1';
+         audio_sda : out std_logic := '1';
 
          ----------------------------------------------------------------------
          -- I2C on-board peripherals
