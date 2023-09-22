@@ -13,6 +13,7 @@ entity iec_serial is
     );
   port (
     clock : in std_logic;
+    clock81 : in std_logic;
     irq : out std_logic := '1';
     
     --------------------------------------------------
@@ -59,6 +60,16 @@ architecture questionable of iec_serial is
   signal wait_data_low : std_logic := '0';
   signal wait_srq_high : std_logic := '0';
   signal wait_srq_low : std_logic := '0';
+
+  signal wait_usec : integer := 0;
+  signal wait_msec : integer := 0;
+
+  signal cycles : integer := 0;
+  signal usecs : integer := 0;
+  signal usec_toggle : std_logic := '0';
+  signal msec_toggle : std_logic := '0';
+  signal last_usec_toggle : std_logic := '0';
+  signal last_msec_toggle : std_logic := '0';
   
 begin
 
@@ -89,9 +100,24 @@ begin
   -- @IO:GS $D69A.5-6 AUTOIEC:DIPROT Device protocol (00=1541,01=C128/C65 FAST, 10 = JiffyDOS(tm), 11=DolphinDOS)
   -- @IO:GS $D69A.0-4 AUTOIEC:DIDEVNUM Currently selected device number
   
-  process (clock) is
+  process (clock,clock81) is
   begin
 
+    if rising_edge(clock81) then
+      if cycles < (81-1) then
+        cycles <= cycles + 1;
+      else
+        cycles <= 0;
+        usec_toggle <= not usec_toggle;
+        if usecs < 999 then
+          usecs <= usecs + 1;
+        else
+          usecs <= 0;
+          msec_toggle <= not msec_toggle;
+        end if;
+      end if;
+    end if;
+    
     if fastio_addr(19 downto 4) = x"d369"
       and (to_integer(fastio_addr(3 downto 0))>6)
       and (to_integer(fastio_addr(3 downto 0))<11)
@@ -196,6 +222,20 @@ begin
         end case;
       end if;
 
+      -- Update usec and msec denominated count-downs
+      if usec_toggle /= last_usec_toggle then
+        if wait_usec > 0 then
+          wait_usec <= wait_usec - 1;
+        end if;
+        usec_toggle <= last_usec_toggle;
+      end if;
+      if msec_toggle /= last_msec_toggle then
+        if wait_usec > 0 then
+          wait_msec <= wait_msec - 1;
+        end if;
+        msec_toggle <= last_msec_toggle;
+      end if;
+      
       -- Advance state in IEC protocol transaction if the requirements are met
       if (iec_state >0)
         and (wait_clk_low='0' or iec_clk_i='0')
@@ -203,7 +243,9 @@ begin
         and (wait_data_low='0' or iec_data_i='0')
         and (wait_data_high='0' or iec_data_i='1')
         and (wait_srq_low='0' or iec_srq_i='0')
-        and (wait_srq_high='0' or iec_srq_i='1') then
+        and (wait_srq_high='0' or iec_srq_i='1')
+        and (wait_usec = 0) and (wait_msec = 0 )
+      then
         iec_state <= iec_state + 1;
       end if;
       case iec_state is

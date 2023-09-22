@@ -419,6 +419,7 @@ begin
     generic map ( cpu_frequency => 40_500_000 )
     port map (
       clock => cpuclock,
+      clock81 => pixelclock,
 
       fastio_addr => fastio_addr,
       fastio_write => fastio_write,
