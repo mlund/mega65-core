@@ -330,6 +330,8 @@ begin
           nonram_val <= read_jobs;
         when x"06" =>
           nonram_val <= write_jobs;
+        when x"07" =>
+          nonram_val <= resets;
         when others => nonram_val <= x"42";
       end case;
 
@@ -440,6 +442,7 @@ begin
       if sdram_init_phase = 0 and sdram_do_init = '1' then
         report "SDRAM: Starting SDRAM initialisation sequence";
         sdram_init_phase <= 1;
+        resets <= resets + 1;
       end if;
       if sdram_prepped = '0' then
         if sdram_init_phase /= 0 then
@@ -501,8 +504,6 @@ begin
             elsif read_latched = '1' or write_latched = '1' then
               if latched_addr(26) = '1' then
                 report "NONRAMACCESS: Non-RAM access detected";
-                sdram_state <= NON_RAM_READ;
-                sdram_emit_command(CMD_NOP);
                 if write_latched = '1' then
                   -- Repeat SDRAM initialisation sequence whenver a non-RAM
                   -- address is written.
@@ -511,6 +512,11 @@ begin
                   sdram_prepped <= '0';
                   sdram_init_phase <= 0;
                   sdram_do_init <= '1';
+                  write_latched <= '0';
+                else
+                  -- Read non-RAM address
+                  sdram_state <= NON_RAM_READ;
+                  sdram_emit_command(CMD_NOP);
                 end if;
               else
                 -- Activate the row
