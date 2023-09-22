@@ -168,6 +168,12 @@ architecture Behavioral of container is
   signal iec_status : unsigned(7 downto 0) := x"00";
   signal iec_data : unsigned(7 downto 0) := x"00";
   signal iec_devinfo : unsigned(7 downto 0) := x"00";
+
+  signal do_write : std_logic := '0';
+  signal fastio_state : integer := 0;
+  signal val : unsigned(11 downto 0) := x"000";
+  signal write_reg : unsigned(3 downto 0) := x"0";
+  signal write_val : unsigned(7 downto 0) := x"00";
   
 begin
 
@@ -395,7 +401,7 @@ begin
       );
 
   iec0: entity work.iec_serial
-    generic map ( cpu_frequency => cpu_frequency )
+    generic map ( cpu_frequency => 40_500_000 )
     port map (
       clock => cpuclock,
 
@@ -504,9 +510,54 @@ begin
           -- +/- to select ICAPE2 register
           when x"2d" => icape2_reg_int <= icape2_reg_int - 1;
           when x"2b" => icape2_reg_int <= icape2_reg_int + 1;
-                                
+
+          -- Write to IEC registers
+          when x"30" | x"31" | x"32" | x"33" | x"34" | x"35" | x"36" | x"37" | x"38" | x"39" =>
+            val(11 downto 8) <= val(7 downto 0) + to_integer(ascii_key(3 downto 0));
+            when x"41" | x"42" | x"43" | x"44" | x"45" | x"46"
+              |  x"61" | x"62" | x"63" | x"64" | x"65" | x"66" =>
+            val(11 downto 8) <= val(7 downto 0) + 9 + to_integer(ascii_key(3 downto 0));
+          when x"0d" | x"0a" =>
+            val <= x"000";
+            do_write <= '1';
+            write_reg <= val(11 downto 8);
+            write_val <= val(7 downto 0);
+
           when others => null;                         
-        end case;        
+        end case;
+      else
+        if fastio_state < 99 then
+          fastio_state <= fastio_state + 1;
+        else
+          fastio_state <= 0;
+        end if;
+        case fastio_state is
+          when 0 => fastio_addr <= x"d3697"; fastio_read <= '1';
+          when 1 => null;
+          when 2 => iec_irq <= fastio_rdata;
+                    fastio_addr <= x"d3698"; fastio_read <= '1';
+          when 3 => null;
+          when 4 => iec_status <= fastio_rdata;
+                    fastio_addr <= x"d3699"; fastio_read <= '1';
+          when 5 => null;
+          when 6 => iec_data <= fastio_rdata;
+                    fastio_addr <= x"d369a"; fastio_read <= '1';
+          when 7 => null;
+          when 8 => iec_devinfo <= fastio_rdata;
+                    fastio_addr <= x"00000"; fastio_read <= '0';
+
+          when 9 => null;
+          when 10 =>
+            if do_write = '1' then
+              fastio_write <= '1';
+              fastio_addr(19 downto 4) <= x"d369";
+              fastio_addr(3 downto 0) <= write_reg;
+              fastio_wdata <= write_val;
+              do_write <= '0';
+            end if;
+
+          when others => null;
+        end case;          
       end if;                        
             
     end if;
