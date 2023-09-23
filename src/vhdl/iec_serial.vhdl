@@ -194,8 +194,10 @@ begin
       case fastio_addr(3 downto 0) is
         when x"7" => -- Read IRQ register
           fastio_rdata <= iec_irq;
+          report "Reading IEC IRQ status register = $" & to_hexstring(iec_irq);
         when x"8" => -- Read from status register
           fastio_rdata <= iec_status;
+          report "Reading IEC status register = $" & to_hexstring(iec_status);
         when x"9" => -- Read from data register
           fastio_rdata <= iec_data;
         when x"a" => -- Read device info
@@ -428,6 +430,7 @@ begin
         when 124 =>
           -- Timeout has occurred: DEVICE NOT PRESENT
           -- (actually it means that there are no devices at all)
+          report "IEC: Attention timeout: No devices on bus";
           iec_state_reached <= to_unsigned(iec_state,12);
           iec_state <= 0;
           iec_busy <= '0';

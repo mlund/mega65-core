@@ -55,6 +55,7 @@ begin
     fastio_write => fastio_write,
     fastio_read => fastio_read,
     fastio_wdata => fastio_wdata,
+    fastio_rdata => fastio_rdata,
 
     debug_state => debug_state,
     debug_usec => debug_usec,
@@ -139,7 +140,7 @@ begin
         end loop;
         fastio_write <= '0';
         
-        for i in 1 to 400000 loop
+        for i in 1 to 800000 loop
           clock_tick;
           if iec_atn='0' then
             if false then
@@ -155,13 +156,27 @@ begin
             end if;
           end if;
         end loop;
+        report "IEC state reached = " & to_hexstring(iec_state_reached);
+
+        -- Expect BUSY flag to have cleared
+        fastio_addr(3 downto 0) <= x"7";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC IRQ status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(5)='1' then
+          assert false report "Expected to not see BUSY indicated in bit 5 of $D697, but it was";
+        end if;
+
+        -- Read status byte
         fastio_addr(3 downto 0) <= x"8";
         fastio_read <= '1';
         for i in 1 to 8 loop
           clock_tick;
         end loop;
         fastio_read <= '0';
-        report "IEC state reached = " & to_hexstring(iec_state_reached);
         report "IEC status byte = $" & to_hexstring(fastio_rdata);
         if fastio_rdata(7)='1' then
           assert false report "Expected to not see DEVICE NOT PRESENT indicated in bit 7 of $D698, but it was";
