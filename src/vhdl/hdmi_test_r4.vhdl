@@ -168,7 +168,8 @@ architecture Behavioral of container is
   signal iec_status : unsigned(7 downto 0) := x"00";
   signal iec_data : unsigned(7 downto 0) := x"00";
   signal iec_devinfo : unsigned(7 downto 0) := x"00";
-  signal iec_state : unsigned(7 downto 0) := x"00";
+  signal iec_state : unsigned(11 downto 0) := x"000";
+  signal iec_state_reached : unsigned(11 downto 0) := x"000";
   
   signal do_write : std_logic := '0';
   signal fastio_state : integer := 0;
@@ -429,6 +430,7 @@ begin
       fastio_rdata => fastio_rdata,
 
       debug_state => iec_state,
+      iec_state_reached => iec_state_reached,
       
       iec_reset => iec_reset,
       iec_atn => iec_atn,
@@ -530,17 +532,22 @@ begin
           when 36 => uart_txdata <= x"74";
           when 37 => uart_txdata <= x"65";
           when 38 => uart_txdata <= x"3a";
-          when 39 => uart_txdata <= nybl2char(iec_state(7 downto 4));
-          when 40 => uart_txdata <= nybl2char(iec_state(3 downto 0));                     
-          when 41 => uart_txdata <= x"20";
+          when 39 => uart_txdata <= nybl2char(iec_state(11 downto 8));
+          when 40 => uart_txdata <= nybl2char(iec_state(7 downto 4));
+          when 41 => uart_txdata <= nybl2char(iec_state(3 downto 0));                     
+          when 42 => uart_txdata <= x"2f";
+          when 43 => uart_txdata <= nybl2char(iec_state_reached(11 downto 8));
+          when 44 => uart_txdata <= nybl2char(iec_state_reached(7 downto 4));
+          when 45 => uart_txdata <= nybl2char(iec_state_reached(3 downto 0));                     
+          when 46 => uart_txdata <= x"20";
                      
-          when 42 => uart_txdata <= nybl2char(write_reg(3 downto 0));
-          when 43 => uart_txdata <= nybl2char(write_val(7 downto 4));
-          when 44 => uart_txdata <= nybl2char(write_val(3 downto 0));                     
-          when 45 => uart_txdata <= x"20";
+          when 47 => uart_txdata <= nybl2char(write_reg(3 downto 0));
+          when 48 => uart_txdata <= nybl2char(write_val(7 downto 4));
+          when 49 => uart_txdata <= nybl2char(write_val(3 downto 0));                     
+          when 50 => uart_txdata <= x"20";
                      
-          when 46 => uart_txdata <= x"0d";
-          when 47 => uart_txdata <= x"0a";     uart_msg_offset <= 0;          
+          when 51 => uart_txdata <= x"0d";
+          when 52 => uart_txdata <= x"0a";     uart_msg_offset <= 0;          
 
           when others => uart_txdata <= x"00"; uart_msg_offset <= 0;            
         end case;

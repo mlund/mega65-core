@@ -31,9 +31,10 @@ entity iec_serial is
     fastio_wdata : in unsigned(7 downto 0);
     fastio_rdata : out unsigned(7 downto 0);
 
-    debug_state : out unsigned(7 downto 0);
+    debug_state : out unsigned(11 downto 0);
     debug_usec : out unsigned(7 downto 0);
     debug_msec : out unsigned(7 downto 0);
+    iec_state_reached : out unsigned(11 downto 0);
     
     --------------------------------------------------
     -- CBM floppy serial port
@@ -167,7 +168,7 @@ begin
     
     if rising_edge(clock) then
 
-      debug_state <= to_unsigned(iec_state,8);
+      debug_state <= to_unsigned(iec_state,12);
       
       -- Indicate busy status
       iec_irq(5) <= not iec_busy;
@@ -363,6 +364,7 @@ begin
         when 122 =>
           -- Timeout has occurred: DEVICE NOT PRESENT
           -- (actually it means that there are no devices at all)
+          iec_state_reached <= to_unsigned(iec_state,12);
           iec_state <= 0;
           iec_busy <= '0';
           iec_devinfo <= x"00";
@@ -398,6 +400,7 @@ begin
           -- Timeout has occurred: DEVICE NOT PRESENT
           -- (which is not strictly true, it's that device
           -- did not respond in time)
+          iec_state_reached <= to_unsigned(iec_state,12);
           iec_state <= 0;
           iec_busy <= '0';
           iec_devinfo <= x"00";
@@ -479,6 +482,7 @@ begin
           -- Timeout has occurred: DEVICE NOT PRESENT
           -- (which is not strictly true, it's that device
           -- did not respond in time)
+          iec_state_reached <= to_unsigned(iec_state,12);
           iec_state <= 0;
           iec_devinfo <= x"00";
           iec_status(7) <= '1'; -- DEVICE NOT PRESENT
@@ -499,6 +503,8 @@ begin
           iec_devinfo(4) <= '1'; 
           
         when others => iec_state <= 0; iec_busy <= '0';
+                       iec_state_reached <= to_unsigned(iec_state,12);
+
       end case;  
       
     end if;
