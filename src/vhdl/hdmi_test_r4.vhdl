@@ -551,17 +551,17 @@ begin
           when 49 => uart_txdata <= nybl2char(write_val(3 downto 0));                     
           when 50 => uart_txdata <= x"20";
 
-          when 48 => uart_txdata <= nybl2char(msec(7 downto 4));
-          when 49 => uart_txdata <= nybl2char(msec(3 downto 0));                     
-          when 50 => uart_txdata <= x"2e";
-          when 48 => uart_txdata <= nybl2char(usec(7 downto 4));
-          when 49 => uart_txdata <= nybl2char(usec(3 downto 0));                     
-          when 50 => uart_txdata <= x"20";
+          when 51 => uart_txdata <= nybl2char(msec(7 downto 4));
+          when 52 => uart_txdata <= nybl2char(msec(3 downto 0));                     
+          when 53 => uart_txdata <= x"2e";
+          when 54 => uart_txdata <= nybl2char(usec(7 downto 4));
+          when 55 => uart_txdata <= nybl2char(usec(3 downto 0));                     
+          when 56 => uart_txdata <= x"20";
 
 
                      
-          when 51 => uart_txdata <= x"0d";
-          when 52 => uart_txdata <= x"0a";     uart_msg_offset <= 0;          
+          when 57 => uart_txdata <= x"0d";
+          when 58 => uart_txdata <= x"0a";     uart_msg_offset <= 0;          
 
           when others => uart_txdata <= x"00"; uart_msg_offset <= 0;            
         end case;
