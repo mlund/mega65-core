@@ -7,6 +7,12 @@ use Std.TextIO.all;
 use work.debugtools.all;
 use work.cputypes.all;
 
+-- on Pi1541 test unit:
+-- ATN - purple
+-- SRQ - white
+-- DATA - green
+-- CLK - blue
+
 entity iec_serial is
   generic (
     cpu_frequency : integer
@@ -28,7 +34,7 @@ entity iec_serial is
     --------------------------------------------------
     -- CBM floppy serial port
     --------------------------------------------------
-    iec_reset : out std_logic;
+    iec_reset : out std_logic := '1';
     iec_atn : out std_logic;
     iec_clk_en : out std_logic;
     iec_data_en : out std_logic;
@@ -222,6 +228,11 @@ begin
             iec_srq_o <= '1'; iec_srq_en <= '1';
           when x"73" => -- Pull SRQ line low to 0V (bitbashing)
             iec_srq_o <= '0'; iec_srq_en <= '0';
+          when x"52" => -- Drive IEC reset pin 5V
+            iec_reset <= '1';
+          when x"72" => -- Drive IEC reset pin 0V
+            iec_reset <= '0';
+            
 
             -- Protocol level commands
           when x"30" => -- Request device attention (send data byte under attention)
