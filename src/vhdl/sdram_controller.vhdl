@@ -199,6 +199,8 @@ architecture tacoma_narrows of sdram_controller is
   signal active_row           : std_logic              := '0';
   signal active_row_addr      : unsigned(25 downto 11) := (others => '0');
 
+  signal resets : unsigned(7 downto 0) := x"00";
+  
 begin
 
   process(clock162r) is
