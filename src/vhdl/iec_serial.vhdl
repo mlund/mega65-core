@@ -209,6 +209,8 @@ begin
     if rising_edge(clock) then
 
       debug_state <= to_unsigned(iec_state,12);
+      debug_usec <= to_unsigned(wait_usec,8);
+      debug_msec <= to_unsigned(wait_msec,8);
       
       -- Indicate busy status
       iec_irq(5) <= not iec_busy;

@@ -170,6 +170,9 @@ architecture Behavioral of container is
   signal iec_devinfo : unsigned(7 downto 0) := x"00";
   signal iec_state : unsigned(11 downto 0) := x"000";
   signal iec_state_reached : unsigned(11 downto 0) := x"000";
+
+  signal usec : unsigned(7 downto 0);
+  signal msec : unsigned(7 downto 0);
   
   signal do_write : std_logic := '0';
   signal fastio_state : integer := 0;
@@ -430,6 +433,8 @@ begin
       fastio_rdata => fastio_rdata,
 
       debug_state => iec_state,
+      debug_usec => usec,
+      debug_msec => msec,
       iec_state_reached => iec_state_reached,
       
       iec_reset => iec_reset,
@@ -545,6 +550,15 @@ begin
           when 48 => uart_txdata <= nybl2char(write_val(7 downto 4));
           when 49 => uart_txdata <= nybl2char(write_val(3 downto 0));                     
           when 50 => uart_txdata <= x"20";
+
+          when 48 => uart_txdata <= nybl2char(msec(7 downto 4));
+          when 49 => uart_txdata <= nybl2char(msec(3 downto 0));                     
+          when 50 => uart_txdata <= x"2e";
+          when 48 => uart_txdata <= nybl2char(usec(7 downto 4));
+          when 49 => uart_txdata <= nybl2char(usec(3 downto 0));                     
+          when 50 => uart_txdata <= x"20";
+
+
                      
           when 51 => uart_txdata <= x"0d";
           when 52 => uart_txdata <= x"0a";     uart_msg_offset <= 0;          
