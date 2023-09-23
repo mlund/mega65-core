@@ -95,7 +95,7 @@ architecture tacoma_narrows of sdram_controller is
   -- The SDRAM requires a 100us setup time
   signal sdram_prepped         : std_logic             := '0';
   signal sdram_100us_countdown : integer               := 16_200;
-  signal sdram_do_init         : std_logic             := '0';
+  signal sdram_do_init         : std_logic             := '1';
   signal sdram_init_phase      : integer range 0 to 63 := 0;
 
   type sdram_cmd_t is (CMD_NOP, CMD_SET_MODE_REG,
@@ -459,8 +459,13 @@ begin
         sdram_a(9)            <= '1';
         -- Normal mode of operation
         sdram_a(8 downto 7)   <= (others => '0');
-        -- CAS latency = 3, for 167MHz operation
-        sdram_a(6 downto 4)   <= to_unsigned(3, 3);
+        -- CAS latency = 3, for 167MHz operation (what we do)
+        -- CAS latency = 2, for 100MHz operation (for debug)
+        if identical_clocks='0' then
+          sdram_a(6 downto 4)   <= to_unsigned(3, 3);
+        else
+          sdram_a(6 downto 4)   <= to_unsigned(2, 3);
+        end if;
         -- Non-interleaved burst order
         sdram_a(3)            <= '0';
         -- Read burst length = 4 x 16 bit words = 8 bytes
