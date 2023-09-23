@@ -131,7 +131,6 @@ architecture tacoma_narrows of sdram_controller is
                          READ_WAIT,
                          READ_WAIT_2,
                          READ_WAIT_3,
-                         READ_WAIT_4,
                          READ_0,
                          READ_1,
                          READ_2,
@@ -460,12 +459,7 @@ begin
         -- Normal mode of operation
         sdram_a(8 downto 7)   <= (others => '0');
         -- CAS latency = 3, for 167MHz operation (what we do)
-        -- CAS latency = 2, for 100MHz operation (for debug)
-        if identical_clocks='0' then
-          sdram_a(6 downto 4)   <= to_unsigned(3, 3);
-        else
-          sdram_a(6 downto 4)   <= to_unsigned(2, 3);
-        end if;
+        sdram_a(6 downto 4)   <= to_unsigned(3, 3);
         -- Non-interleaved burst order
         sdram_a(3)            <= '0';
         -- Read burst length = 4 x 16 bit words = 8 bytes
@@ -655,15 +649,12 @@ begin
             sdram_dqml <= '0'; sdram_dqmh <= '0';
             sdram_emit_command(CMD_NOP);
           when READ_WAIT_2 =>
-            sdram_dqml <= '0'; sdram_dqmh <= '0';
-            sdram_emit_command(CMD_NOP);
-          when READ_WAIT_3 =>
             if identical_clocks='1' then
               sdram_state <= READ_0;
             end if;
             sdram_dqml <= '0'; sdram_dqmh <= '0';
             sdram_emit_command(CMD_NOP);
-          when READ_WAIT_4 =>
+          when READ_WAIT_3 =>
             sdram_dqml <= '0'; sdram_dqmh <= '0';
             sdram_emit_command(CMD_NOP);
           when READ_0 =>
