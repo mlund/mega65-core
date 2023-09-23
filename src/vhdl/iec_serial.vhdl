@@ -194,10 +194,8 @@ begin
       case fastio_addr(3 downto 0) is
         when x"7" => -- Read IRQ register
           fastio_rdata <= iec_irq;
-          report "Reading IEC IRQ status register = $" & to_hexstring(iec_irq);
         when x"8" => -- Read from status register
           fastio_rdata <= iec_status;
-          report "Reading IEC status register = $" & to_hexstring(iec_status);
         when x"9" => -- Read from data register
           fastio_rdata <= iec_data;
         when x"a" => -- Read device info
@@ -261,6 +259,7 @@ begin
       end if;
 
       if iec_new_cmd='1' then
+        report "IEC Command Dispatch: $" & to_hexstring(iec_cmd);
         iec_new_cmd <= '0';
         case iec_cmd is
 
@@ -426,6 +425,7 @@ begin
         when 123 =>
           if iec_data_i = '0' then
             iec_state <= iec_state + 2; -- Proceed with ATN send
+            wait_msec <= 0;
           end if;
         when 124 =>
           -- Timeout has occurred: DEVICE NOT PRESENT
@@ -433,34 +433,32 @@ begin
           report "IEC: Attention timeout: No devices on bus";
           iec_state_reached <= to_unsigned(iec_state,12);
           iec_state <= 0;
-          iec_busy <= '0';
           iec_devinfo <= x"00";
           iec_status(7) <= '1'; -- DEVICE NOT PRESENT
           iec_status(1) <= '1'; -- TIMEOUT OCCURRED ...
           iec_status(0) <= '1'; -- ... WHILE WE WERE TALKING          
 
           -- Release all IEC lines
-          iec_atn <= '1';
-          iec_clk_o <= '1'; iec_clk_en <= '1';
+          a('1');
+          c('1');
 
           iec_busy <= '0';
           
         when 125 =>
           -- At least one device has responded
 
-          -- CLK to 5V
-          iec_clk_o <= '1'; iec_clk_en <= '1';
+          c('1'); -- CLK to 5V
 
           -- Now wait upto 64ms for listener ready for data
           -- This period is actually unconstrained in the protcol,
           -- but we place a limit on it for now.
           wait_msec <= 64;
-          report "IEC: Waiting for DATA to go high (device acknowledges byte)";
 
         when 126 =>
           if iec_data_i='1' then
             -- Listener ready for data
             iec_state <= iec_state + 2;
+            wait_msec <= 0;
           end if;
         when 127 =>
           -- Timeout on listener ready for data
@@ -491,56 +489,84 @@ begin
           -- Send the first 7 bits
           report "IEC: Sending data byte under ATN";
         when 129 => c('0'); d('1'); wait_usec <= 5;
-        when 130 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
-        when 131 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
-        when 132 => c('0'); d('1'); wait_usec <= 5;
-        when 133 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
-        when 134 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 130 => null;
+        when 131 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 132 => null;
+        when 133 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 134 => null;
         when 135 => c('0'); d('1'); wait_usec <= 5;
-        when 136 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
-        when 137 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
-        when 138 => c('0'); d('1'); wait_usec <= 5;
-        when 139 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
-        when 140 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 136 => null;
+        when 137 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 138 => null;
+        when 139 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 140 => null;
         when 141 => c('0'); d('1'); wait_usec <= 5;
-        when 142 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
-        when 143 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
-        when 144 => c('0'); d('1'); wait_usec <= 5;
-        when 145 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
-        when 146 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 142 => null;
+        when 143 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 144 => null;
+        when 145 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 146 => null;
         when 147 => c('0'); d('1'); wait_usec <= 5;
-        when 148 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
-        when 149 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 148 => null;
+        when 149 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 150 => null;
+        when 151 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 152 => null;
+        when 153 => c('0'); d('1'); wait_usec <= 5;
+        when 154 => null;
+        when 155 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 156 => null;
+        when 157 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 158 => null;
+        when 159 => c('0'); d('1'); wait_usec <= 5;
+        when 160 => null;
+        when 161 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 162 => null;
+        when 163 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 164 => null;
+        when 165 => c('0'); d('1'); wait_usec <= 5;
+        when 166 => null;
+        when 167 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 168 => null;
+        when 169 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 170 => null;
            -- Now we have sent 7 bits, release data, keeping clock at 0V, and
            -- check for DATA being pulled low
-        when 150 => c('0'); d('1'); wait_usec <= 500;
+        when 171 => c('0'); d('1'); wait_usec <= 500;
                     report "IEC: Performing JiffyDOS(tm) check";
-        when 151 =>
+        when 172 =>
           -- Data went low: device speaks JiffyDOS protocol
           if iec_data_i='0' then
-            report "IEC: Device supports JiffyDOS(tm) protocol";
+            if iec_devinfo(6 downto 5) = "00" then
+              report "IEC: Device supports JiffyDOS(tm) protocol. Waiting for DATA to release again.";
+            end if;
             -- Record JiffyDOS capability
             iec_devinfo(6 downto 5) <= "10";
             -- Wait for DATA to be released again
             wait_usec <= 0; wait_data_high <= '1';
           end if;
-        when 152 => c('0'); d(iec_data_out(0)); wait_usec <= 15; 
-        when 153 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20; 
-        when 154 => c('0'); d('1');
+        when 173 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 174 => null;
+        when 175 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 176 => null;
+        when 177 => c('0'); d('1');
                     -- Allow device 1000usec = 1ms to acknowledge byte by
                     -- pulling data low
                     wait_msec <= 1;
                     report "IEC: Waiting for device to acknowledge byte";
-        when 155 =>
+        when 178 =>
           if iec_data_i='0' then
+            report "IEC: Device acknowledged receipt of byte";
             iec_state <= iec_state + 2;
+            wait_msec <= 0;
           end if;
-        when 156 =>
+        when 179 =>
           -- Timeout detected acknowledging byte
 
           -- Timeout has occurred: DEVICE NOT PRESENT
           -- (which is not strictly true, it's that device
           -- did not respond in time)
+          report "IEC: DEVICE NOT PRESENT: Device failed to acknowledge byte";
           iec_state_reached <= to_unsigned(iec_state,12);
           iec_state <= 0;
           iec_devinfo <= x"00";
@@ -548,18 +574,23 @@ begin
           iec_status(1) <= '1'; -- TIMEOUT OCCURRED ...
           iec_status(0) <= '1'; -- ... WHILE WE WERE TALKING
 
+          iec_busy <= '0';
+          
           -- Release all IEC lines
           iec_atn <= '1';
           c('1');
 
-        when 157 =>
+        when 180 =>
           -- Successfully sent byte
+          report "IEC: Successfully completed sending byte under attention";
           iec_devinfo(7) <= '1';
           iec_busy <= '0';
 
           -- And we are still under attention
           iec_under_attention <= '1';
-          iec_devinfo(4) <= '1'; 
+          iec_devinfo(4) <= '1';
+
+          iec_state <= 0;
           
         when others => iec_state <= 0; iec_busy <= '0';
                        iec_state_reached <= to_unsigned(iec_state,12);

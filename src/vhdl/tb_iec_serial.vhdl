@@ -143,15 +143,53 @@ begin
         for i in 1 to 800000 loop
           clock_tick;
           if iec_atn='0' then
-            if false then
+            if true then
               -- Pretend there is a device
-              if iec_clk_o = '0' then
+              if atn_state = 0 and iec_clk_o = '0' then
                 atn_state <= 1;
+                report "TESTBED: Pulling DATA to 0V";
                 iec_data_i <= '0';
               end if;
               if atn_state = 1 and iec_clk_o = '1' then
                 atn_state <= 2;
                 iec_data_i <= '1';
+                report "TESTBED: Releasing DATA to 5V";
+              end if;
+              if atn_state = 2 and iec_clk_o = '0' then
+                atn_state <= 3;
+              end if;
+              if atn_state = 2 and iec_clk_o = '0' then
+                atn_state <= 3;
+              end if;
+              -- Then watch first 7 bits arrive, then signal JiffyDOS support
+              if atn_state = 2 and iec_clk_o = '0' then atn_state <= atn_state + 1; end if;
+              if atn_state = 3 and iec_clk_o = '1' then atn_state <= atn_state + 1; end if;
+              if atn_state = 4 and iec_clk_o = '0' then atn_state <= atn_state + 1; end if;
+              if atn_state = 5 and iec_clk_o = '1' then atn_state <= atn_state + 1; end if;
+              if atn_state = 6 and iec_clk_o = '0' then atn_state <= atn_state + 1; end if;
+              if atn_state = 7 and iec_clk_o = '1' then atn_state <= atn_state + 1; end if;
+              if atn_state = 8 and iec_clk_o = '0' then atn_state <= atn_state + 1; end if;
+              if atn_state = 9 and iec_clk_o = '1' then atn_state <= atn_state + 1; end if;
+              if atn_state = 10 and iec_clk_o = '0' then atn_state <= atn_state + 1; end if;
+              if atn_state = 11 and iec_clk_o = '1' then atn_state <= atn_state + 1; end if;
+              if atn_state = 12 and iec_clk_o = '0' then atn_state <= atn_state + 1; end if;
+              if atn_state = 13 and iec_clk_o = '1' then atn_state <= atn_state + 1; end if;
+              if atn_state = 14 and iec_clk_o = '0' then atn_state <= atn_state + 1; end if;
+              if atn_state = 15 and iec_clk_o = '1' then atn_state <= atn_state + 1; end if;
+              if atn_state = 16 and iec_clk_o = '0' then
+                atn_state <= atn_state + 1;
+                iec_data_i <= '0';
+                report "TESTBED: Pulling DATA to 0V to kludge indication of JiffyDOS support ";
+                for j in 1 to 12 loop
+                  clock_tick;
+                end loop;
+                iec_data_i <= '1';
+              end if;
+              if atn_state = 17 and iec_clk_o = '1' then atn_state <= atn_state + 1; end if;
+              if atn_state = 18 and iec_clk_o = '0' then
+                atn_state <= atn_state + 1;
+                iec_data_i <= '0';
+                report "TESTBED: Pulling DATA to 0V to kludge indication of byte acknowledgement ";
               end if;
             end if;
           end if;
@@ -166,8 +204,8 @@ begin
         end loop;
         fastio_read <= '0';
         report "IEC IRQ status byte = $" & to_hexstring(fastio_rdata);
-        if fastio_rdata(5)='1' then
-          assert false report "Expected to not see BUSY indicated in bit 5 of $D697, but it was";
+        if fastio_rdata(5)='0' then
+          assert false report "Expected to see ready for command indicated in bit 5 of $D697, but it wasn't";
         end if;
 
         -- Read status byte
