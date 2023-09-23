@@ -131,6 +131,7 @@ architecture tacoma_narrows of sdram_controller is
                          READ_WAIT,
                          READ_WAIT_2,
                          READ_WAIT_3,
+                         READ_WAIT_4,
                          READ_0,
                          READ_1,
                          READ_2,
@@ -649,12 +650,15 @@ begin
             sdram_dqml <= '0'; sdram_dqmh <= '0';
             sdram_emit_command(CMD_NOP);
           when READ_WAIT_2 =>
+            sdram_dqml <= '0'; sdram_dqmh <= '0';
+            sdram_emit_command(CMD_NOP);
+          when READ_WAIT_3 =>
             if identical_clocks='1' then
               sdram_state <= READ_0;
             end if;
             sdram_dqml <= '0'; sdram_dqmh <= '0';
             sdram_emit_command(CMD_NOP);
-          when READ_WAIT_3 =>
+          when READ_WAIT_4 =>
             sdram_dqml <= '0'; sdram_dqmh <= '0';
             sdram_emit_command(CMD_NOP);
           when READ_0 =>
