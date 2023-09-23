@@ -115,7 +115,7 @@ architecture tacoma_narrows of sdram_controller is
     2      => CMD_PRECHARGE,
     6      => CMD_AUTO_REFRESH,
     16     => CMD_AUTO_REFRESH,
-    26     => CMD_SET_MODE_REG,
+    30     => CMD_SET_MODE_REG,
     others => CMD_NOP);
 
   -- SDRAM state machine.  IDLE must be the last in the list,
