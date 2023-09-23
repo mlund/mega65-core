@@ -354,7 +354,7 @@ begin
           iec_devinfo(4 downto 0) <= iec_data_out(4 downto 0);
 
           -- Wait upto 1ms for DATA to go low
-          wait_msec <= 1;
+          wait_msec <= 1; iec_advance <= '1';
           
         when 121 =>
           if iec_data_i = '0' then
