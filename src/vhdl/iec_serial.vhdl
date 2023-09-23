@@ -48,6 +48,7 @@ architecture questionable of iec_serial is
   signal iec_irq : unsigned(7 downto 0) := x"00";
   signal iec_status : unsigned(7 downto 0) := x"00";
   signal iec_data : unsigned(7 downto 0) := x"00";
+  signal iec_data_out : unsigned(7 downto 0) := x"00";
   signal iec_devinfo : unsigned(7 downto 0) := x"00";
 
   signal iec_cmd : unsigned(7 downto 0) := x"00";
