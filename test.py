@@ -26,14 +26,20 @@ lib = vu.add_library("lib")
 #lib.add_source_files("src/vhdl/is42s16320f_model.vhdl")
 
 # Uncomment below for testing slow_devices driving SDRAM
-lib.add_source_files("src/vhdl/tb_slow_drives_sdram.vhdl");
+#lib.add_source_files("src/vhdl/tb_slow_drives_sdram.vhdl");
+#lib.add_source_files("src/vhdl/debugtools.vhdl")
+#lib.add_source_files("src/vhdl/cputypes.vhdl")
+#lib.add_source_files("src/vhdl/slow_devices.vhdl");
+#lib.add_source_files("src/vhdl/expansion_port_controller.vhdl");
+#lib.add_source_files("src/vhdl/dummy_opl2.vhdl");
+#lib.add_source_files("src/vhdl/sdram_controller.vhdl");
+#lib.add_source_files("src/vhdl/is42s16320f_model.vhdl")
+
+# Uncomment below for testing IEC hardware accelerator
+lib.add_source_files("src/vhdl/tb_iec_serial.vhdl");
+lib.add_source_files("src/vhdl/iec_serial.vhdl");
 lib.add_source_files("src/vhdl/debugtools.vhdl")
 lib.add_source_files("src/vhdl/cputypes.vhdl")
-lib.add_source_files("src/vhdl/slow_devices.vhdl");
-lib.add_source_files("src/vhdl/expansion_port_controller.vhdl");
-lib.add_source_files("src/vhdl/dummy_opl2.vhdl");
-lib.add_source_files("src/vhdl/sdram_controller.vhdl");
-lib.add_source_files("src/vhdl/is42s16320f_model.vhdl")
 
 vu.set_compile_option("ghdl.a_flags", ["-frelaxed-rules"])
 vu.set_compile_option("ghdl.flags", ["-frelaxed-rules"])

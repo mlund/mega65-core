@@ -71,6 +71,7 @@ architecture questionable of iec_serial is
   signal iec_dev_listening : std_logic := '0';  
   
   signal iec_state : integer := 0;
+  signal last_iec_state : integer := 0;
   signal iec_busy : std_logic := '0';
   signal iec_under_attention : std_logic := '0';
   
@@ -95,6 +96,10 @@ architecture questionable of iec_serial is
   signal timing_sync_toggle : std_logic := '0';
   signal last_timing_sync_toggle : std_logic := '0';
 
+  signal last_iec_data : std_logic := 'U';
+  signal last_iec_clk : std_logic := 'U';
+  signal last_iec_srq : std_logic := 'U';
+  
 begin
 
   -- Note that we put RX on bit 6, so that the common case of LOADing can be a
@@ -126,6 +131,41 @@ begin
   -- @IO:GS $D69A.0-3 AUTOIEC:DIDEVNUM Lower 4 bits of currently selected device number
   
   process (clock,clock81) is
+    procedure d(v : std_logic) is
+    begin
+      if v /= last_iec_data then
+        report "SIGNAL: Setting DATA to " & std_logic'image(v);
+        last_iec_data <= v;
+      end if;
+      iec_data_o <= v; iec_data_en <= v;      
+    end procedure;
+    procedure c(v : std_logic) is
+    begin
+      if v /= last_iec_clk then
+        report "SIGNAL: Setting CLK to " & std_logic'image(v);
+        last_iec_clk <= v;
+      end if;
+      iec_clk_o <= v; iec_clk_en <= v;      
+    end procedure;
+    procedure s(v : std_logic) is
+    begin
+      if v/= last_iec_srq then
+        report "SIGNAL: Setting SRQ to " & std_logic'image(v);
+        last_iec_srq <= v;
+      end if;
+      iec_srq_o <= v; iec_srq_en <= v;      
+    end procedure;
+    procedure a(v : std_logic) is
+    begin
+      report "SIGNAL: Setting ATN to " & std_logic'image(v);
+      iec_atn <= v;
+    end procedure;
+    procedure iec_data_out_rotate is
+    begin
+      -- Rotate byte being sent completely, so repeated sending
+      -- of same byte is possible without having to re-write it.
+      iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
+    end procedure;
   begin
 
     if rising_edge(clock81) then
@@ -198,6 +238,7 @@ begin
         and (to_integer(fastio_addr(3 downto 0))>6)
         and (to_integer(fastio_addr(3 downto 0))<11) then
         if fastio_write='1' then
+          report "register write: $" & to_hexstring(fastio_wdata) & " -> reg $" & to_hexstring(fastio_addr(3 downto 0));
           case fastio_addr(3 downto 0) is
             when x"7" => -- Write to IRQ register
               -- Writing to IRQ bits clears the events
@@ -226,21 +267,21 @@ begin
           
           -- Low-level / bitbashing commands
           when x"41" => -- ATN to +5V
-            iec_atn <= '1';              
+            a('1');
           when x"61" => -- ATN low to 0V
-            iec_atn <= '0';              
+            a('0');
           when x"43" => -- CLK line +5V (bitbashing)
-            iec_clk_o <= '1'; iec_clk_en <= '1';
+            c('1');
           when x"63" => -- Pull CLK line low to 0V (bitbashing)
-            iec_clk_o <= '0'; iec_clk_en <= '0';
+            c('0');
           when x"44" => -- DATA line to +5V (bitbashing)
-            iec_data_o <= '1'; iec_data_en <= '1';
+            d('1');
           when x"64" => -- Pull DATA line low to 0V (bitbashing)
-            iec_data_o <= '0'; iec_data_en <= '0';
+            d('0');
           when x"53" => -- SRQ line to +5V (bitbashing)
-            iec_srq_o <= '1'; iec_srq_en <= '1';
+            s('1');
           when x"73" => -- Pull SRQ line low to 0V (bitbashing)
-            iec_srq_o <= '0'; iec_srq_en <= '0';
+            s('0');
           when x"52" => -- Drive IEC reset pin 5V
             iec_reset <= '1';
           when x"72" => -- Drive IEC reset pin 0V
@@ -267,28 +308,46 @@ begin
       -- Update usec and msec denominated count-downs
       if usec_toggle /= last_usec_toggle then
         if wait_usec > 0 then
+          report "TIME: decrementing usec counter to " & integer'image(wait_usec-1);
           wait_usec <= wait_usec - 1;
         end if;
         usec_toggle <= last_usec_toggle;
       end if;
       if msec_toggle /= last_msec_toggle then
-        if wait_usec > 0 then
+        if wait_msec > 0 then
+          report "TIME: decrementing msec counter to " & integer'image(wait_msec-1);
           wait_msec <= wait_msec - 1;
         end if;
         msec_toggle <= last_msec_toggle;
       end if;
       
       -- Advance state in IEC protocol transaction if the requirements are met
-      if (iec_state >0) and ((iec_advance='1') or (
-        (wait_clk_low='0' or iec_clk_i='0')
-        and (wait_clk_high='0' or iec_clk_i='1')
-        and (wait_data_low='0' or iec_data_i='0')
-        and (wait_data_high='0' or iec_data_i='1')
-        and (wait_srq_low='0' or iec_srq_i='0')
-        and (wait_srq_high='0' or iec_srq_i='1')
-        and (wait_usec = 0) and (wait_msec = 0 ) ) )
+      if iec_state /= last_iec_state then
+        report "iec_state = " & integer'image(iec_state)
+          & ", wait_msec = " & integer'image(wait_msec)
+          & ", wait_usec = " & integer'image(wait_usec)
+          & ", iec_advance = " & std_logic'image(iec_advance);
+        last_iec_state <= iec_state;
+      end if;
+      if (iec_state >0)
+        and ((iec_advance='1')
+             or (
+               (wait_clk_low='0' or iec_clk_i='0')
+               and (wait_clk_high='0' or iec_clk_i='1')
+               and (wait_data_low='0' or iec_data_i='0')
+               and (wait_data_high='0' or iec_data_i='1')
+               and (wait_srq_low='0' or iec_srq_i='0')
+               and (wait_srq_high='0' or iec_srq_i='1')
+               and (wait_usec = 0)
+               and (wait_msec = 0 )
+               )
+           )
       then
+        report "Advancing to state " & integer'image(iec_state+1);
         iec_state <= iec_state + 1;
+        if iec_advance='1' then
+          report "iec_advance used.";
+        end if;
         iec_advance <= '0';
       end if;
       case iec_state is
@@ -301,9 +360,8 @@ begin
           iec_under_attention <= '0';
           
           -- DATA to 5V
-          iec_data_o <= '1'; iec_data_en <= '1';
           -- Ensure SRQ is released to 5V
-          iec_srq_o <= '1'; iec_srq_en <= '1';
+          d('1'); s('1');
 
           -- Skip C= fast serial signal if a device is
           -- listening, so that it doesn't get mis-interpretted
@@ -316,32 +374,29 @@ begin
 
           -- Send data byte $FF using SRQ as clock to indicate our ability
           -- to do C= fast serial
-        when 101 => iec_srq_o <= '1'; iec_srq_en <= '1'; wait_usec <= 5;
-        when 102 => iec_srq_o <= '0'; iec_srq_en <= '0'; wait_usec <= 5;
-        when 103 => iec_srq_o <= '1'; iec_srq_en <= '1'; wait_usec <= 5;
-        when 104 => iec_srq_o <= '0'; iec_srq_en <= '0'; wait_usec <= 5;
-        when 105 => iec_srq_o <= '1'; iec_srq_en <= '1'; wait_usec <= 5;
-        when 106 => iec_srq_o <= '0'; iec_srq_en <= '0'; wait_usec <= 5;
-        when 107 => iec_srq_o <= '1'; iec_srq_en <= '1'; wait_usec <= 5;
-        when 108 => iec_srq_o <= '0'; iec_srq_en <= '0'; wait_usec <= 5;
-        when 109 => iec_srq_o <= '1'; iec_srq_en <= '1'; wait_usec <= 5;
-        when 110 => iec_srq_o <= '0'; iec_srq_en <= '0'; wait_usec <= 5;
-        when 111 => iec_srq_o <= '1'; iec_srq_en <= '1'; wait_usec <= 5;
-        when 112 => iec_srq_o <= '0'; iec_srq_en <= '0'; wait_usec <= 5;
-        when 113 => iec_srq_o <= '1'; iec_srq_en <= '1'; wait_usec <= 5;
-        when 114 => iec_srq_o <= '0'; iec_srq_en <= '0'; wait_usec <= 5;
-        when 115 => iec_srq_o <= '1'; iec_srq_en <= '1'; wait_usec <= 5;
-        when 116 => iec_srq_o <= '0'; iec_srq_en <= '0'; wait_usec <= 5;
+        when 101 => s('1'); wait_usec <= 5;
+        when 102 => s('0'); wait_usec <= 5;
+        when 103 => s('1'); wait_usec <= 5;
+        when 104 => s('0'); wait_usec <= 5;
+        when 105 => s('1'); wait_usec <= 5;
+        when 106 => s('0'); wait_usec <= 5;
+        when 107 => s('1'); wait_usec <= 5;
+        when 108 => s('0'); wait_usec <= 5;
+        when 109 => s('1'); wait_usec <= 5;
+        when 110 => s('0'); wait_usec <= 5;
+        when 111 => s('1'); wait_usec <= 5;
+        when 112 => s('0'); wait_usec <= 5;
+        when 113 => s('1'); wait_usec <= 5;
+        when 114 => s('0'); wait_usec <= 5;
+        when 115 => s('1'); wait_usec <= 5;
+        when 116 => s('0'); wait_usec <= 5;
           
         when 120 =>
-          -- ATN to 0V
-          iec_atn <= '0';
-          -- CLK to 5V
-          iec_clk_o <= '1'; iec_clk_en <= '1';
-          -- DATA to 5V
-          iec_data_o <= '1'; iec_data_en <= '1';
-          -- Ensure SRQ is released to 5V
-          iec_srq_o <= '1'; iec_srq_en <= '1';
+          -- Reset all IEC lines:
+          a('0'); -- ATN to 0V
+          c('1'); -- CLK to 5V
+          d('1'); -- DATA to 5V          
+          s('1'); -- Ensure SRQ is released to 5V
 
           -- Clear relevant status bits
           iec_status(7) <= '0'; -- no DEVICE NOT FOUND error (yet)
@@ -355,20 +410,22 @@ begin
           iec_devinfo(4 downto 0) <= iec_data_out(4 downto 0);
 
           -- Wait a little while before asserting CLK
-          wait_usec <= 20; iec_advance <= '1';
+          wait_usec <= 20;
           
         when 121 => 
           -- CLK to 0V
-          iec_clk_o <= '0'; iec_clk_en <= '0';
-          
-          -- Wait upto 1ms for DATA to go low
-          wait_msec <= 1; iec_advance <= '1';
-          
+          c('0');
+
         when 122 =>
-          if iec_data_i = '0' then
-            iec_state <= 124; -- Proceed with ATN send
-          end if;
+          -- Wait upto 1ms for DATA to go low
+          wait_msec <= 1;
+          report "IEC: Waiting for DATA to go low (device responding to ATN)";
+
         when 123 =>
+          if iec_data_i = '0' then
+            iec_state <= iec_state + 2; -- Proceed with ATN send
+          end if;
+        when 124 =>
           -- Timeout has occurred: DEVICE NOT PRESENT
           -- (actually it means that there are no devices at all)
           iec_state_reached <= to_unsigned(iec_state,12);
@@ -385,7 +442,7 @@ begin
 
           iec_busy <= '0';
           
-        when 124 =>
+        when 125 =>
           -- At least one device has responded
 
           -- CLK to 5V
@@ -394,14 +451,15 @@ begin
           -- Now wait upto 64ms for listener ready for data
           -- This period is actually unconstrained in the protcol,
           -- but we place a limit on it for now.
-          wait_msec <= 64; iec_advance <= '1';
+          wait_msec <= 64;
+          report "IEC: Waiting for DATA to go high (device acknowledges byte)";
 
-        when 125 =>
+        when 126 =>
           if iec_data_i='1' then
             -- Listener ready for data
-            iec_state <= 127;
+            iec_state <= iec_state + 2;
           end if;
-        when 126 =>
+        when 127 =>
           -- Timeout on listener ready for data
           
           -- Timeout has occurred: DEVICE NOT PRESENT
@@ -419,7 +477,7 @@ begin
           iec_atn <= '1';
           iec_clk_o <= '1'; iec_clk_en <= '1';
 
-        when 127 =>
+        when 128 =>
           -- Okay, all listeners are ready for the data byte.
           -- So send it using the slow protocol.
           -- After sending 7th bit, we do the JiffyDOS(tm) check
@@ -428,62 +486,53 @@ begin
           -- the JiffyDOS protocol.  More on that when we get to it.
 
           -- Send the first 7 bits
-        when 128 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
-        when 129 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
-        when 130 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
-                    -- Rotate byte being sent completely, so repeated sending
-                    -- of same byte is possible without having to re-write it.
-                    iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 131 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
-        when 132 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
-        when 133 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
-                    iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 134 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
-        when 135 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
-        when 136 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
-                    iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 137 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
-        when 138 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
-        when 139 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
-                    iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 140 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
-        when 141 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
-        when 142 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
-                    iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 143 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
-        when 144 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
-        when 145 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
-                    iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 146 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
-        when 147 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
-        when 148 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
-                    iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
+          report "IEC: Sending data byte under ATN";
+        when 129 => c('0'); d('1'); wait_usec <= 5;
+        when 130 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 131 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 132 => c('0'); d('1'); wait_usec <= 5;
+        when 133 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 134 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 135 => c('0'); d('1'); wait_usec <= 5;
+        when 136 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 137 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 138 => c('0'); d('1'); wait_usec <= 5;
+        when 139 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 140 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 141 => c('0'); d('1'); wait_usec <= 5;
+        when 142 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 143 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 144 => c('0'); d('1'); wait_usec <= 5;
+        when 145 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 146 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 147 => c('0'); d('1'); wait_usec <= 5;
+        when 148 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 149 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
            -- Now we have sent 7 bits, release data, keeping clock at 0V, and
            -- check for DATA being pulled low
-        when 149 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1';
-                    wait_usec <= 500; iec_advance <= '1';
-        when 150 =>
+        when 150 => c('0'); d('1'); wait_usec <= 500;
+                    report "IEC: Performing JiffyDOS(tm) check";
+        when 151 =>
           -- Data went low: device speaks JiffyDOS protocol
           if iec_data_i='0' then
+            report "IEC: Device supports JiffyDOS(tm) protocol";
             -- Record JiffyDOS capability
             iec_devinfo(6 downto 5) <= "10";
             -- Wait for DATA to be released again
-            wait_usec <= 0; wait_data_high <= '1'; iec_advance <= '1';
+            wait_usec <= 0; wait_data_high <= '1';
           end if;
-        when 151 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0);
-                    wait_usec <= 15; iec_advance <= '1';
-        when 152 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0);
-                    wait_usec <= 20; iec_advance <= '1';
-                    iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 153 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1';
+        when 152 => c('0'); d(iec_data_out(0)); wait_usec <= 15; 
+        when 153 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20; 
+        when 154 => c('0'); d('1');
                     -- Allow device 1000usec = 1ms to acknowledge byte by
                     -- pulling data low
-                    wait_msec <= 1; iec_advance <= '1';
-        when 154 =>
-          if iec_data_i='0' then
-            iec_state <= 156;
-          end if;
+                    wait_msec <= 1;
+                    report "IEC: Waiting for device to acknowledge byte";
         when 155 =>
+          if iec_data_i='0' then
+            iec_state <= iec_state + 2;
+          end if;
+        when 156 =>
           -- Timeout detected acknowledging byte
 
           -- Timeout has occurred: DEVICE NOT PRESENT
@@ -498,9 +547,9 @@ begin
 
           -- Release all IEC lines
           iec_atn <= '1';
-          iec_clk_o <= '1'; iec_clk_en <= '1';
+          c('1');
 
-        when 156 =>
+        when 157 =>
           -- Successfully sent byte
           iec_devinfo(7) <= '1';
           iec_busy <= '0';
