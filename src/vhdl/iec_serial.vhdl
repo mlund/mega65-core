@@ -30,6 +30,10 @@ entity iec_serial is
     fastio_read : in std_logic;
     fastio_wdata : in unsigned(7 downto 0);
     fastio_rdata : out unsigned(7 downto 0);
+
+    debug_state : out unsigned(7 downto 0);
+    debug_usec : out unsigned(7 downto 0);
+    debug_msec : out unsigned(7 downto 0);
     
     --------------------------------------------------
     -- CBM floppy serial port
@@ -78,6 +82,8 @@ architecture questionable of iec_serial is
 
   signal wait_usec : integer := 0;
   signal wait_msec : integer := 0;
+
+  signal iec_advance : std_logic := '0';
 
   signal cycles : integer := 0;
   signal usecs : integer := 0;
@@ -161,6 +167,8 @@ begin
     
     if rising_edge(clock) then
 
+      debug_state <= to_unsigned(iec_state,8);
+      
       -- Indicate busy status
       iec_irq(5) <= not iec_busy;
     
@@ -211,6 +219,10 @@ begin
       if iec_new_cmd='1' then
         iec_new_cmd <= '0';
         case iec_cmd is
+
+          -- Abort existing command
+          when x"00" => iec_state <= 0;
+          
           -- Low-level / bitbashing commands
           when x"41" => -- ATN to +5V
             iec_atn <= '1';              
@@ -266,16 +278,17 @@ begin
       end if;
       
       -- Advance state in IEC protocol transaction if the requirements are met
-      if (iec_state >0)
-        and (wait_clk_low='0' or iec_clk_i='0')
+      if (iec_state >0) and ((iec_advance='1') or (
+        (wait_clk_low='0' or iec_clk_i='0')
         and (wait_clk_high='0' or iec_clk_i='1')
         and (wait_data_low='0' or iec_data_i='0')
         and (wait_data_high='0' or iec_data_i='1')
         and (wait_srq_low='0' or iec_srq_i='0')
         and (wait_srq_high='0' or iec_srq_i='1')
-        and (wait_usec = 0) and (wait_msec = 0 )
+        and (wait_usec = 0) and (wait_msec = 0 ) ) )
       then
         iec_state <= iec_state + 1;
+        iec_advance <= '0';
       end if;
       case iec_state is
         -- IDLE state
@@ -372,7 +385,7 @@ begin
           -- Now wait upto 64ms for listener ready for data
           -- This period is actually unconstrained in the protcol,
           -- but we place a limit on it for now.
-          wait_msec <= 64;
+          wait_msec <= 64; iec_advance <= '1';
 
         when 124 =>
           if iec_data_i='1' then
@@ -405,55 +418,57 @@ begin
           -- the JiffyDOS protocol.  More on that when we get to it.
 
           -- Send the first 7 bits
-        when 127 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5;
+        when 127 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
         when 128 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
         when 129 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
                     -- Rotate byte being sent completely, so repeated sending
                     -- of same byte is possible without having to re-write it.
                     iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 130 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5;
+        when 130 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
         when 131 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
         when 132 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
                     iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 133 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5;
+        when 133 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
         when 134 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
         when 135 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
                     iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 136 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5;
+        when 136 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
         when 137 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
         when 138 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
                     iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 139 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5;
+        when 139 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
         when 140 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
         when 141 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
                     iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 142 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5;
+        when 142 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
         when 143 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
         when 144 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
                     iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
-        when 145 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5;
+        when 145 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1'; wait_usec <= 5; iec_advance <= '1';
         when 146 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
         when 147 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
                     iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
            -- Now we have sent 7 bits, release data, keeping clock at 0V, and
            -- check for DATA being pulled low
         when 148 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1';
-                    wait_usec <= 500; 
+                    wait_usec <= 500; iec_advance <= '1';
         when 149 =>
           -- Data went low: device speaks JiffyDOS protocol
           if iec_data_i='0' then
             -- Record JiffyDOS capability
             iec_devinfo(6 downto 5) <= "10";
             -- Wait for DATA to be released again
-            wait_usec <= 0; wait_data_high <= '1';
+            wait_usec <= 0; wait_data_high <= '1'; iec_advance <= '1';
           end if;
-        when 150 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 15;
-        when 151 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0); wait_usec <= 20;
+        when 150 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0);
+                    wait_usec <= 15; iec_advance <= '1';
+        when 151 => iec_clk_o <= '1'; iec_clk_en <= '1'; iec_data_o <= iec_data_out(0); iec_data_en <= iec_data_out(0);
+                    wait_usec <= 20; iec_advance <= '1';
                     iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
         when 152 => iec_clk_o <= '0'; iec_clk_en <= '0'; iec_data_o <= '1'; iec_data_en <= '1';
                     -- Allow device 1000usec = 1ms to acknowledge byte by
                     -- pulling data low
-                    wait_msec <= 1;
+                    wait_msec <= 1; iec_advance <= '1';
         when 153 =>
           if iec_data_i='0' then
             iec_state <= 155;
