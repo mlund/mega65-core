@@ -219,7 +219,8 @@ begin
       debug_waits(3) <= wait_data_low;
       debug_waits(4) <= wait_srq_high;
       debug_waits(5) <= wait_srq_low;
-      debug_waits(7 downto 6) <= (others => '0');
+      debug_waits(6) <= iec_advance;
+      debug_waits(7) <= '0';
       
       -- Indicate busy status
       iec_irq(5) <= not iec_busy;
