@@ -276,7 +276,13 @@ begin
         case iec_cmd is
 
           -- Abort existing command
-          when x"00" => iec_state <= 0;
+          when x"00" =>
+            iec_state <= 0;
+            wait_clk_high <= '0'; wait_clk_low <= '0';
+            wait_data_high <= '0'; wait_data_low <= '0';
+            wait_srq_high <= '0'; wait_srq_low <= '0';
+            wait_usec <= 0; wait_msec <= 0;
+            iec_advance <= '0';
           
           -- Low-level / bitbashing commands
           when x"41" => -- ATN to +5V
@@ -306,6 +312,13 @@ begin
             iec_dev_listening <= '1';
             iec_state <= 100;
             iec_busy <= '1';
+
+            wait_clk_high <= '0'; wait_clk_low <= '0';
+            wait_data_high <= '0'; wait_data_low <= '0';
+            wait_srq_high <= '0'; wait_srq_low <= '0';
+            wait_usec <= 0; wait_msec <= 0;
+            iec_advance <= '0';
+            
           when x"31" => -- Send byte
             iec_dev_listening <= '1';
           when x"32" => -- Receive byte
