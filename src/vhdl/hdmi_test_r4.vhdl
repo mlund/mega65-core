@@ -422,7 +422,8 @@ begin
       );
 
   iec0: entity work.iec_serial
-    generic map ( cpu_frequency => 40_500_000 )
+    generic map ( cpu_frequency => 40_500_000,
+                  with_debug => true)
     port map (
       clock => cpuclock,
       clock81 => pixelclock,
