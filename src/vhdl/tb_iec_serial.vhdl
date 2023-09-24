@@ -45,7 +45,8 @@ architecture test_arch of tb_iec_serial is
 begin
 
   iec0: entity work.iec_serial generic map (
-    cpu_frequency => 40_500_500
+    cpu_frequency => 40_500_500,
+    with_debug => true
     )
     port map (
     clock => clock41,
@@ -124,6 +125,56 @@ begin
         if fastio_rdata(1)='0' then
           assert false report "Expected to see TIMEOUT indicated in bit 1 of $D698, but it wasn't";
         end if;
+
+      elsif run("Debug RAM can be read") then
+        fastio_addr(3 downto 0) <= x"9"; -- set write data
+        fastio_wdata <= x"28"; -- Access device 8
+        fastio_write <= '1';
+        for i in 1 to 4 loop
+          clock_tick;
+        end loop;
+        fastio_addr(3 downto 0) <= x"8";
+        fastio_wdata <= x"30"; -- Trigger ATN write
+        for i in 1 to 4 loop
+          clock_tick;
+        end loop;
+        fastio_write <= '0';
+        
+        for i in 1 to 400000 loop
+          clock_tick;
+        end loop;
+
+        -- Now read back debug RAM content
+
+        -- Reset read point to start of debug RAM
+        fastio_write <= '1';
+        fastio_wdata <= x"00";
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_write <= '0';
+
+        report "Starting readback of debug RAM";
+        fastio_addr(3 downto 0) <= x"4";
+        for n in 0 to 127 loop
+          fastio_write <= '0';
+          fastio_read <= '1';
+          for i in 1 to 8 loop
+            clock_tick;
+          end loop;
+          fastio_read <= '0';
+
+          report "Read $" & to_hexstring(fastio_rdata) & " from debug RAM.";
+          
+          fastio_read <= '0';
+          fastio_write <= '1';
+          fastio_wdata <= x"01";
+          for i in 1 to 4 loop
+            clock_tick;
+          end loop;
+
+        end loop;
+          
 
         
       elsif run("ATN Sequence with device succeeds") then

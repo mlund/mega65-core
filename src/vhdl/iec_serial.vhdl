@@ -224,13 +224,14 @@ begin
     end if;
     
     if fastio_addr(19 downto 4) = x"d369"
-      and (to_integer(fastio_addr(3 downto 0))>6)
+      and (to_integer(fastio_addr(3 downto 0))>3)
       and (to_integer(fastio_addr(3 downto 0))<11)
       and fastio_read='1' then
       case fastio_addr(3 downto 0) is
         when x"4" => -- debug read register
           if with_debug then
             fastio_rdata <= debug_ram_rdata;
+            report "Reading $" & to_hexstring(debug_ram_rdata) & " from debug RAM address " & integer'image(debug_ram_raddr_int);
           end if;
         when x"7" => -- Read IRQ register
           fastio_rdata <= iec_irq;
@@ -267,6 +268,7 @@ begin
             debug_ram_write <= '1';
             debug_ram_waddr_int <= debug_ram_waddr_int + 1;
             debug_ram_waddr <= debug_ram_waddr_int + 1;
+            report "Writing $" & to_hexstring(debug_ram_wdata) & " to debug RAM address " & integer'image(debug_ram_waddr_int + 1);
           end if;
         end if;
       end if;
@@ -309,10 +311,10 @@ begin
       end if;
       
       if fastio_addr(19 downto 4) = x"d369"
-        and (to_integer(fastio_addr(3 downto 0))>6)
+        and (to_integer(fastio_addr(3 downto 0))>3)
         and (to_integer(fastio_addr(3 downto 0))<11) then
         if fastio_write='1' then
-          report "register write: $" & to_hexstring(fastio_wdata) & " -> reg $" & to_hexstring(fastio_addr(3 downto 0));
+          report "REG: register write: $" & to_hexstring(fastio_wdata) & " -> reg $" & to_hexstring(fastio_addr(3 downto 0));
           case fastio_addr(3 downto 0) is
             when x"4" =>
               if with_debug then
