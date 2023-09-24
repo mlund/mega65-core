@@ -41,10 +41,10 @@ entity iec_serial is
     -- CBM floppy serial port
     --------------------------------------------------
     iec_reset : out std_logic := '1';
-    iec_atn : out std_logic;
-    iec_clk_en : out std_logic;
-    iec_data_en : out std_logic;
-    iec_srq_en : out std_logic;
+    iec_atn : out std_logic := '1';
+    iec_clk_en : out std_logic := '1';
+    iec_data_en : out std_logic := '1';
+    iec_srq_en : out std_logic := '1';
     iec_clk_o : out std_logic;
     iec_data_o : out std_logic;
     iec_srq_o : out std_logic;
