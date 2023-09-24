@@ -127,6 +127,11 @@ begin
 
         
       elsif run("ATN Sequence with device succeeds") then
+
+        for i in 1 to 4000 loop
+          clock_tick;
+        end loop;
+        
         fastio_addr(3 downto 0) <= x"9"; -- set write data
         fastio_wdata <= x"28"; -- Access device 8
         fastio_write <= '1';

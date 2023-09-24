@@ -625,6 +625,7 @@ begin
           iec_under_attention <= '1';
           iec_devinfo(4) <= '1';
 
+          iec_state_reached <= to_unsigned(iec_state,12);
           iec_state <= 0;
           
         when others => iec_state <= 0; iec_busy <= '0';
