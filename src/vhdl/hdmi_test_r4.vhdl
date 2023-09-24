@@ -164,6 +164,7 @@ architecture Behavioral of container is
      8 => to_unsigned(126,8)
      );
 
+  signal iec_debug_ram : unsigned(7 downto 0) := x"00";
   signal iec_irq : unsigned(7 downto 0) := x"00";
   signal iec_status : unsigned(7 downto 0) := x"00";
   signal iec_data : unsigned(7 downto 0) := x"00";
@@ -564,10 +565,12 @@ begin
           when 58 => uart_txdata <= nybl2char(debug_waits(3 downto 0));                     
           when 59 => uart_txdata <= x"20";
 
-
+          when 60 => uart_txdata <= nybl2char(iec_debug_ram(7 downto 4));
+          when 61 => uart_txdata <= nybl2char(iec_debug_ram(3 downto 0));                     
+          when 62 => uart_txdata <= x"20";
                      
-          when 60 => uart_txdata <= x"0d";
-          when 61 => uart_txdata <= x"0a";     uart_msg_offset <= 0;          
+          when 63 => uart_txdata <= x"0d";
+          when 64 => uart_txdata <= x"0a";     uart_msg_offset <= 0;          
 
           when others => uart_txdata <= x"00"; uart_msg_offset <= 0;            
         end case;
@@ -614,22 +617,25 @@ begin
         fastio_write <= '0';
 
         case fastio_state is
-          when 0 => fastio_addr <= x"d3697"; fastio_read <= '1';
+          when 0 => fastio_addr <= x"d3694"; fastio_read <= '1';
           when 1 => null;
-          when 2 => iec_irq <= fastio_rdata;
-          when 3 => fastio_addr <= x"d3698"; fastio_read <= '1';
+          when 2 => iec_debug_ram <= fastio_rdata;
+          when 3 => fastio_addr <= x"d3697"; fastio_read <= '1';
           when 4 => null;
-          when 5 => iec_status <= fastio_rdata;
-          when 6 => fastio_addr <= x"d3699"; fastio_read <= '1';
+          when 5 => iec_irq <= fastio_rdata;
+          when 6 => fastio_addr <= x"d3698"; fastio_read <= '1';
           when 7 => null;
-          when 8 => iec_data <= fastio_rdata;
-          when 9 => fastio_addr <= x"d369a"; fastio_read <= '1';
+          when 8 => iec_status <= fastio_rdata;
+          when 9 => fastio_addr <= x"d3699"; fastio_read <= '1';
           when 10 => null;
-          when 11 => iec_devinfo <= fastio_rdata;
+          when 11 => iec_data <= fastio_rdata;
+          when 12 => fastio_addr <= x"d369a"; fastio_read <= '1';
+          when 13 => null;
+          when 14 => iec_devinfo <= fastio_rdata;
                     fastio_addr <= x"00000"; fastio_read <= '0';
 
-          when 12 => null;
-          when 13 =>
+          when 15 => null;
+          when 16 =>
             if do_write = '1' then
               fastio_write <= '1';
               fastio_addr(19 downto 4) <= x"d369";
