@@ -34,6 +34,7 @@ entity iec_serial is
     debug_state : out unsigned(11 downto 0);
     debug_usec : out unsigned(7 downto 0);
     debug_msec : out unsigned(7 downto 0);
+    debug_waits : out unsigned(7 downto 0);
     iec_state_reached : out unsigned(11 downto 0);
     
     --------------------------------------------------
@@ -211,6 +212,14 @@ begin
       debug_state <= to_unsigned(iec_state,12);
       debug_usec <= to_unsigned(wait_usec,8);
       debug_msec <= to_unsigned(wait_msec,8);
+
+      debug_waits(0) <= wait_clk_high;
+      debug_waits(1) <= wait_clk_low;
+      debug_waits(2) <= wait_data_high;
+      debug_waits(3) <= wait_data_low;
+      debug_waits(4) <= wait_srq_high;
+      debug_waits(5) <= wait_srq_low;
+      debug_waits(7 downto 6) <= (others => '0');
       
       -- Indicate busy status
       iec_irq(5) <= not iec_busy;
@@ -350,6 +359,16 @@ begin
         iec_state <= iec_state + 1;
         if iec_advance='1' then
           report "iec_advance used.";
+        else
+          if wait_clk_high='1' then report "Used and clearing wait_clk_high"; end if;
+          if wait_clk_low='1' then report "Used and clearing wait_clk_low"; end if;
+          if wait_data_high='1' then report "Used and clearing wait_data_high"; end if;
+          if wait_data_low='1' then report "Used and clearing wait_data_low"; end if;
+          if wait_srq_high='1' then report "Used and clearing wait_srq_high"; end if;
+          if wait_srq_low='1' then report "Used and clearing wait_srq_low"; end if;
+          wait_clk_high <= '0'; wait_clk_low <= '0';
+          wait_data_high <= '0'; wait_data_low <= '0';
+          wait_srq_high <= '0'; wait_srq_low <= '0';
         end if;
         iec_advance <= '0';
       end if;
