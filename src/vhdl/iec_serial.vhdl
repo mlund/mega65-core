@@ -15,7 +15,8 @@ use work.cputypes.all;
 
 entity iec_serial is
   generic (
-    cpu_frequency : integer
+    cpu_frequency : integer;
+    with_debug : boolean := false
     );
   port (
     clock : in std_logic;
@@ -100,6 +101,20 @@ architecture questionable of iec_serial is
   signal last_iec_data : std_logic := 'U';
   signal last_iec_clk : std_logic := 'U';
   signal last_iec_srq : std_logic := 'U';
+
+  signal debug_counter : integer range 0 to 4095 := 4095;
+  signal debug_ram_write : std_logic := '0';
+  signal debug_ram_waddr : integer := 0;
+  signal debug_ram_waddr_int : integer := 0;
+  signal debug_ram_raddr : integer := 0;
+  signal debug_ram_raddr_int : integer := 0;
+  signal debug_ram_wdata : unsigned(7 downto 0) := x"00";
+  signal debug_ram_rdata : unsigned(7 downto 0);  
+  signal iec_clk_o_int : std_logic := '0';
+  signal iec_data_o_int : std_logic := '0';
+  signal iec_srq_o_int : std_logic := '0';
+  signal iec_atn_int : std_logic := '0';
+  signal iec_reset_int : std_logic := '0';
   
 begin
 
@@ -130,6 +145,20 @@ begin
   -- @IO:GS $D69A.5-6 AUTOIEC:DIPROT Device protocol (00=1541,01=C128/C65 FAST, 10 = JiffyDOS(tm), 11=both
   -- @IO:GS $D69A.4 AUTOIEC:DIATN Device is currently held under attention
   -- @IO:GS $D69A.0-3 AUTOIEC:DIDEVNUM Lower 4 bits of currently selected device number
+
+  ram0: if with_debug generate
+    debugram0: entity work.ram8x4096_sync
+      port map (
+        clkr => clock,
+        clkw => clock,
+        cs => '1',
+        w => debug_ram_write,
+        write_address => debug_ram_waddr,
+        address => debug_ram_raddr,
+        wdata => debug_ram_wdata,
+        rdata => debug_ram_rdata
+        );
+    end generate;
   
   process (clock,clock81) is
     procedure d(v : std_logic) is
@@ -138,7 +167,8 @@ begin
         report "SIGNAL: Setting DATA to " & std_logic'image(v);
         last_iec_data <= v;
       end if;
-      iec_data_o <= v; iec_data_en <= v;      
+      iec_data_o <= v; iec_data_en <= v;
+      iec_data_o_int <= v;
     end procedure;
     procedure c(v : std_logic) is
     begin
@@ -146,7 +176,8 @@ begin
         report "SIGNAL: Setting CLK to " & std_logic'image(v);
         last_iec_clk <= v;
       end if;
-      iec_clk_o <= v; iec_clk_en <= v;      
+      iec_clk_o <= v; iec_clk_en <= v;
+      iec_clk_o_int <= v;
     end procedure;
     procedure s(v : std_logic) is
     begin
@@ -154,12 +185,14 @@ begin
         report "SIGNAL: Setting SRQ to " & std_logic'image(v);
         last_iec_srq <= v;
       end if;
-      iec_srq_o <= v; iec_srq_en <= v;      
+      iec_srq_o <= v; iec_srq_en <= v;
+      iec_srq_o_int <= v;
     end procedure;
     procedure a(v : std_logic) is
     begin
       report "SIGNAL: Setting ATN to " & std_logic'image(v);
       iec_atn <= v;
+      iec_atn_int <= v;
     end procedure;
     procedure iec_data_out_rotate is
     begin
@@ -169,7 +202,9 @@ begin
     end procedure;
   begin
 
+    
     if rising_edge(clock81) then
+
       if timing_sync_toggle /= last_timing_sync_toggle then
         last_timing_sync_toggle <= timing_sync_toggle;
         cycles <= 0;
@@ -193,6 +228,10 @@ begin
       and (to_integer(fastio_addr(3 downto 0))<11)
       and fastio_read='1' then
       case fastio_addr(3 downto 0) is
+        when x"4" => -- debug read register
+          if with_debug then
+            fastio_rdata <= debug_ram_rdata;
+          end if;
         when x"7" => -- Read IRQ register
           fastio_rdata <= iec_irq;
         when x"8" => -- Read from status register
@@ -209,6 +248,29 @@ begin
     
     if rising_edge(clock) then
 
+      if with_debug then
+        debug_ram_wdata(0) <= iec_data_i;
+        debug_ram_wdata(1) <= iec_clk_i;
+        debug_ram_wdata(2) <= iec_srq_i;
+        debug_ram_wdata(3) <= iec_data_o_int;
+        debug_ram_wdata(4) <= iec_clk_o_int;
+        debug_ram_wdata(5) <= iec_srq_o_int;
+        debug_ram_wdata(6) <= iec_atn_int;
+        debug_ram_wdata(7) <= iec_reset_int;
+        
+        if debug_counter < (40-1) then
+          debug_counter <= debug_counter + 1;
+          debug_ram_write <= '0';
+        else
+          debug_counter <= 0;
+          if debug_ram_waddr_int < 4095 then
+            debug_ram_write <= '1';
+            debug_ram_waddr_int <= debug_ram_waddr_int + 1;
+            debug_ram_waddr <= debug_ram_waddr_int + 1;
+          end if;
+        end if;
+      end if;
+      
       debug_state <= to_unsigned(iec_state,12);
       debug_usec <= to_unsigned(wait_usec,8);
       debug_msec <= to_unsigned(wait_msec,8);
@@ -252,6 +314,18 @@ begin
         if fastio_write='1' then
           report "register write: $" & to_hexstring(fastio_wdata) & " -> reg $" & to_hexstring(fastio_addr(3 downto 0));
           case fastio_addr(3 downto 0) is
+            when x"4" =>
+              if with_debug then
+                if fastio_wdata = x"00" then
+                  debug_ram_raddr <= 0;
+                  debug_ram_raddr_int <= 0;
+                else
+                  if debug_ram_raddr_int < 4095 then
+                    debug_ram_raddr_int <= debug_ram_raddr_int + 1;
+                    debug_ram_raddr <= debug_ram_raddr_int + 1;
+                  end if;
+                end if;
+              end if;
             when x"7" => -- Write to IRQ register
               -- Writing to IRQ bits clears the events
               iec_irq(7) <= iec_irq(7) and not fastio_wdata(7);
@@ -303,9 +377,10 @@ begin
             s('0');
           when x"52" => -- Drive IEC reset pin 5V
             iec_reset <= '1';
+            iec_reset_int <= '1';
           when x"72" => -- Drive IEC reset pin 0V
             iec_reset <= '0';
-            
+            iec_reset_int <= '0';            
 
             -- Protocol level commands
           when x"30" => -- Request device attention (send data byte under attention)
@@ -318,6 +393,9 @@ begin
             wait_srq_high <= '0'; wait_srq_low <= '0';
             wait_usec <= 0; wait_msec <= 0;
             iec_advance <= '0';
+
+            -- Trigger begin collecting debug info during job
+            debug_ram_waddr_int <= 0;
             
           when x"31" => -- Send byte
             iec_dev_listening <= '1';
@@ -510,8 +588,8 @@ begin
           iec_status(0) <= '1'; -- ... WHILE WE WERE TALKING
 
           -- Release all IEC lines
-          iec_atn <= '1';
-          iec_clk_o <= '1'; iec_clk_en <= '1';
+          a('1');
+          c('1');
 
         when 128 =>
           -- Okay, all listeners are ready for the data byte.
@@ -612,7 +690,7 @@ begin
           iec_busy <= '0';
           
           -- Release all IEC lines
-          iec_atn <= '1';
+          a('1');
           c('1');
 
         when 180 =>

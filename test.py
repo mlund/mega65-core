@@ -40,6 +40,7 @@ lib.add_source_files("src/vhdl/tb_iec_serial.vhdl");
 lib.add_source_files("src/vhdl/iec_serial.vhdl");
 lib.add_source_files("src/vhdl/debugtools.vhdl")
 lib.add_source_files("src/vhdl/cputypes.vhdl")
+lib.add_source_files("src/vhdl/ghdl_ram8x4096_sync.vhdl")
 
 vu.set_compile_option("ghdl.a_flags", ["-frelaxed-rules"])
 vu.set_compile_option("ghdl.flags", ["-frelaxed-rules"])
