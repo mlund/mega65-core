@@ -52,6 +52,7 @@ int openSerialPort(char *port)
 void purge_serial(void)
 {
   char buf[1024];
+  usleep(10000);
   int r=read(serialfd,buf,1024);
   while(r>0) {
     usleep(1000);
@@ -62,15 +63,15 @@ void purge_serial(void)
 unsigned int icapereg,icapeval,val,write_count;
 unsigned int iec_irq,iec_status,iec_data,iec_devinfo,iec_state,iec_state_reached,write_val,msec,usec,waits;
 
-int main(int argc,char **argv)
+int getUpdate(void)
 {
-  openSerialPort(argv[1]);
-
   int line_len=0;
   char line[1024];
 
   char bytes[1024];
 
+  purge_serial();
+  
   while(1) {
     int n = read(serialfd,bytes,1024);
     if (n>0) {
@@ -99,3 +100,59 @@ int main(int argc,char **argv)
 
   return 0;
 }
+
+
+#define REG_IRQ 7
+#define REG_CMD 8
+#define REG_DATA 9
+#define REG_DEVINFO 10
+void writeReg(int reg, unsigned int val)
+{
+  char cmd[5];
+  snprintf(cmd,5,"%x%02x\r",reg&0xf,val);
+  write(serialfd,cmd,4);
+  fprintf(stderr,"DEBUG: POKE $D69%1X,$%02X\n",reg,val);
+  return;
+}
+
+void iecReset(void)
+{
+  fprintf(stderr,"INFO: Resetting IEC bus\n");
+
+  writeReg(REG_CMD,0x00);  // Reset IEC state machine
+  getUpdate();
+  writeReg(REG_CMD,0x72); // Pull /RESET low
+  getUpdate();
+  // Wait a little
+  usleep(100000);
+  // Release /RESET
+  writeReg(REG_CMD,0x52);
+  getUpdate();
+  // Wait until all lines are released by drive
+  while(iec_status&0x2c!=0x2c) {
+    usleep(100000);
+    getUpdate();
+  }
+}
+
+int main(int argc,char **argv)
+{
+  openSerialPort(argv[1]);
+
+  iecReset();
+  
+  for(int dev=8;dev<10;dev++) {
+    fprintf(stderr,"INFO: Probing device #%d\n",dev);
+    iecReset();
+    getUpdate();
+    writeReg(9,0x20+dev);  // TALK + device
+    getUpdate();
+    writeReg(8,'0');       // Command device to talk
+    getUpdate();
+    usleep(100000); // Allow time for job to complete
+    getUpdate();
+  }
+
+  return 0;
+}
+
