@@ -590,7 +590,7 @@ begin
           -- CLK to 0V
           c('0');
 
-        when 122 =>
+        when 122 => null;
 
         when 123 =>
           -- Wait upto 1ms for DATA to go low
