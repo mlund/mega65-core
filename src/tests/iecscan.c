@@ -61,7 +61,7 @@ void purge_serial(void)
 }
 
 unsigned int icapereg,icapeval,val,write_count;
-unsigned int iec_irq,iec_status,iec_data,iec_devinfo,iec_state,iec_state_reached,write_val,msec,usec,waits,iec_debug_ram;
+unsigned int iec_irq,iec_status,iec_data,iec_devinfo,iec_state,iec_state_reached,write_val,msec,usec,waits,iec_debug_ram,iec_debug_ram2;
 
 int getUpdate(void)
 {
@@ -79,13 +79,13 @@ int getUpdate(void)
 	int c=bytes[i];
 	if (c=='\n'||c=='\r') {
 	  if (line_len) {
-	    if (sscanf(line,"%x=%x %x %x %x %x %x %x State:%x/%x %x %x.%x,%x %x",
+	    if (sscanf(line,"%x=%x %x %x %x %x %x %x State:%x/%x %x %x.%x,%x %x:%x",
 		       &icapereg,&icapeval,
 		       &iec_irq,&iec_status,&iec_data,&iec_devinfo,
 		       &val,&write_count,
 		       &iec_state,&iec_state_reached,
-		       &write_val,&msec,&usec,&waits,&iec_debug_ram)
-		== 15 ) {
+		       &write_val,&msec,&usec,&waits,&iec_debug_ram,&iec_debug_ram2)
+		== 16 ) {
 	      // fprintf(stderr,"DEBUG: line = '%s'\n",line);
 	      return 0;
 	    }
@@ -142,7 +142,7 @@ iecDataTrace(char *msg)
   writeReg(REG_DBG,0x00); // Reset data pointer to start of buffer
   for(int i=0;i<4096;i++) {
     getUpdate();
-    printf(" $%02x",iec_debug_ram); fflush(stdout);
+    printf(" $%02x/%d",iec_debug_ram,iec_debug_ram2); fflush(stdout);
     writeReg(REG_DBG,0x01); // Advance to next value in debug trace buffer
   }
   printf("\n");

@@ -248,11 +248,21 @@ begin
           if with_debug then
             fastio_rdata <= debug_ram_rdata;
             report "Reading $" & to_hexstring(debug_ram_rdata) & " from debug RAM address " & integer'image(debug_ram_raddr_int);
+          else
+            fastio_rdata <= (others => 'Z');
           end if;
         when x"5" => -- debug read register
           if with_debug then
             fastio_rdata <= debug_ram_rdata2;
             report "Reading $" & to_hexstring(debug_ram_rdata2) & " from debug RAM2 address " & integer'image(debug_ram_raddr_int);
+          else
+            fastio_rdata <= (others => 'Z');
+          end if;
+        when x"6" =>
+          if with_debug then
+            fastio_rdata <= to_unsigned(debug_ram_raddr_int,8);
+          else
+            fastio_rdata <= (others => 'Z');
           end if;
         when x"7" => -- Read IRQ register
           fastio_rdata <= iec_irq;
