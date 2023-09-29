@@ -19,7 +19,183 @@
 #include <poll.h>
 #include <termios.h>
 
+#define PNG_DEBUG 3
+#include <png.h>
+
 int serialfd=-1;
+
+char *sigs[5][24]={
+  {"                        ",
+   "  xxxx   xxxxxx xx   xx ",
+   " xxxxxx    xx   xxx  xx ",
+   "xx    xx   xx   xxxx xx ",
+   "xxxxxxxx   xx   xx xxxx ",
+   "xx    xx   xx   xx  xxx ",
+   "xx    xx   xx   xx   xx ",
+   "xx    xx   xx   xx   xx "},
+  {"                        ",
+   " xxxxx  xx      xx  xx  ",
+   "xx   xx xx      xx xx   ",
+   "xx      xx      xxxx    ",
+   "xx      xx      xxxx    ",
+   "xx      xx      xx xx   ",
+   "xx   xx xx      xx  xx  ",
+   " xxxxx  xxxxxxx xx  xx  "},
+  {"                        ",
+   "xxxxxx  xxxxxx   xxxx   ",
+   "xx   xx   xx    xxxxxx  ",
+   "xx   xx   xx   xx    xx ",
+   "xx   xx   xx   xxxxxxxx ",
+   "xx   xx   xx   xx    xx ",
+   "xx   xx   xx   xx    xx ",
+   "xxxxxx    xx   xx    xx "},
+  {"                        ",
+   " xxxxx  xxxxxx   xxxxx  ",
+   "xx      xx   xx xx   xx ",
+   "xx      xx   xx xx   xx ",
+   " xxxxx  xxxxxx  xx   xx ",
+   "     xx xx xx   xx  x x ",
+   "     xx xx  xx  xx  xxx ",
+   " xxxxx  xx   xx  xxxxxxx"},
+  {"                        ",
+   "xxxxxx   xxxxx  xxxxxx  ",
+   "xx   xx xx        xx    ",
+   "xx   xx xx        xx    ",
+   "xxxxxx   xxxxx    xx    ",
+   "xx xx        xx   xx    ",
+   "xx  xx       xx   xx    ",
+   "xx   xx  xxxxx    xx    "}
+};
+
+char *digits[10][8]={
+  {"        ",
+   " xxxxx  ",
+   "x    xx ",
+   "x   x x ",
+   "x  x  x ",
+   "x x   x ",
+   "xx    x ",
+   " xxxxx  "},
+  {"        ",
+   "  xxx   ",
+   " xxxx   ",
+   "   xx   ",
+   "   xx   ",
+   "   xx   ",
+   "   xx   ",
+   " xxxxxx "},
+  {"        "
+   "  xxxx  ",
+   " xx  xx ",
+   "    xx  ",
+   "   xx   ",
+   "  xx    ",
+   " xx     ",
+   "xxxxxxx "},
+  {"        ",
+   " xxxxx  ",
+   "xx   xx ",
+   "     xx ",
+   "  xxxxx ",
+   "     xx ",
+   "xx   xx ",
+   " xxxxx  "},
+  {"        ",
+   "xx  xx  ",
+   "xx  xx  ",
+   "xx  xx  ",
+   "xxxxxx  ",
+   "    xx  ",
+   "    xx  ",
+   "    xx  "},
+  {"        ",
+   "xxxxxxx ",
+   "xx      ",
+   "xxxxxx  ",
+   "     xx ",
+   "     xx ",
+   "     xx ",
+   "xxxxxx  "},
+  {"        ",
+   " xxxxx  ",
+   "xx   xx ",
+   "xx      ",
+   "xxxxxx  ",
+   "xx   xx ",
+   "xx   xx ",
+   " xxxxx  "},
+  {"        ",
+   " xxxxx  ",
+   "    xx  ",
+   "    xx  ",
+   "   xx   ",
+   "   xx   ",
+   "  xx    ",
+   "  xx    "},
+  {"        ",
+   " xxxxx  ",
+   "xx   xx ",
+   "xx   xx ",
+   " xxxxx  ",
+   "xx   xx ",
+   "xx   xx ",
+   " xxxxx  "},
+  {"        ",
+   " xxxxx  ",
+   "xx   xx ",
+   "xx   xx ",
+   " xxxxxx ",
+   "     xx ",
+   "xx   xx ",
+   " xxxxx  "}
+};
+
+void write_png(char *filename)
+{
+  int y;
+  png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  if (!png)
+    abort();
+
+  png_infop info = png_create_info_struct(png);
+  if (!info)
+    abort();
+
+  if (setjmp(png_jmpbuf(png)))
+    abort();
+
+  FILE *f = fopen(filename, "wb");
+  if (!f)
+    abort();
+
+  png_init_io(png, f);
+
+  int MAXX = 1024;
+  int MAXY = 768;
+
+  unsigned int image[MAXY][MAXX];
+  
+  png_set_IHDR(
+      png, info, MAXX, MAXY, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_DEFAULT);
+
+  png_write_info(png, info);
+
+#if 0
+  for (y = 0; y < maxy; y++) {
+    printf("  writing y=%d\n", y);
+    fflush(stdout);
+    png_write_row(png, frame[y]);
+  }
+#endif
+  
+  png_write_end(png, info);
+  png_destroy_write_struct(&png, &info);
+
+  fclose(f);
+
+  return;
+}
+
 
 int openSerialPort(char *port)
 {
