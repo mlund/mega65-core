@@ -85,6 +85,7 @@ architecture questionable of iec_serial is
   signal wait_srq_low : std_logic := '0';
 
   signal not_waiting_usec : boolean := true;
+  signal not_waiting_msec : boolean := true;
   signal wait_usec : integer := 0;
   signal wait_msec : integer := 0;
 
@@ -217,6 +218,14 @@ begin
       -- of same byte is possible without having to re-write it.
       iec_data_out(6 downto 0) <= iec_data_out(7 downto 1); iec_data_out(7) <= iec_data_out(0);
     end procedure;
+    procedure micro_wait(usecs : integer) is
+    begin
+      if not_waiting_usec then wait_usec <= usecs; not_waiting_usec <= false; end if;
+    end if;
+    procedure milli_wait(msecs : integer) is
+    begin
+      if not_waiting_msec then wait_msec <= msecs; not_waiting_msec <= false; end if;
+    end if;
   begin
 
     
@@ -458,8 +467,12 @@ begin
       end if;
       if msec_toggle /= last_msec_toggle then
         if wait_msec > 0 then
+          not_waiting_msec <= false;
           report "TIME: decrementing msec counter to " & integer'image(wait_msec-1);
           wait_msec <= wait_msec - 1;
+          if wait_msec = 1 then
+            not_waiting_msec <= true;
+          end if;
         end if;
         msec_toggle <= last_msec_toggle;
       end if;
@@ -527,22 +540,22 @@ begin
 
           -- Send data byte $FF using SRQ as clock to indicate our ability
           -- to do C= fast serial
-        when 101 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 102 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 103 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 104 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 105 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 106 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 107 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 108 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 109 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 110 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 111 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 112 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 113 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 114 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 115 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
-        when 116 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 101 => s('1'); micro_wait(5);
+        when 102 => s('0'); micro_wait(5);
+        when 103 => s('1'); micro_wait(5);
+        when 104 => s('0'); micro_wait(5);
+        when 105 => s('1'); micro_wait(5);
+        when 106 => s('0'); micro_wait(5);
+        when 107 => s('1'); micro_wait(5);
+        when 108 => s('0'); micro_wait(5);
+        when 109 => s('1'); micro_wait(5);
+        when 110 => s('0'); micro_wait(5);
+        when 111 => s('1'); micro_wait(5);
+        when 112 => s('0'); micro_wait(5);
+        when 113 => s('1'); micro_wait(5);
+        when 114 => s('0'); micro_wait(5);
+        when 115 => s('1'); micro_wait(5);
+        when 116 => s('0'); micro_wait(5);
           
         when 120 =>
           -- Reset all IEC lines:
@@ -563,21 +576,22 @@ begin
           iec_devinfo(4 downto 0) <= iec_data_out(4 downto 0);
 
           -- Wait a little while before asserting CLK
-          wait_usec <= 20;
+          micro_wait(20);
           
         when 121 => 
           -- CLK to 0V
           c('0');
 
         when 122 =>
-          -- Wait upto 1ms for DATA to go low
-          wait_msec <= 1;
-          report "IEC: Waiting for DATA to go low (device responding to ATN)";
 
         when 123 =>
+          -- Wait upto 1ms for DATA to go low
+          report "IEC: Waiting for DATA to go low (device responding to ATN)";
           if iec_data_i = '0' then
             iec_state <= iec_state + 2; -- Proceed with ATN send
             wait_msec <= 0;
+          else
+            milli_wait(1);            
           end if;
         when 124 =>
           -- Timeout has occurred: DEVICE NOT PRESENT
@@ -601,16 +615,16 @@ begin
 
           c('1'); -- CLK to 5V
 
+        when 126 =>
           -- Now wait upto 64ms for listener ready for data
           -- This period is actually unconstrained in the protcol,
           -- but we place a limit on it for now.
-          wait_msec <= 64;
-
-        when 126 =>
           if iec_data_i='1' then
             -- Listener ready for data
             iec_state <= iec_state + 2;
             wait_msec <= 0;
+          else
+            milli_wait(64);
           end if;
         when 127 =>
           -- Timeout on listener ready for data
@@ -640,51 +654,51 @@ begin
 
           -- Send the first 7 bits
           report "IEC: Sending data byte under ATN";
-        when 129 => c('0'); d('1'); wait_usec <= 5;
+        when 129 => c('0'); d('1'); micro_wait(5);
         when 130 => null;
-        when 131 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 131 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 132 => null;
-        when 133 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 133 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
         when 134 => null;
-        when 135 => c('0'); d('1'); wait_usec <= 5;
+        when 135 => c('0'); d('1'); micro_wait(5);
         when 136 => null;
-        when 137 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 137 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 138 => null;
-        when 139 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 139 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
         when 140 => null;
-        when 141 => c('0'); d('1'); wait_usec <= 5;
+        when 141 => c('0'); d('1'); micro_wait(5);
         when 142 => null;
-        when 143 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 143 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 144 => null;
-        when 145 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 145 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(15);
         when 146 => null;
-        when 147 => c('0'); d('1'); wait_usec <= 5;
+        when 147 => c('0'); d('1'); micro_wait(5);
         when 148 => null;
-        when 149 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 149 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 150 => null;
-        when 151 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 151 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
         when 152 => null;
-        when 153 => c('0'); d('1'); wait_usec <= 5;
+        when 153 => c('0'); d('1'); micro_wait(5);
         when 154 => null;
-        when 155 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 155 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 156 => null;
-        when 157 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 157 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
         when 158 => null;
-        when 159 => c('0'); d('1'); wait_usec <= 5;
+        when 159 => c('0'); d('1'); micro_wait(5);
         when 160 => null;
-        when 161 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 161 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 162 => null;
-        when 163 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 163 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
         when 164 => null;
-        when 165 => c('0'); d('1'); wait_usec <= 5;
+        when 165 => c('0'); d('1'); micro_wait(5);
         when 166 => null;
-        when 167 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 167 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 168 => null;
-        when 169 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 169 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
         when 170 => null;
            -- Now we have sent 7 bits, release data, keeping clock at 0V, and
            -- check for DATA being pulled low
-        when 171 => c('0'); d('1'); wait_usec <= 500;
+        when 171 => c('0'); d('1'); micro_wait(500);
                     report "IEC: Performing JiffyDOS(tm) check";
         when 172 =>
           -- Data went low: device speaks JiffyDOS protocol
@@ -697,20 +711,21 @@ begin
             -- Wait for DATA to be released again
             wait_usec <= 0; wait_data_high <= '1';
           end if;
-        when 173 => c('0'); d(iec_data_out(0)); wait_usec <= 15;
+        when 173 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 174 => null;
-        when 175 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; wait_usec <= 20;
+        when 175 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
         when 176 => null;
         when 177 => c('0'); d('1');
-                    -- Allow device 1000usec = 1ms to acknowledge byte by
-                    -- pulling data low
-                    wait_msec <= 1;
-                    report "IEC: Waiting for device to acknowledge byte";
         when 178 =>
+          -- Allow device 1000usec = 1ms to acknowledge byte by
+          -- pulling data low
+          report "IEC: Waiting for device to acknowledge byte";
           if iec_data_i='0' then
             report "IEC: Device acknowledged receipt of byte";
             iec_state <= iec_state + 2;
             wait_msec <= 0;
+          else
+            milli_wait(1);
           end if;
         when 179 =>
           -- Timeout detected acknowledging byte

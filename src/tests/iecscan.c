@@ -159,12 +159,12 @@ int main(int argc,char **argv)
     iecReset();
     getUpdate();
     writeReg(REG_DATA,0x20+dev);  // TALK + device
-    iecDataTrace("After sending $2x under attention");
     getUpdate();
     writeReg(REG_CMD,0x30);       // Command device to talk
     getUpdate();
     usleep(100000); // Allow time for job to complete
     getUpdate();
+    iecDataTrace("After sending $2x under attention");
   }
 
   return 0;
