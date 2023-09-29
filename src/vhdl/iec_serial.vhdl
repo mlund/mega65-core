@@ -110,6 +110,8 @@ architecture questionable of iec_serial is
   signal debug_ram_raddr_int : integer := 0;
   signal debug_ram_wdata : unsigned(7 downto 0) := x"00";
   signal debug_ram_rdata : unsigned(7 downto 0);  
+  signal debug_ram_wdata2 : unsigned(7 downto 0) := x"00";
+  signal debug_ram_rdata2 : unsigned(7 downto 0);  
   signal iec_clk_o_int : std_logic := '0';
   signal iec_data_o_int : std_logic := '0';
   signal iec_srq_o_int : std_logic := '0';
@@ -157,6 +159,20 @@ begin
         address => debug_ram_raddr,
         wdata => debug_ram_wdata,
         rdata => debug_ram_rdata
+        );
+    end generate;
+  
+  ram1: if with_debug generate
+    debugram0: entity work.ram8x4096_sync
+      port map (
+        clkr => clock,
+        clkw => clock,
+        cs => '1',
+        w => debug_ram_write,
+        write_address => debug_ram_waddr,
+        address => debug_ram_raddr,
+        wdata => debug_ram_wdata2,
+        rdata => debug_ram_rdata2
         );
     end generate;
   
@@ -233,6 +249,11 @@ begin
             fastio_rdata <= debug_ram_rdata;
             report "Reading $" & to_hexstring(debug_ram_rdata) & " from debug RAM address " & integer'image(debug_ram_raddr_int);
           end if;
+        when x"5" => -- debug read register
+          if with_debug then
+            fastio_rdata <= debug_ram_rdata2;
+            report "Reading $" & to_hexstring(debug_ram_rdata2) & " from debug RAM2 address " & integer'image(debug_ram_raddr_int);
+          end if;
         when x"7" => -- Read IRQ register
           fastio_rdata <= iec_irq;
         when x"8" => -- Read from status register
@@ -258,6 +279,8 @@ begin
         debug_ram_wdata(5) <= iec_srq_o_int;
         debug_ram_wdata(6) <= iec_atn_int;
         debug_ram_wdata(7) <= iec_reset_int;
+
+        debug_ram_wdata2 <= to_unsigned(iec_state,8);
         
         if debug_counter < (40-1) then
           debug_counter <= debug_counter + 1;
