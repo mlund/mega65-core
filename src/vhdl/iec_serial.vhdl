@@ -220,12 +220,18 @@ begin
     end procedure;
     procedure micro_wait(usecs : integer) is
     begin
-      if not_waiting_usec then wait_usec <= usecs; not_waiting_usec <= false; end if;
-    end if;
+      if not_waiting_usec then
+        wait_usec <= usecs;
+        not_waiting_usec <= false;
+      end if;
+    end procedure;
     procedure milli_wait(msecs : integer) is
     begin
-      if not_waiting_msec then wait_msec <= msecs; not_waiting_msec <= false; end if;
-    end if;
+      if not_waiting_msec then
+        wait_msec <= msecs;
+        not_waiting_msec <= false;
+      end if;
+    end procedure;
   begin
 
     
@@ -556,7 +562,9 @@ begin
         when 114 => s('0'); micro_wait(5);
         when 115 => s('1'); micro_wait(5);
         when 116 => s('0'); micro_wait(5);
-          
+
+        when 117 | 118 | 119 => null;
+                    
         when 120 =>
           -- Reset all IEC lines:
           a('0'); -- ATN to 0V
