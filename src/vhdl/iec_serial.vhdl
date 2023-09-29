@@ -84,6 +84,7 @@ architecture questionable of iec_serial is
   signal wait_srq_high : std_logic := '0';
   signal wait_srq_low : std_logic := '0';
 
+  signal not_waiting_usec : boolean := true;
   signal wait_usec : integer := 0;
   signal wait_msec : integer := 0;
 
@@ -446,8 +447,12 @@ begin
       -- Update usec and msec denominated count-downs
       if usec_toggle /= last_usec_toggle then
         if wait_usec > 0 then
-          report "TIME: decrementing usec counter to " & integer'image(wait_usec-1);
+          not_waiting_usec <= false;
+          report "TIME: decrementing usec counter to " & integer'image(wait_usec-1);          
           wait_usec <= wait_usec - 1;
+          if wait_usec = 1 then
+            not_waiting_usec <= true;
+          end if;
         end if;
         usec_toggle <= last_usec_toggle;
       end if;
@@ -522,22 +527,22 @@ begin
 
           -- Send data byte $FF using SRQ as clock to indicate our ability
           -- to do C= fast serial
-        when 101 => s('1'); wait_usec <= 5;
-        when 102 => s('0'); wait_usec <= 5;
-        when 103 => s('1'); wait_usec <= 5;
-        when 104 => s('0'); wait_usec <= 5;
-        when 105 => s('1'); wait_usec <= 5;
-        when 106 => s('0'); wait_usec <= 5;
-        when 107 => s('1'); wait_usec <= 5;
-        when 108 => s('0'); wait_usec <= 5;
-        when 109 => s('1'); wait_usec <= 5;
-        when 110 => s('0'); wait_usec <= 5;
-        when 111 => s('1'); wait_usec <= 5;
-        when 112 => s('0'); wait_usec <= 5;
-        when 113 => s('1'); wait_usec <= 5;
-        when 114 => s('0'); wait_usec <= 5;
-        when 115 => s('1'); wait_usec <= 5;
-        when 116 => s('0'); wait_usec <= 5;
+        when 101 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 102 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 103 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 104 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 105 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 106 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 107 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 108 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 109 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 110 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 111 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 112 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 113 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 114 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 115 => s('1'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
+        when 116 => s('0'); if not_waiting_usec then wait_usec <= 5; not_waiting_usec <= false; end if;
           
         when 120 =>
           -- Reset all IEC lines:
