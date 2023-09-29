@@ -662,6 +662,7 @@ begin
 
           -- Send the first 7 bits
           report "IEC: Sending data byte under ATN";
+          null;
         when 129 => c('0'); d('1'); micro_wait(5);
         when 130 => null;
         when 131 => c('0'); d(iec_data_out(0)); micro_wait(15);
