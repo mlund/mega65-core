@@ -413,13 +413,14 @@ begin
           when x"52" => -- Drive IEC reset pin 5V
             iec_reset <= '1';
             iec_reset_int <= '1';
+            iec_dev_listening <= '0';
           when x"72" => -- Drive IEC reset pin 0V
             iec_reset <= '0';
             iec_reset_int <= '0';            
+            iec_dev_listening <= '0';
 
             -- Protocol level commands
           when x"30" => -- Request device attention (send data byte under attention)
-            iec_dev_listening <= '1';
             iec_state <= 100;
             iec_busy <= '1';
 
@@ -433,9 +434,7 @@ begin
             debug_ram_waddr_int <= 0;
             
           when x"31" => -- Send byte
-            iec_dev_listening <= '1';
           when x"32" => -- Receive byte
-            iec_dev_listening <= '0';
           when x"33" => -- Send EOI without byte
           when x"34" => -- Send byte with EOI
           when x"35" => -- Turn around from talk to listen
@@ -734,6 +733,8 @@ begin
           iec_devinfo(7) <= '1';
           iec_busy <= '0';
 
+          iec_dev_listening <= '0';
+          
           -- And we are still under attention
           iec_under_attention <= '1';
           iec_devinfo(4) <= '1';

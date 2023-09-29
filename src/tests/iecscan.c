@@ -61,7 +61,7 @@ void purge_serial(void)
 }
 
 unsigned int icapereg,icapeval,val,write_count;
-unsigned int iec_irq,iec_status,iec_data,iec_devinfo,iec_state,iec_state_reached,write_val,msec,usec,waits,iec_debug_ram,iec_debug_ram2;
+unsigned int iec_irq,iec_status,iec_data,iec_devinfo,iec_state,iec_state_reached,write_val,msec,usec,waits,iec_debug_ram,iec_debug_ram2,iec_debug_raddr;
 
 int getUpdate(void)
 {
@@ -79,13 +79,13 @@ int getUpdate(void)
 	int c=bytes[i];
 	if (c=='\n'||c=='\r') {
 	  if (line_len) {
-	    if (sscanf(line,"%x=%x %x %x %x %x %x %x State:%x/%x %x %x.%x,%x %x:%x",
+	    if (sscanf(line,"%x=%x %x %x %x %x %x %x State:%x/%x %x %x.%x,%x %x:%x:%x",
 		       &icapereg,&icapeval,
 		       &iec_irq,&iec_status,&iec_data,&iec_devinfo,
 		       &val,&write_count,
 		       &iec_state,&iec_state_reached,
-		       &write_val,&msec,&usec,&waits,&iec_debug_ram,&iec_debug_ram2)
-		== 16 ) {
+		       &write_val,&msec,&usec,&waits,&iec_debug_ram,&iec_debug_ram2,&iec_debug_raddr)
+		== 17 ) {
 	      // fprintf(stderr,"DEBUG: line = '%s'\n",line);
 	      return 0;
 	    }
@@ -158,10 +158,10 @@ int main(int argc,char **argv)
     fprintf(stderr,"INFO: Probing device #%d\n",dev);
     iecReset();
     getUpdate();
-    writeReg(9,0x20+dev);  // TALK + device
+    writeReg(REG_DATA,0x20+dev);  // TALK + device
     iecDataTrace("After sending $2x under attention");
     getUpdate();
-    writeReg(8,'0');       // Command device to talk
+    writeReg(REG_CMD,0x30);       // Command device to talk
     getUpdate();
     usleep(100000); // Allow time for job to complete
     getUpdate();
