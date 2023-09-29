@@ -61,7 +61,7 @@ void purge_serial(void)
 }
 
 unsigned int icapereg,icapeval,val,write_count;
-unsigned int iec_irq,iec_status,iec_data,iec_devinfo,iec_state,iec_state_reached,write_val,msec,usec,waits;
+unsigned int iec_irq,iec_status,iec_data,iec_devinfo,iec_state,iec_state_reached,write_val,msec,usec,waits,iec_debug_ram;
 
 int getUpdate(void)
 {
@@ -79,14 +79,14 @@ int getUpdate(void)
 	int c=bytes[i];
 	if (c=='\n'||c=='\r') {
 	  if (line_len) {
-	    if (sscanf(line,"%x=%x %x %x %x %x %x %x State:%x/%x %x %x.%x,%x",
+	    if (sscanf(line,"%x=%x %x %x %x %x %x %x State:%x/%x %x %x.%x,%x %x",
 		       &icapereg,&icapeval,
 		       &iec_irq,&iec_status,&iec_data,&iec_devinfo,
 		       &val,&write_count,
 		       &iec_state,&iec_state_reached,
-		       &write_val,&msec,&usec,&waits)
-		== 14 ) {
-	      fprintf(stderr,"DEBUG: line = '%s'\n",line);
+		       &write_val,&msec,&usec,&waits,&iec_debug_ram)
+		== 15 ) {
+	      // fprintf(stderr,"DEBUG: line = '%s'\n",line);
 	      return 0;
 	    }
 	  }
@@ -102,6 +102,7 @@ int getUpdate(void)
 }
 
 
+#define REG_DBG 4
 #define REG_IRQ 7
 #define REG_CMD 8
 #define REG_DATA 9
@@ -111,7 +112,7 @@ void writeReg(int reg, unsigned int val)
   char cmd[5];
   snprintf(cmd,5,"%x%02x\r",reg&0xf,val);
   write(serialfd,cmd,4);
-  fprintf(stderr,"DEBUG: POKE $D69%1X,$%02X\n",reg,val);
+  // fprintf(stderr,"DEBUG: POKE $D69%1X,$%02X\n",reg,val);
   return;
 }
 
@@ -135,6 +136,18 @@ void iecReset(void)
   }
 }
 
+iecDataTrace(char *msg)
+{
+  fprintf(stderr,"DEBUG: Fetching IEC data trace...\n");
+  writeReg(REG_DBG,0x00); // Reset data pointer to start of buffer
+  for(int i=0;i<4096;i++) {
+    getUpdate();
+    printf(" $%02x",iec_debug_ram); fflush(stdout);
+    writeReg(REG_DBG,0x01); // Advance to next value in debug trace buffer
+  }
+  printf("\n");
+}
+
 int main(int argc,char **argv)
 {
   openSerialPort(argv[1]);
@@ -146,6 +159,7 @@ int main(int argc,char **argv)
     iecReset();
     getUpdate();
     writeReg(9,0x20+dev);  // TALK + device
+    iecDataTrace("After sending $2x under attention");
     getUpdate();
     writeReg(8,'0');       // Command device to talk
     getUpdate();
