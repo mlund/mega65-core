@@ -74,6 +74,7 @@ architecture questionable of iec_serial is
   
   signal iec_state : integer := 0;
   signal last_iec_state : integer := 0;
+  signal prev_iec_state : integer := 0;
   signal iec_busy : std_logic := '0';
   signal iec_under_attention : std_logic := '0';
   
@@ -307,8 +308,9 @@ begin
         debug_ram_wdata(7) <= iec_reset_int;
 
         debug_ram_wdata2 <= to_unsigned(iec_state,8);
-        
-        if debug_counter < (40-1) then
+
+        prev_iec_state <= iec_state;
+        if debug_counter < (40-1) and (iec_state = prev_iec_state) then
           debug_counter <= debug_counter + 1;
           debug_ram_write <= '0';
         else
