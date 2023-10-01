@@ -33,6 +33,16 @@ entity internal1541 is
     -- Assert when the drive should be fully suspended
     -- (for freezing / resuming )
     drive_suspend : in std_logic;
+
+    -- IEC interface
+    iec_atn_i : in std_logic;
+    iec_clk_i : in std_logic;
+    iec_data_i : in std_logic;
+    iec_srq_i : in std_logic;
+    -- outputs are in voltage sense, i.e., 1 = 5V, 0 = 0V
+    iec_clk_o : out std_logic := '1';
+    iec_data_o : out std_logic := '1';
+    iec_srq_o : out std_logic := '1';
     
     -- Interface to SD card data feed
     -- Here we read non-GCR bytes and turn them to GCR.

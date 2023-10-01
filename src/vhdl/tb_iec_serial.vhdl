@@ -45,6 +45,9 @@ architecture test_arch of tb_iec_serial is
   signal f1541_pc : unsigned(15 downto 0);
   signal f1541_reset_n : std_logic := '1';
   signal f1541_cycle_strobe : std_logic := '0';
+  signal f1541_clk : std_logic;
+  signal f1541_data : std_logic;
+  signal f1541_srq : std_logic;
   
 begin
 
@@ -99,6 +102,15 @@ begin
       drive_reset_n => f1541_reset_n,
       drive_suspend => '0',
 
+      iec_atn_i => iec_atn,
+      iec_clk_i => iec_clk_en,
+      iec_data_i => iec_data_en,
+      iec_srq_i => iec_srq_en,
+
+      iec_clk_o => f1541_clk,
+      iec_data_o => f1541_data,
+      iec_srq_o => f1541_srq,
+      
       sd_data_byte => x"00",
       sd_data_ready_toggle => '0'
       
