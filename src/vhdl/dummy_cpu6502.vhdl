@@ -156,6 +156,128 @@ begin
       reg_pc <= branch_addr;
       cpu_state <= opcode_fetch;
     end procedure;
+
+    procedure alu_op_cmp (
+      i1 : in unsigned(7 downto 0);
+      i2 : in unsigned(7 downto 0)) is
+      variable result : unsigned(8 downto 0) := to_unsigned(0,9);
+    begin
+      result := ("0"&i1) - ("0"&i2);
+      flag_z <= '0'; flag_c <= '0';
+      if result(7 downto 0)=x"00" then
+        flag_z <= '1';
+      end if;
+      if result(8)='0' then
+        flag_c <= '1';
+      end if;
+      flag_n <= result(7);
+    end alu_op_cmp;
+
+    impure function alu_op_add (
+      i1 : in unsigned(7 downto 0);
+      i2 : in unsigned(7 downto 0)) return unsigned is
+      -- Result is NVZC<8bit result>
+      variable tmp : unsigned(11 downto 0) := x"000";
+    begin
+      if flag_d='1' then
+        tmp(8) := '0';
+        tmp(7 downto 0) := (i1 and x"0f") + (i2 and x"0f") + ("0000000" & flag_c);
+        
+        if tmp(7 downto 0) > x"09" then
+          tmp(7 downto 0) := tmp(7 downto 0) + x"06";
+        end if;
+        if tmp(7 downto 0) < x"10" then
+          tmp(8 downto 0) := '0'&(tmp(7 downto 0) and x"0f")
+                             + to_integer(i1 and x"f0") + to_integer(i2 and x"f0");
+        else
+          tmp(8 downto 0) := '0'&(tmp(7 downto 0) and x"0f")
+                             + to_integer(i1 and x"f0") + to_integer(i2 and x"f0")
+                             + 16;
+        end if;
+        if (i1 + i2 + ( "0000000" & flag_c )) = x"00" then
+          report "add result SET Z";
+          tmp(9) := '1'; -- Z flag
+        else
+          report "add result CLEAR Z (result=$"
+            & to_hexstring((i1 + i2 + ( "0000000" & flag_c )));
+          tmp(9) := '0'; -- Z flag
+        end if;
+        tmp(11) := tmp(7); -- N flag
+        tmp(10) := (i1(7) xor tmp(7)) and (not (i1(7) xor i2(7))); -- V flag
+        if tmp(8 downto 4) > "01001" then
+          tmp(7 downto 0) := tmp(7 downto 0) + x"60";
+          tmp(8) := '1'; -- C flag
+        end if;
+      -- flag_c <= tmp(8);
+      else
+        tmp(8 downto 0) := ("0"&i2)
+                           + ("0"&i1)
+                           + ("00000000"&flag_c);
+        tmp(7 downto 0) := tmp(7 downto 0);
+        tmp(11) := tmp(7); -- N flag
+        if (tmp(7 downto 0) = x"00") then
+          tmp(9) := '1';
+        else tmp(9) := '0'; -- Z flag
+        end if;
+        tmp(10) := (not (i1(7) xor i2(7))) and (i1(7) xor tmp(7)); -- V flag
+      -- flag_c <= tmp(8);
+      end if;
+
+      -- Return final value
+      --report "add result of "
+      --  & "$" & to_hexstring(std_logic_vector(i1)) 
+      --  & " + "
+      --  & "$" & to_hexstring(std_logic_vector(i2)) 
+      --  & " + "
+      --  & "$" & std_logic'image(flag_c)
+      --  & " = " & to_hexstring(std_logic_vector(tmp(7 downto 0))) severity note;
+      return tmp;
+    end function alu_op_add;
+
+    impure function alu_op_sub (
+      i1 : in unsigned(7 downto 0);
+      i2 : in unsigned(7 downto 0)) return unsigned is
+      variable tmp : unsigned(11 downto 0) := x"000"; -- NVZC+8bit result
+      variable tmpd : unsigned(8 downto 0) := "000000000";
+    begin
+      tmp(8 downto 0) := ("0"&i1) - ("0"&i2)
+                         - "000000001" + ("00000000"&flag_c);
+      tmp(8) := not tmp(8); -- Carry flag
+      tmp(10) := (i1(7) xor tmp(7)) and (i1(7) xor i2(7)); -- Overflowflag
+      tmp(7 downto 0) := tmp(7 downto 0);
+      tmp(11) := tmp(7); -- Negative flag
+      if tmp(7 downto 0) = x"00" then
+        tmp(9) := '1';
+      else
+        tmp(9) := '0';  -- Zero flag
+      end if;
+      if flag_d='1' then
+        tmpd := (("00000"&i1(3 downto 0)) - ("00000"&i2(3 downto 0)))
+                - "000000001" + ("00000000" & flag_c);
+
+        if tmpd(4)='1' then
+          tmpd(3 downto 0) := tmpd(3 downto 0)-x"6";
+          tmpd(8 downto 4) := ("0"&i1(7 downto 4)) - ("0"&i2(7 downto 4)) - "00001";
+        else
+          tmpd(8 downto 4) := ("0"&i1(7 downto 4)) - ("0"&i2(7 downto 4));
+        end if;
+        if tmpd(8)='1' then
+          tmpd(8 downto 0) := tmpd(8 downto 0) - ("0"&x"60");
+        end if;
+        tmp(7 downto 0) := tmpd(7 downto 0);
+      end if;
+                                        -- Return final value
+                                        --report "subtraction result of "
+                                        --  & "$" & to_hexstring(std_logic_vector(i1)) 
+                                        --  & " - "
+                                        --  & "$" & to_hexstring(std_logic_vector(i2)) 
+                                        --  & " - 1 + "
+                                        --  & "$" & std_logic'image(flag_c)
+                                        --  & " = " & to_hexstring(std_logic_vector(tmp(7 downto 0))) severity note;
+      return tmp(11 downto 0);
+    end function alu_op_sub;
+
+    
   begin
 
     if rising_edge(clk) then
@@ -296,6 +418,11 @@ begin
                   when others => null;
                 end case;
                 case reg_instruction is
+                  when I_ADC | I_SBC | I_CMP | I_CPX | I_CPY | I_ORA | I_EOR | I_AND
+                    | I_LDA | I_LDX | I_LDY
+                    | I_ROL | I_ROR | I_ASL | I_LSR | I_INC | I_DEC
+                    =>
+                    cpu_state <= load;
                   when I_STA => data_o <= reg_a; write <= '1'; cpu_state <= opcode_fetch;
                   when I_STX => data_o <= reg_x; write <= '1'; cpu_state <= opcode_fetch;
                   when I_STY => data_o <= reg_y; write <= '1'; cpu_state <= opcode_fetch;
@@ -343,6 +470,11 @@ begin
                 end case;
                 
                 case reg_instruction is
+                  when I_ADC | I_SBC | I_CMP | I_CPX | I_CPY | I_ORA | I_EOR | I_AND
+                    | I_LDA | I_LDX | I_LDY
+                    | I_ROL | I_ROR | I_ASL | I_LSR | I_INC | I_DEC
+                    =>
+                    cpu_state <= load;
                   when I_STA => data_o <= reg_a; write <= '1'; cpu_state <= opcode_fetch;
                   when I_STX => data_o <= reg_x; write <= '1'; cpu_state <= opcode_fetch;
                   when I_STY => data_o <= reg_y; write <= '1'; cpu_state <= opcode_fetch;
@@ -353,6 +485,20 @@ begin
                 assert false report "Hit unimplemented addressing mode " & addressingmode'image(reg_mode);
                 null;
             end case;          
+
+          when load =>
+
+            cpu_state <= idecode;
+            case reg_instruction is
+              when I_CMP => alu_op_cmp(reg_a,data_i);
+              when I_CPX => alu_op_cmp(reg_x,data_i);
+              when I_CPY => alu_op_cmp(reg_y,data_i);
+              when I_LDA => reg_a <= data_i; set_nz(data_i);
+              when I_LDX => reg_x <= data_i; set_nz(data_i);
+              when I_LDY => reg_y <= data_i; set_nz(data_i);
+              when others =>
+                assert false report "Unimplemented load instruction " & instruction'image(reg_instruction);
+            end case;
             
           when others =>
             assert false report "Hit unimplemented CPU state " & cpu_state_t'image(cpu_state);
