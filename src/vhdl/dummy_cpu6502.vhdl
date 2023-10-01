@@ -126,10 +126,13 @@ architecture vapourware of cpu6502 is
   signal reg_opcode : unsigned(7 downto 0) := x"00";
   signal reg_instruction : instruction := I_NOP;
 
+  signal reg_addr : unsigned(15 downto 0) := to_unsigned(0,16);
   signal reg_x_dec : unsigned(7 downto 0);
   signal reg_y_dec : unsigned(7 downto 0);
   signal reg_x_inc : unsigned(7 downto 0);
   signal reg_y_inc : unsigned(7 downto 0);
+  signal reg_addr_x : unsigned(8 downto 0);
+  signal reg_addr_y : unsigned(8 downto 0);
   
 begin
   process (clk) is
@@ -162,6 +165,8 @@ begin
       reg_x_dec <= reg_x - 1;
       reg_y_inc <= reg_y + 1;
       reg_y_dec <= reg_y - 1;
+      reg_addr_x <= to_unsigned(to_integer(reg_addr(7 downto 0)) + to_integer(reg_x),9);
+      reg_addr_y <= to_unsigned(to_integer(reg_addr(7 downto 0)) + to_integer(reg_y),9);
       
       last_nmi <= nmi;
       if nmi='0' and last_nmi='1' then
@@ -241,11 +246,15 @@ begin
                   when I_DEY => reg_y <= reg_y_dec; set_nz(reg_y_dec);
                   when I_INX => reg_x <= reg_x_inc; set_nz(reg_x_inc);
                   when I_INY => reg_y <= reg_y_inc; set_nz(reg_y_inc);
-                  when I_NOP => flag_i <= '0';
+                  when I_NOP => null;
                   when I_SEC => flag_c <= '1';
                   when I_SED => flag_d <= '1';
                   when I_SEI => flag_i <= '1';
-                    
+                  when I_TAX => reg_x <= reg_a; set_nz(reg_a);
+                  when I_TAY => reg_y <= reg_a; set_nz(reg_a);
+                  when I_TXA => reg_a <= reg_x; set_nz(reg_x);
+                  when I_TYA => reg_a <= reg_y; set_nz(reg_y);
+                                
                   when others =>
                     assert false report "Unimplemented implied mode instruction " & instruction'image(instruction_lut(to_integer(data_i)));
                 end case;
@@ -253,9 +262,11 @@ begin
                 reg_pc <= reg_pc + 1;
             end case;
           when byte2_fetch =>
+            reg_addr(7 downto 0) <= data_i;
             cpu_state <= byte3_fetch;
             case reg_mode is
               when M_IMMNN =>
+                reg_pc <= reg_pc + 1;
                 case reg_instruction is
                   when I_LDA => reg_a <= data_i; set_nz(data_i); cpu_state <= idecode;
                   when I_LDX => reg_x <= data_i; set_nz(data_i); cpu_state <= idecode;
@@ -263,22 +274,55 @@ begin
                   when others =>
                     assert false report "Unimplemented immediate mode instruction " & instruction'image(reg_instruction);
                 end case;
---              when M_NN =>
---              when M_NNX =>
---              when M_NNY =>
+              when M_NN | M_NNX | M_NNY =>
+                case reg_mode is
+                  when M_NN => address(7 downto 0) <= to_unsigned(0 + to_integer(data_i),8);
+                  when M_NNX => address(7 downto 0) <= to_unsigned(0 + to_integer(reg_x) + to_integer(data_i),8);
+                  when M_NNY => address(7 downto 0) <= to_unsigned(0 + to_integer(reg_y) + to_integer(data_i),8);
+                  when others => null;
+                end case;
+                case reg_instruction is
+                  when I_STA => data_o <= reg_a; write <= '1'; cpu_state <= opcode_fetch;
+                  when I_STX => data_o <= reg_x; write <= '1'; cpu_state <= opcode_fetch;
+                  when I_STY => data_o <= reg_y; write <= '1'; cpu_state <= opcode_fetch;
+                  when others =>
+                    assert false report "Unimplemented absolute mode instruction " & instruction'image(reg_instruction);
+                end case;
 --              when M_INNX | M_INNY =>
 --                when M_RR =>
+              when M_NNNN | M_INNNN | M_NNNNX | M_NNNNY => cpu_state <= byte3_fetch; reg_pc <= reg_pc + 1;
               when others =>
                 assert false report "Hit unimplemented addressing mode " & addressingmode'image(reg_mode);
-                    
+                null;
             end case;    
 
           when byte3_fetch =>
+            reg_addr(15 downto 8) <= data_i;
             case reg_mode is
-              when M_IMPL | M_IMMNN =>
-                cpu_state <= opcode_fetch;
+              when M_NNNN | M_NNNNX | M_NNNNY =>
+
+                -- Default to absolute unindexed addressing mode
+                address(15 downto 8) <= data_i;
+                address(7 downto 0) <= reg_addr(7 downto 0);
+
+                -- XXX Does not charge an extra cycle for page crossing
+                case reg_mode is
+                  when M_NNNNX => address(7 downto 0) <= reg_addr_x(7 downto 0);
+                                  if reg_addr_x(8)='1' then address(15 downto 8) <= to_unsigned(to_integer(data_i) + 1,8); end if;
+                  when M_NNNNY => address(7 downto 0) <= reg_addr_y(7 downto 0);
+                                  if reg_addr_y(8)='1' then address(15 downto 8) <= to_unsigned(to_integer(data_i) + 1,8); end if;
+                  when others => null;
+                end case;
+                
+                case reg_instruction is
+                  when I_STA => data_o <= reg_a; write <= '1'; cpu_state <= opcode_fetch;
+                  when I_STX => data_o <= reg_x; write <= '1'; cpu_state <= opcode_fetch;
+                  when I_STY => data_o <= reg_y; write <= '1'; cpu_state <= opcode_fetch;
+                  when others =>
+                    assert false report "Unimplemented absolute mode instruction " & instruction'image(reg_instruction);
+                end case;
               when others =>
-                -- LOAD, STORE or something else?
+                assert false report "Hit unimplemented addressing mode " & addressingmode'image(reg_mode);
                 null;
             end case;          
             
