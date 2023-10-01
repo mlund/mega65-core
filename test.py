@@ -44,7 +44,7 @@ lib.add_source_files("src/vhdl/victypes.vhdl")
 lib.add_source_files("src/vhdl/ghdl_ram8x4096_sync.vhdl")
 lib.add_source_files("src/vhdl/internal1541.vhdl")
 lib.add_source_files("src/vhdl/dpram8x4096.vhdl")
-lib.add_source_files("src/vhdl/driverom.vhdl")
+lib.add_source_files("src/vhdl/driverom1541.vhdl")
 lib.add_source_files("src/vhdl/dummy_cpu6502.vhdl")
 
 vu.set_compile_option("ghdl.a_flags", ["-frelaxed-rules"])

@@ -28,6 +28,8 @@ architecture test_arch of tb_iec_serial is
   signal debug_msec : unsigned(7 downto 0);
   signal iec_state_reached : unsigned(11 downto 0);
 
+  signal drive_cycle_countdown : integer := 0;
+
   signal iec_reset : std_logic;
   signal iec_atn : std_logic;
   signal iec_clk_en : std_logic;
@@ -123,6 +125,15 @@ begin
       pixelclock <= not pixelclock;
       if pixelclock='1' then
         clock41 <= not clock41;
+        if clock41 = '1' then
+          if drive_cycle_countdown /= 0 then
+            drive_cycle_countdown <= drive_cycle_countdown - 1;
+            f1541_cycle_strobe <= '0';
+          else
+            drive_cycle_countdown <= 40;
+            f1541_cycle_strobe <= '1';
+          end if;
+        end if;
       end if;
       wait for 6.173 ns;
     end procedure;
