@@ -92,6 +92,7 @@ architecture vapourware of cpu6502 is
     M_impl,  M_nnnnY, M_impl,  M_nnnnY, M_nnnnX, M_nnnnX, M_nnnnX, M_nnnnX);    
 
   type cpu_state_t is (
+    poreset,
     interrupt,
     vector0,
     vector1,
@@ -105,7 +106,7 @@ architecture vapourware of cpu6502 is
     rmw_store2
     );
 
-  signal cpu_state : cpu_state_t := interrupt;
+  signal cpu_state : cpu_state_t := poreset;
   
   signal reg_pc : unsigned(15 downto 0) := x"FFFC";
   signal reg_a : unsigned(7 downto 0) := x"00";
@@ -140,34 +141,43 @@ begin
       write <= '1';
       
       if ready='1' then
-        report("1541CPU: Clock ticks");
+        report("1541CPU: Clock ticks, state=" & cpu_state_t'image(cpu_state)
+               & ", data_i = $" & to_hexstring(data_i)
+               & ", addr=$" & to_hexstring(address));
 
         -- By default, fetch next instruction byte
         address <= reg_pc;
         
         case cpu_state is
+          when poreset =>
+            address <= x"FFFC";
+            report "1541CPU: Power-on RESET commenced";
+            cpu_state <= vector0;
           when interrupt =>
             address <= x"FFF8";
             if reset='0' then
               address(3 downto 0) <= x"c";
+              report "1541CPU: RESET commenced";
             elsif nmi_pending='1' then
               address(3 downto 0) <= x"a";
+              report "1541CPU: NMI commenced";
               nmi_pending <= '0';
             else
               address(3 downto 0) <= x"e";
+              report "1541CPU: IRQ commenced";
             end if;
             cpu_state <= vector0;
 
           when vector0 =>
             reg_pc(7 downto 0) <= data_i;
             address(0) <= '1';
-            cpu_state <= opcode_fetch;
+            cpu_state <= vector1;
           when vector1 =>
             reg_pc(15 downto 8) <= data_i;
             address <= address;
             address(0) <= '1';
             cpu_state <= opcode_fetch;
-
+            report "1541CPU: Read interrupt vector. Jumping to $" & to_hexstring(data_i) & to_hexstring(reg_pc(7 downto 0));
           when opcode_fetch =>
             if irq='0' or nmi='0' or reset='0' then
               cpu_state <= interrupt;
