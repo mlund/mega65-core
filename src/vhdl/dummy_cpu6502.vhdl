@@ -118,17 +118,51 @@ architecture vapourware of cpu6502 is
   signal flag_c : std_logic := '0';
   signal flag_i : std_logic := '0';
   signal flag_v : std_logic := '0';    
+  signal flag_n : std_logic := '0';    
 
   signal nmi_pending : std_logic := '0';
   signal last_nmi : std_logic := '1';
   signal reg_mode : addressingmode := M_IMPL;
   signal reg_opcode : unsigned(7 downto 0) := x"00";
+  signal reg_instruction : instruction := I_NOP;
+
+  signal reg_x_dec : unsigned(7 downto 0);
+  signal reg_y_dec : unsigned(7 downto 0);
+  signal reg_x_inc : unsigned(7 downto 0);
+  signal reg_y_inc : unsigned(7 downto 0);
   
 begin
   process (clk) is
+
+    variable virt_flags : unsigned(7 downto 0);
+    
+    procedure set_nz(d : unsigned(7 downto 0)) is
+    begin
+      flag_n <= d(7);
+      if d = x"00" then
+        flag_z <= '1';
+      else
+        flag_z <= '0';
+      end if;
+    end procedure;
   begin
 
     if rising_edge(clk) then
+
+      virt_flags(7) := flag_n;
+      virt_flags(6) := flag_v;
+      virt_flags(5) := '1';
+      virt_flags(4) := '0';
+      virt_flags(3) := flag_d;
+      virt_flags(2) := flag_i;
+      virt_flags(1) := flag_z;
+      virt_flags(0) := flag_c;
+
+      reg_x_inc <= reg_x + 1;
+      reg_x_dec <= reg_x - 1;
+      reg_y_inc <= reg_y + 1;
+      reg_y_dec <= reg_y - 1;
+      
       last_nmi <= nmi;
       if nmi='0' and last_nmi='1' then
         nmi_pending <= '1';
@@ -183,19 +217,61 @@ begin
               cpu_state <= interrupt;
             else
               reg_pc <= reg_pc + 1;
-              cpu_state <= byte2_fetch;
+              cpu_state <= idecode;
             end if;
 
           when idecode =>
+            cpu_state <= byte2_fetch;
             reg_opcode <= data_i;
+            reg_instruction <= instruction_lut(to_integer(data_i));
             reg_mode <= mode_lut(to_integer(data_i));
+            report "PC: $" & to_hexstring(reg_pc) & ", A:" & to_hexstring(reg_a) & ", X:" & to_hexstring(reg_x)
+              & ", Y:" & to_hexstring(reg_y) & ", SP:" & to_hexstring(reg_sp)
+              & " NVxBDIZC=" & to_string(virt_flags) & ", " &
+              " Decoding " & instruction'image(instruction_lut(to_integer(data_i)))
+              & ", mode = " & addressingmode'image(mode_lut(to_integer(data_i)));
             case mode_lut(to_integer(data_i)) is
               when M_IMPL =>
-                null;
+                cpu_state <= opcode_fetch;
+                case instruction_lut(to_integer(data_i)) is
+                  when I_CLC => flag_c <= '0';
+                  when I_CLD => flag_d <= '0';
+                  when I_CLI => flag_i <= '0';
+                  when I_DEX => reg_x <= reg_x_dec; set_nz(reg_x_dec);
+                  when I_DEY => reg_y <= reg_y_dec; set_nz(reg_y_dec);
+                  when I_INX => reg_x <= reg_x_inc; set_nz(reg_x_inc);
+                  when I_INY => reg_y <= reg_y_inc; set_nz(reg_y_inc);
+                  when I_NOP => flag_i <= '0';
+                  when I_SEC => flag_c <= '1';
+                  when I_SED => flag_d <= '1';
+                  when I_SEI => flag_i <= '1';
+                    
+                  when others =>
+                    assert false report "Unimplemented implied mode instruction " & instruction'image(instruction_lut(to_integer(data_i)));
+                end case;
               when others =>
                 reg_pc <= reg_pc + 1;
             end case;
+          when byte2_fetch =>
             cpu_state <= byte3_fetch;
+            case reg_mode is
+              when M_IMMNN =>
+                case reg_instruction is
+                  when I_LDA => reg_a <= data_i; set_nz(data_i); cpu_state <= idecode;
+                  when I_LDX => reg_x <= data_i; set_nz(data_i); cpu_state <= idecode;
+                  when I_LDY => reg_y <= data_i; set_nz(data_i); cpu_state <= idecode;
+                  when others =>
+                    assert false report "Unimplemented immediate mode instruction " & instruction'image(reg_instruction);
+                end case;
+--              when M_NN =>
+--              when M_NNX =>
+--              when M_NNY =>
+--              when M_INNX | M_INNY =>
+--                when M_RR =>
+              when others =>
+                assert false report "Hit unimplemented addressing mode " & addressingmode'image(reg_mode);
+                    
+            end case;    
 
           when byte3_fetch =>
             case reg_mode is
@@ -205,7 +281,7 @@ begin
                 -- LOAD, STORE or something else?
                 null;
             end case;          
-
+            
           when others =>
             assert false report "Hit unimplemented CPU state " & cpu_state_t'image(cpu_state);
         end case;
