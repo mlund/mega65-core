@@ -41,6 +41,10 @@ architecture test_arch of tb_iec_serial is
   signal iec_srq_i : std_logic := '1';
     
   signal atn_state : integer := 0;
+
+  signal f1541_pc : unsigned(15 downto 0);
+  signal f1541_reset_n : std_logic := '1';
+  signal f1541_cycle_strobe : std_logic := '0';
   
 begin
 
@@ -78,6 +82,28 @@ begin
     
     );
 
+  c1541: entity work.internal1541
+    port map (
+      clock => clock41,
+
+      fastio_read => '0',
+      fastio_write => '0',
+      fastio_address => to_unsigned(0,20),
+      fastio_wdata => x"00",
+      cs_driverom => '0',
+      cs_driveram => '0',
+
+      address_next => f1541_pc,
+
+      drive_clock_cycle_strobe => f1541_cycle_strobe,
+      drive_reset_n => f1541_reset_n,
+      drive_suspend => '0',
+
+      sd_data_byte => x"00",
+      sd_data_ready_toggle => '0'
+      
+      );
+  
   main : process
 
     procedure clock_tick is

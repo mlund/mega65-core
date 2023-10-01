@@ -14,6 +14,7 @@ port (
       address : buffer unsigned(15 downto 0);
       address_next : out unsigned(15 downto 0);
       clk : in std_logic;
+      clock81 : in std_logic;
       cpu_int : out std_logic;
       cpu_state : out unsigned(7 downto 0);
       data_i : in unsigned(7 downto 0);
@@ -31,6 +32,11 @@ port (
 end entity cpu6502;
 
 architecture vapourware of cpu6502 is
-begin  
+  
+begin
+  process (clk) is
+  begin
+    
+  end process;  
 end vapourware;
 

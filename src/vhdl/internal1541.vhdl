@@ -29,7 +29,7 @@ entity internal1541 is
     -- so that fast loaders can be accelerated.
     drive_clock_cycle_strobe : in std_logic;
     -- Assert high to hold the drive CPU under reset
-    drive_reset : in std_logic;
+    drive_reset_n : in std_logic;
     -- Assert when the drive should be fully suspended
     -- (for freezing / resuming )
     drive_suspend : in std_logic;
@@ -134,8 +134,7 @@ begin
 
   cpu: component cpu6502 port map (
     clk => clock,
---    reset => drive_reset,
-    reset => '0',
+    reset => drive_reset_n,
     nmi => nmi,
     irq => irq,
     ready => drive_clock_cycle_strobe,
@@ -151,8 +150,8 @@ begin
   begin
 
     if rising_edge(clock) then
-      report "1541TICK: address = $" & to_hstring(address) & ", drive_cycle = "
-        & std_logic'image(drive_clock_cycle_strobe) & ", reset=" & std_logic'image(drive_reset);
+      report "1541TICK: address = $" & to_hexstring(address) & ", drive_cycle = "
+        & std_logic'image(drive_clock_cycle_strobe) & ", reset=" & std_logic'image(drive_reset_n);
     end if;
     
     address_next <= address_next_internal;
