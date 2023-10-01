@@ -138,6 +138,7 @@ begin
   process (clk) is
 
     variable virt_flags : unsigned(7 downto 0);
+    variable branch_addr : unsigned(15 downto 0);
     
     procedure set_nz(d : unsigned(7 downto 0)) is
     begin
@@ -148,10 +149,23 @@ begin
         flag_z <= '0';
       end if;
     end procedure;
+
+    procedure take_branch is
+    begin
+      report "Taking branch to $" & to_hexstring(branch_addr);
+      reg_pc <= branch_addr;
+      cpu_state <= opcode_fetch;
+    end procedure;
   begin
 
     if rising_edge(clk) then
 
+      if data_i(7)='0' then
+        branch_addr := reg_pc + to_integer(data_i);
+      else
+        branch_addr := reg_pc - 128 + to_integer(data_i(6 downto 0));
+      end if;
+      
       virt_flags(7) := flag_n;
       virt_flags(6) := flag_v;
       virt_flags(5) := '1';
@@ -286,10 +300,24 @@ begin
                   when I_STX => data_o <= reg_x; write <= '1'; cpu_state <= opcode_fetch;
                   when I_STY => data_o <= reg_y; write <= '1'; cpu_state <= opcode_fetch;
                   when others =>
-                    assert false report "Unimplemented absolute mode instruction " & instruction'image(reg_instruction);
+                    assert false report "Unimplemented zeropage mode instruction " & instruction'image(reg_instruction);
                 end case;
 --              when M_INNX | M_INNY =>
---                when M_RR =>
+              when M_RR =>
+                -- XXX Doesn't charge extra cycle for crossing page boundary
+                cpu_state <= idecode;
+                case reg_instruction is
+                  when I_BNE => if flag_z='0' then take_branch; end if;
+                  when I_BEQ => if flag_z='1' then take_branch; end if;
+                  when I_BCC => if flag_c='0' then take_branch; end if;
+                  when I_BCS => if flag_c='1' then take_branch; end if;
+                  when I_BMI => if flag_n='1' then take_branch; end if;
+                  when I_BPL => if flag_n='0' then take_branch; end if;
+                  when I_BVS => if flag_v='1' then take_branch; end if;
+                  when I_BVC => if flag_v='0' then take_branch; end if;
+                  when others =>
+                    assert false report "Unimplemented branch instruction " & instruction'image(reg_instruction);
+                end case;
               when M_NNNN | M_INNNN | M_NNNNX | M_NNNNY => cpu_state <= byte3_fetch; reg_pc <= reg_pc + 1;
               when others =>
                 assert false report "Hit unimplemented addressing mode " & addressingmode'image(reg_mode);
