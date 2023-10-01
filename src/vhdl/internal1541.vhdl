@@ -86,27 +86,6 @@ architecture romanesque_revival of internal1541 is
   
   signal address_next_internal : unsigned(15 downto 0);
   
-  component cpu6502 is
-    port (
-      address : buffer unsigned(15 downto 0);
-      address_next : out unsigned(15 downto 0);
-      clk : in std_logic;
-      cpu_int : out std_logic;
-      cpu_state : out unsigned(7 downto 0);
-      data_i : in unsigned(7 downto 0);
-      data_o : out unsigned(7 downto 0);
-      data_o_next : out unsigned(7 downto 0);
-      irq : in std_logic;
-      nmi : in std_logic;
-      ready : in std_logic;
-      reset : in std_logic;
-      sync : buffer std_logic;
-      t : out unsigned(2 downto 0);
-      write : out std_logic;
-      write_next : buffer std_logic
-    );
-  end component;
-
 begin
   
   -- XXX Add the missing 6522 VIAs
@@ -138,11 +117,11 @@ begin
 
     -- CPU interface
     clkb => clock,
-    addressb => to_integer(address),
+    addressb => to_integer(address(13 downto 0)),
     dob => rom_rdata
     );
 
-  cpu: component cpu6502 port map (
+  cpu: entity work.cpu6502 port map (
     clk => clock,
     reset => drive_reset_n,
     nmi => nmi,
@@ -160,8 +139,8 @@ begin
   begin
 
     if rising_edge(clock) then
-      report "1541TICK: address = $" & to_hexstring(address) & ", drive_cycle = "
-        & std_logic'image(drive_clock_cycle_strobe) & ", reset=" & std_logic'image(drive_reset_n);
+      -- report "1541TICK: address = $" & to_hexstring(address) & ", drive_cycle = "
+      --   & std_logic'image(drive_clock_cycle_strobe) & ", reset=" & std_logic'image(drive_reset_n);
     end if;
     
     address_next <= address_next_internal;

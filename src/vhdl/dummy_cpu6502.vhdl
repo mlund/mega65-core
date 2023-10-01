@@ -10,24 +10,23 @@ use work.cputypes.all;
 use work.victypes.all;
 
 entity cpu6502 is 
-port (
-      address : buffer unsigned(15 downto 0);
-      address_next : out unsigned(15 downto 0);
-      clk : in std_logic;
-      clock81 : in std_logic;
-      cpu_int : out std_logic;
-      cpu_state : out unsigned(7 downto 0);
-      data_i : in unsigned(7 downto 0);
-      data_o : out unsigned(7 downto 0);
-      data_o_next : out unsigned(7 downto 0);
-      irq : in std_logic;
-      nmi : in std_logic;
-      ready : in std_logic;
-      reset : in std_logic;
-      sync : buffer std_logic;
-      t : out unsigned(2 downto 0);
-      write : out std_logic;
-      write_next : buffer std_logic
+  port (
+    address : buffer unsigned(15 downto 0);
+    address_next : out unsigned(15 downto 0);
+    clk : in std_logic;
+    cpu_int : out std_logic;
+    cpu_state_o : out unsigned(7 downto 0);
+    data_i : in unsigned(7 downto 0);
+    data_o : out unsigned(7 downto 0);
+    data_o_next : out unsigned(7 downto 0);
+    irq : in std_logic;
+    nmi : in std_logic;
+    ready : in std_logic;
+    reset : in std_logic;
+    sync : buffer std_logic;
+    t : out unsigned(2 downto 0);
+    write : out std_logic;
+    write_next : buffer std_logic
     );
 end entity cpu6502;
 
@@ -90,16 +89,118 @@ architecture vapourware of cpu6502 is
     M_immnn, M_InnX,  M_immnn, M_InnX,  M_nn,    M_nn,    M_nn,    M_nn,
     M_impl,  M_immnn, M_impl,  M_immnn, M_nnnn,  M_nnnn,  M_nnnn,  M_nnnn,
     M_rr,    M_InnY,  M_impl,  M_InnY,  M_nnX,   M_nnX,   M_nnX,   M_nnX,
-    M_impl,  M_nnnnY, M_impl,  M_nnnnY, M_nnnnX, M_nnnnX, M_nnnnX, M_nnnnX);
+    M_impl,  M_nnnnY, M_impl,  M_nnnnY, M_nnnnX, M_nnnnX, M_nnnnX, M_nnnnX);    
 
-    
+  type cpu_state_t is (
+    interrupt,
+    vector0,
+    vector1,
+    opcode_fetch,
+    idecode,
+    byte2_fetch,
+    byte3_fetch,
+    load,
+    store,
+    rmw_store1,
+    rmw_store2
+    );
+
+  signal cpu_state : cpu_state_t := interrupt;
+  
+  signal reg_pc : unsigned(15 downto 0) := x"FFFC";
+  signal reg_a : unsigned(7 downto 0) := x"00";
+  signal reg_x : unsigned(7 downto 0) := x"00";
+  signal reg_y : unsigned(7 downto 0) := x"00";
+  signal reg_sp : unsigned(7 downto 0) := x"00";
+  signal flag_z : std_logic := '0';
+  signal flag_d : std_logic := '0';
+  signal flag_c : std_logic := '0';
+  signal flag_i : std_logic := '0';
+  signal flag_v : std_logic := '0';    
+
+  signal nmi_pending : std_logic := '0';
+  signal last_nmi : std_logic := '1';
+  signal reg_mode : addressingmode := M_IMPL;
+  signal reg_opcode : unsigned(7 downto 0) := x"00";
   
 begin
   process (clk) is
   begin
-    
-    if ready='1' then
-      report("1541CPU: Clock ticks");
+
+    if rising_edge(clk) then
+      last_nmi <= nmi;
+      if nmi='0' and last_nmi='1' then
+        nmi_pending <= '1';
+      end if;    
+
+      -- Export debug status of CPU
+      cpu_state_o <= to_unsigned(cpu_state_t'pos(cpu_state),8);
+      address_next <= reg_pc;
+      
+      write <= '1';
+      
+      if ready='1' then
+        report("1541CPU: Clock ticks");
+
+        -- By default, fetch next instruction byte
+        address <= reg_pc;
+        
+        case cpu_state is
+          when interrupt =>
+            address <= x"FFF8";
+            if reset='0' then
+              address(3 downto 0) <= x"c";
+            elsif nmi_pending='1' then
+              address(3 downto 0) <= x"a";
+              nmi_pending <= '0';
+            else
+              address(3 downto 0) <= x"e";
+            end if;
+            cpu_state <= vector0;
+
+          when vector0 =>
+            reg_pc(7 downto 0) <= data_i;
+            address(0) <= '1';
+            cpu_state <= opcode_fetch;
+          when vector1 =>
+            reg_pc(15 downto 8) <= data_i;
+            address <= address;
+            address(0) <= '1';
+            cpu_state <= opcode_fetch;
+
+          when opcode_fetch =>
+            if irq='0' or nmi='0' or reset='0' then
+              cpu_state <= interrupt;
+            else
+              reg_pc <= reg_pc + 1;
+              cpu_state <= byte2_fetch;
+            end if;
+
+          when idecode =>
+            reg_opcode <= data_i;
+            reg_mode <= mode_lut(to_integer(data_i));
+            case mode_lut(to_integer(data_i)) is
+              when M_IMPL =>
+                null;
+              when others =>
+                reg_pc <= reg_pc + 1;
+            end case;
+            cpu_state <= byte3_fetch;
+
+          when byte3_fetch =>
+            case reg_mode is
+              when M_IMPL | M_IMMNN =>
+                cpu_state <= opcode_fetch;
+              when others =>
+                -- LOAD, STORE or something else?
+                null;
+            end case;          
+
+          when others =>
+            assert false report "Hit unimplemented CPU state " & cpu_state_t'image(cpu_state);
+        end case;
+        
+      end if;
     end if;
     
   end process;  
