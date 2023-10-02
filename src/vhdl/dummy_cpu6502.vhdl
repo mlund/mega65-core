@@ -139,6 +139,9 @@ begin
 
     variable virt_flags : unsigned(7 downto 0);
     variable branch_addr : unsigned(15 downto 0);
+    variable alu_and : unsigned(7 downto 0);
+    variable alu_ora : unsigned(7 downto 0);
+    variable alu_eor : unsigned(7 downto 0);
     
     procedure set_nz(d : unsigned(7 downto 0)) is
     begin
@@ -285,8 +288,13 @@ begin
       if data_i(7)='0' then
         branch_addr := reg_pc + to_integer(data_i);
       else
-        branch_addr := reg_pc - 128 + to_integer(data_i(6 downto 0));
+        branch_addr := reg_pc - 256 + to_integer(data_i);
+        -- report "Calculated branch addr as $" & to_hexstring(branch_addr) &" = $" & to_hexstring(reg_pc) & " - 256 + " & integer'image(to_integer(data_i));
       end if;
+
+      alu_and := reg_a and data_i;
+      alu_ora := reg_a or data_i;
+      alu_eor := reg_a xor data_i;
       
       virt_flags(7) := flag_n;
       virt_flags(6) := flag_v;
@@ -312,16 +320,17 @@ begin
       -- Export debug status of CPU
       cpu_state_o <= to_unsigned(cpu_state_t'pos(cpu_state),8);
       address_next <= reg_pc;
-      
+
+      -- Disassert /write line, i.e., read by default
       write <= '1';
-      
+
       if ready='1' then
         report("1541CPU: Clock ticks, state=" & cpu_state_t'image(cpu_state)
                & ", data_i = $" & to_hexstring(data_i)
-               & ", addr=$" & to_hexstring(address));
+               & ", addr read=$" & to_hexstring(address));
 
         -- By default, fetch next instruction byte
-        address <= reg_pc;
+        address <= reg_pc;              
         
         case cpu_state is
           when poreset =>
@@ -388,7 +397,9 @@ begin
                   when I_SEI => flag_i <= '1';
                   when I_TAX => reg_x <= reg_a; set_nz(reg_a);
                   when I_TAY => reg_y <= reg_a; set_nz(reg_a);
+                  when I_TSX => reg_x <= reg_sp; set_nz(reg_sp);
                   when I_TXA => reg_a <= reg_x; set_nz(reg_x);
+                  when I_TXS => reg_sp <= reg_x;
                   when I_TYA => reg_a <= reg_y; set_nz(reg_y);
                                 
                   when others =>
@@ -396,6 +407,7 @@ begin
                 end case;
               when others =>
                 reg_pc <= reg_pc + 1;
+                report "PC <= PC + 1 from $" & to_hexstring(reg_pc);
             end case;
           when byte2_fetch =>
             reg_addr(7 downto 0) <= data_i;
@@ -403,10 +415,14 @@ begin
             case reg_mode is
               when M_IMMNN =>
                 reg_pc <= reg_pc + 1;
+                cpu_state <= idecode;                 
                 case reg_instruction is
-                  when I_LDA => reg_a <= data_i; set_nz(data_i); cpu_state <= idecode;
-                  when I_LDX => reg_x <= data_i; set_nz(data_i); cpu_state <= idecode;
-                  when I_LDY => reg_y <= data_i; set_nz(data_i); cpu_state <= idecode;
+                  when I_LDA => reg_a <= data_i; set_nz(data_i);
+                  when I_LDX => reg_x <= data_i; set_nz(data_i);
+                  when I_LDY => reg_y <= data_i; set_nz(data_i);
+                  when I_AND => reg_a <= alu_and; set_nz(alu_and);
+                  when I_ORA => reg_a <= alu_ora; set_nz(alu_ora);
+                  when I_EOR => reg_a <= alu_eor; set_nz(alu_eor);
                   when others =>
                     assert false report "Unimplemented immediate mode instruction " & instruction'image(reg_instruction);
                 end case;
@@ -418,9 +434,10 @@ begin
                   when others => null;
                 end case;
                 case reg_instruction is
-                  when I_ADC | I_SBC | I_CMP | I_CPX | I_CPY | I_ORA | I_EOR | I_AND
-                    | I_LDA | I_LDX | I_LDY
+                  when I_ADC | I_SBC | I_CMP | I_CPX | I_CPY | I_ORA | I_EOR | I_AND 
+                    | I_LDA | I_LDX | I_LDY 
                     | I_ROL | I_ROR | I_ASL | I_LSR | I_INC | I_DEC
+                    | I_BIT
                     =>
                     cpu_state <= load;
                   when I_STA => data_o <= reg_a; write <= '1'; cpu_state <= opcode_fetch;
@@ -473,6 +490,7 @@ begin
                   when I_ADC | I_SBC | I_CMP | I_CPX | I_CPY | I_ORA | I_EOR | I_AND
                     | I_LDA | I_LDX | I_LDY
                     | I_ROL | I_ROR | I_ASL | I_LSR | I_INC | I_DEC
+                    | I_BIT
                     =>
                     cpu_state <= load;
                   when I_STA => data_o <= reg_a; write <= '1'; cpu_state <= opcode_fetch;
@@ -489,6 +507,8 @@ begin
           when load =>
 
             cpu_state <= idecode;
+            reg_pc <= reg_pc + 1;
+            
             case reg_instruction is
               when I_CMP => alu_op_cmp(reg_a,data_i);
               when I_CPX => alu_op_cmp(reg_x,data_i);
@@ -496,6 +516,10 @@ begin
               when I_LDA => reg_a <= data_i; set_nz(data_i);
               when I_LDX => reg_x <= data_i; set_nz(data_i);
               when I_LDY => reg_y <= data_i; set_nz(data_i);
+              when I_AND => reg_a <= alu_and; set_nz(alu_and);
+              when I_ORA => reg_a <= alu_ora; set_nz(alu_ora);
+              when I_EOR => reg_a <= alu_eor; set_nz(alu_eor);
+              when I_BIT => set_nz(data_i); flag_v <= data_i(6); 
               when others =>
                 assert false report "Unimplemented load instruction " & instruction'image(reg_instruction);
             end case;
