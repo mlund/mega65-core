@@ -741,7 +741,7 @@ begin
         cs_driverom => cs_driverom,
         cs_driveram => cs_driveram,
         drive_clock_cycle_strobe => drive_clock_cycle_strobe,
-        drive_reset => drive_reset,
+        drive_reset_n => drive_reset,
         drive_suspend => cpu_hypervisor_mode,
 
         -- Debug output of 1541 CPU next address
