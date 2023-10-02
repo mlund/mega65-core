@@ -28,7 +28,7 @@ entity internal1541 is
     -- This allows us to accelerate the 1541 at the same ratio as the CPU,
     -- so that fast loaders can be accelerated.
     drive_clock_cycle_strobe : in std_logic;
-    -- Assert high to hold the drive CPU under reset
+    -- Assert low to hold the drive CPU under reset
     drive_reset_n : in std_logic;
     -- Assert when the drive should be fully suspended
     -- (for freezing / resuming )

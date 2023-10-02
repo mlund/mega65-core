@@ -319,7 +319,7 @@ begin
             debug_ram_write <= '1';
             debug_ram_waddr_int <= debug_ram_waddr_int + 1;
             debug_ram_waddr <= debug_ram_waddr_int + 1;
-            report "Writing $" & to_hexstring(debug_ram_wdata) & " to debug RAM address " & integer'image(debug_ram_waddr_int + 1);
+            -- report "Writing $" & to_hexstring(debug_ram_wdata) & " to debug RAM address " & integer'image(debug_ram_waddr_int + 1);
           end if;
         end if;
       end if;
