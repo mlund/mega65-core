@@ -747,6 +747,12 @@ begin
         -- Debug output of 1541 CPU next address
         address_next => address_next_1541,
 
+        -- XXX Not currently connected to internal IEC bus        
+        iec_atn_i => '1',
+        iec_clk_i => '1',
+        iec_data_i => '1',
+        iec_srq_i => '1',
+        
         sd_data_byte => sd1541_data,
         sd_data_ready_toggle => sd1541_ready_toggle,
         sd_data_request_toggle => sd1541_request_toggle,
