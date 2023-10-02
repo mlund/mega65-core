@@ -103,7 +103,8 @@ architecture vapourware of cpu6502 is
     load,
     store,
     rmw_store1,
-    rmw_store2
+    rmw_store2,
+    jsrhi
     );
 
   signal cpu_state : cpu_state_t := poreset;
@@ -142,6 +143,9 @@ begin
     variable alu_and : unsigned(7 downto 0);
     variable alu_ora : unsigned(7 downto 0);
     variable alu_eor : unsigned(7 downto 0);
+    variable sp_dec : unsigned(7 downto 0);
+    variable sp_inc : unsigned(7 downto 0);
+    variable add_result : unsigned(11 downto 0);
     
     procedure set_nz(d : unsigned(7 downto 0)) is
     begin
@@ -311,6 +315,8 @@ begin
       reg_y_dec <= reg_y - 1;
       reg_addr_x <= to_unsigned(to_integer(reg_addr(7 downto 0)) + to_integer(reg_x),9);
       reg_addr_y <= to_unsigned(to_integer(reg_addr(7 downto 0)) + to_integer(reg_y),9);
+      sp_inc := reg_sp + 1;
+      sp_dec := reg_sp - 1;
       
       last_nmi <= nmi;
       if nmi='0' and last_nmi='1' then
@@ -407,7 +413,7 @@ begin
                 end case;
               when others =>
                 reg_pc <= reg_pc + 1;
-                report "PC <= PC + 1 from $" & to_hexstring(reg_pc);
+                -- report "PC <= PC + 1 from $" & to_hexstring(reg_pc);
             end case;
           when byte2_fetch =>
             reg_addr(7 downto 0) <= data_i;
@@ -423,10 +429,24 @@ begin
                   when I_AND => reg_a <= alu_and; set_nz(alu_and);
                   when I_ORA => reg_a <= alu_ora; set_nz(alu_ora);
                   when I_EOR => reg_a <= alu_eor; set_nz(alu_eor);
+                  when I_ADC =>
+                    add_result := alu_op_add(reg_a,data_i);
+                    reg_a <= add_result(7 downto 0);
+                    flag_c <= add_result(8);  flag_z <= add_result(9);
+                    flag_v <= add_result(10); flag_n <= add_result(11);
+                  when I_SBC => 
+                    add_result := alu_op_sub(reg_a,data_i);
+                    reg_a <= add_result(7 downto 0);
+                    flag_c <= add_result(8);  flag_z <= add_result(9);
+                    flag_v <= add_result(10); flag_n <= add_result(11);
+                  when I_CMP => alu_op_cmp(reg_a,data_i);
+                  when I_CPX => alu_op_cmp(reg_x,data_i);
+                  when I_CPY => alu_op_cmp(reg_y,data_i);
                   when others =>
                     assert false report "Unimplemented immediate mode instruction " & instruction'image(reg_instruction);
                 end case;
               when M_NN | M_NNX | M_NNY =>
+                address(15 downto 8) <= x"00"; -- Accessing zero-page
                 case reg_mode is
                   when M_NN => address(7 downto 0) <= to_unsigned(0 + to_integer(data_i),8);
                   when M_NNX => address(7 downto 0) <= to_unsigned(0 + to_integer(reg_x) + to_integer(data_i),8);
@@ -487,6 +507,20 @@ begin
                 end case;
                 
                 case reg_instruction is
+                  when I_JMP | I_JSR =>
+                    reg_pc(7 downto 0) <= reg_addr(7 downto 0);
+                    reg_pc(15 downto 8) <= data_i;
+                    if reg_instruction = I_JSR then
+                      reg_addr <= reg_pc;
+                      cpu_state <= jsrhi;
+                      write <= '0';
+                      address(15 downto 8) <= x"01"; -- stack
+                      address(7 downto 0) <= reg_sp;
+                      data_o <= reg_pc(7 downto 0);
+                      reg_sp <= sp_dec;
+                    else
+                      cpu_state <= opcode_fetch;
+                    end if;
                   when I_ADC | I_SBC | I_CMP | I_CPX | I_CPY | I_ORA | I_EOR | I_AND
                     | I_LDA | I_LDX | I_LDY
                     | I_ROL | I_ROR | I_ASL | I_LSR | I_INC | I_DEC
@@ -523,6 +557,13 @@ begin
               when others =>
                 assert false report "Unimplemented load instruction " & instruction'image(reg_instruction);
             end case;
+          when jsrhi =>
+            write <= '0';
+            address(15 downto 8) <= x"01"; -- stack
+            address(7 downto 0) <= reg_sp;
+            data_o <= reg_addr(15 downto 8);
+            reg_sp <= sp_dec;
+            cpu_state <= opcode_fetch;
             
           when others =>
             assert false report "Hit unimplemented CPU state " & cpu_state_t'image(cpu_state);
