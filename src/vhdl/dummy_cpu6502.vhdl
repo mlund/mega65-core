@@ -102,9 +102,8 @@ architecture vapourware of cpu6502 is
     byte3_fetch,
     load,
     store,
-    rmw_store1,
-    rmw_store2,
-    jsrhi
+    jsrhi,
+    rmw_commit
     );
 
   signal cpu_state : cpu_state_t := poreset;
@@ -134,6 +133,8 @@ architecture vapourware of cpu6502 is
   signal reg_y_inc : unsigned(7 downto 0);
   signal reg_addr_x : unsigned(8 downto 0);
   signal reg_addr_y : unsigned(8 downto 0);
+
+  signal reg_data : unsigned(7 downto 0) := x"00";
   
 begin
   process (clk) is
@@ -407,6 +408,19 @@ begin
                   when I_TXA => reg_a <= reg_x; set_nz(reg_x);
                   when I_TXS => reg_sp <= reg_x;
                   when I_TYA => reg_a <= reg_y; set_nz(reg_y);
+                  when I_ROR =>  reg_a(6 downto 0) <= reg_a(7 downto 1);
+                                 reg_a(7) <= flag_c;
+                                 flag_c <= reg_a(0);
+                                 set_nz(reg_a(6 downto 0) & "0");
+                  when I_ROL =>  reg_a(7 downto 1) <= reg_a(6 downto 0);
+                                 reg_a(0) <= flag_c;
+                                 flag_c <= reg_a(7);
+                  when I_LSR =>  reg_a(6 downto 0) <= reg_a(7 downto 1);
+                                 reg_a(7) <= '0';
+                                 flag_c <= reg_data(0);
+                  when I_ASL =>  reg_a(7 downto 1) <= reg_a(6 downto 0);
+                                 reg_a(0) <= '0';
+                                 flag_c <= reg_a(7);
                                 
                   when others =>
                     assert false report "Unimplemented implied mode instruction " & instruction'image(instruction_lut(to_integer(data_i)));
@@ -553,7 +567,33 @@ begin
               when I_AND => reg_a <= alu_and; set_nz(alu_and);
               when I_ORA => reg_a <= alu_ora; set_nz(alu_ora);
               when I_EOR => reg_a <= alu_eor; set_nz(alu_eor);
-              when I_BIT => set_nz(data_i); flag_v <= data_i(6); 
+              when I_BIT => set_nz(data_i); flag_v <= data_i(6);
+              when I_INC | I_DEC | I_ROL | I_ROR | I_LSR | I_ASL =>
+                -- Read-modify-write instruction
+                -- These write back the original value, before writing back the
+                -- updated value
+                write <= '0';
+                address <= address;
+                data_o <= data_i;
+                cpu_state <= rmw_commit;
+                case reg_instruction is
+                  when I_INC =>  reg_data <= data_i + 1;
+                  when I_DEC =>  reg_data <= data_i - 1;
+                  when I_ROR =>  reg_data(6 downto 0) <= data_i(7 downto 1);
+                                 reg_data(7) <= flag_c;
+                                 flag_c <= reg_data(0);
+                  when I_ROL =>  reg_data(7 downto 1) <= data_i(6 downto 0);
+                                 reg_data(0) <= flag_c;
+                                 flag_c <= reg_data(7);
+                  when I_LSR =>  reg_data(6 downto 0) <= data_i(7 downto 1);
+                                 reg_data(7) <= '0';
+                                 flag_c <= reg_data(0);
+                  when I_ASL =>  reg_data(7 downto 1) <= data_i(6 downto 0);
+                                 reg_data(0) <= '0';
+                                 flag_c <= reg_data(7);
+                  when others =>
+                    assert false report "Unimplemented RMW instruction " & instruction'image(reg_instruction);
+                end case;
               when others =>
                 assert false report "Unimplemented load instruction " & instruction'image(reg_instruction);
             end case;
@@ -563,6 +603,11 @@ begin
             address(7 downto 0) <= reg_sp;
             data_o <= reg_addr(15 downto 8);
             reg_sp <= sp_dec;
+            cpu_state <= opcode_fetch;
+          when rmw_commit =>
+            write <= '0';
+            address <= address;
+            data_o <= reg_data;
             cpu_state <= opcode_fetch;
             
           when others =>
