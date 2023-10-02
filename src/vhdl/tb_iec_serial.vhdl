@@ -143,7 +143,11 @@ begin
 
     while test_suite loop
 
-      if run("ATN Sequence with no device gets DEVICE NOT PRESENT") then
+      if run("Simulated 1541 runs") then
+        for i in 1 to 20_000_000 loop
+          clock_tick;
+        end loop;
+      elsif run("ATN Sequence with no device gets DEVICE NOT PRESENT") then
         fastio_addr(3 downto 0) <= x"9"; -- set write data
         fastio_wdata <= x"28"; -- Access device 8
         fastio_write <= '1';
@@ -223,9 +227,7 @@ begin
           end loop;
 
         end loop;
-          
-
-        
+                  
       elsif run("ATN Sequence with device succeeds") then
 
         for i in 1 to 4000 loop
