@@ -103,6 +103,11 @@ int main(int argc,char **argv)
   }
   fclose(f);  
 
+  // Mask out RAM/ROM tests on startup to speed it up
+  for(int i=0xEAA7;i<=0xEB21;i++) {
+    hirom[i-0xe000]=0xea;
+  }
+  
   fprintf(stdout,"%s",top);
   for(int i=0;i<8192;i++) printf(" %d => x\"%02x\",\n",i,lorom[i]);
   for(int i=0;i<8191;i++)
