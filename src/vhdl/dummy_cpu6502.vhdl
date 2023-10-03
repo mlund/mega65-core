@@ -109,7 +109,8 @@ architecture vapourware of cpu6502 is
     izp,
     izp2,
     izpvector,
-    izpvector2
+    izpvector2,
+    pull
     );
 
   signal cpu_state : cpu_state_t := poreset;
@@ -406,8 +407,29 @@ begin
                   when I_INX => reg_x <= reg_x_inc; set_nz(reg_x_inc);
                   when I_INY => reg_y <= reg_y_inc; set_nz(reg_y_inc);
                   when I_NOP => null;
+                  when I_PHA => address(15 downto 8) <= x"01";
+                                address(7 downto 0) <= reg_sp;
+                                write <= '0';
+                                data_o <= reg_a;
+                                reg_sp <= sp_dec;
+                                cpu_state <= opcode_fetch;
+                  when I_PHP => address(15 downto 8) <= x"01";
+                                address(7 downto 0) <= reg_sp;
+                                write <= '0';
+                                data_o <= virt_flags;
+                                reg_sp <= sp_dec;
+                                cpu_state <= opcode_fetch;
+                  when I_PLA => address(15 downto 8) <= x"01";
+                                address(7 downto 0) <= sp_inc;
+                                reg_sp <= sp_inc;
+                                cpu_state <= pull;
+                  when I_PLP => address(15 downto 8) <= x"01";
+                                address(7 downto 0) <= sp_inc;
+                                reg_sp <= sp_inc;
+                                cpu_state <= pull;
+                    
                   when I_RTS => address(15 downto 8) <= x"01";
-                                address(7 downto 0) <= reg_sp + 1;
+                                address(7 downto 0) <= sp_inc;
                                 reg_sp <= sp_inc;
                                 cpu_state <= rts;
                   when I_SEC => flag_c <= '1';
@@ -684,6 +706,23 @@ begin
               when I_STY => data_o <= reg_y; write <= '1'; cpu_state <= opcode_fetch;
               when others =>
                 assert false report "Unimplemented (zeropage) indexed mode instruction " & instruction'image(reg_instruction);
+            end case;
+
+          when pull =>
+            case reg_instruction is
+              when I_PLA =>
+                reg_a <= data_i; set_nz(data_i);
+                cpu_state <= opcode_fetch;
+              when I_PLP =>
+                flag_n <= data_i(7);
+                flag_v <= data_i(6);
+                flag_d <= data_i(3);
+                flag_i <= data_i(2);
+                flag_z <= data_i(1);
+                flag_c <= data_i(0);
+                cpu_state <= opcode_fetch;
+              when others =>
+                null;
             end case;
             
           when others =>
