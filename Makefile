@@ -734,7 +734,7 @@ test-iec:	$(TOOLDIR)/mkdriverom
 	./test-iec.py
 
 $(TOOLDIR)/mkdriverom:	$(TOOLDIR)/mkdriverom.c
-	$(CC) $(COPT) -o $< $@
+	$(CC) $(COPT) -o $@ $<
 
 $(TOOLDIR)/merge-issue:	$(TOOLDIR)/merge-issue.c
 	$(CC) $(COPT) -o $(TOOLDIR)/merge-issue $(TOOLDIR)/merge-issue.c
