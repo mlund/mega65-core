@@ -135,9 +135,11 @@ begin
     data_o => wdata   
     );
   
-  process(clock,address,address_next_internal,cs_ram,ram_rdata,cs_rom,rom_rdata)
+  process(clock,address,address_next_internal,cs_ram,ram_rdata,cs_rom,rom_rdata,cpu_write)
   begin
 
+    ram_write_enable <= not cpu_write;
+  
     if rising_edge(clock) then
       -- report "1541TICK: address = $" & to_hexstring(address) & ", drive_cycle = "
       --   & std_logic'image(drive_clock_cycle_strobe) & ", reset=" & std_logic'image(drive_reset_n);
