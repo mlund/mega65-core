@@ -105,7 +105,11 @@ architecture vapourware of cpu6502 is
     jsrhi,
     rmw_commit,
     rts,
-    rts2
+    rts2,
+    izp,
+    izp2,
+    izpvector,
+    izpvector2
     );
 
   signal cpu_state : cpu_state_t := poreset;
@@ -487,7 +491,18 @@ begin
                   when others =>
                     assert false report "Unimplemented zeropage mode instruction " & instruction'image(reg_instruction);
                 end case;
---              when M_INNX | M_INNY =>
+              when M_INNX =>
+                reg_addr(15 downto 8) <= x"00";
+                reg_addr(7 downto 0) <= data_i + to_integer(reg_x);
+                address(15 downto 8) <= x"00";
+                address(7 downto 0) <= data_i + to_integer(reg_x);
+                cpu_state <= izp;
+              when M_INNY =>
+                reg_addr(15 downto 8) <= x"00";
+                reg_addr(7 downto 0) <= data_i;
+                address(15 downto 8) <= x"00";
+                address(7 downto 0) <= data_i;
+                cpu_state <= izp;
               when M_RR =>
                 -- XXX Doesn't charge extra cycle for crossing page boundary
                 cpu_state <= idecode;
@@ -636,6 +651,40 @@ begin
               reg_pc(15 downto 8) <= reg_pc(15 downto 8) + 1;
             end if;
             cpu_state <= opcode_fetch;
+          when izp =>
+            reg_addr(7 downto 0) <= data_i;
+            address(15 downto 8) <= address(15 downto 8);
+            address(7 downto 0) <= address(7 downto 0) + 1;
+            cpu_state <= izp2;
+          when izp2 =>
+            -- We now have the vector, so generate the load address
+            reg_addr(15 downto 8) <= data_i;
+            if reg_mode = M_InnX then
+              address <= reg_addr;
+            else
+              address <= reg_addr + to_integer(reg_y);
+            end if;
+            cpu_state <= izpvector;
+          when izpvector =>
+            reg_addr(7 downto 0) <= data_i;
+            address <= address + 1;
+            cpu_state <= izpvector2;
+          when izpvector2 =>
+            reg_addr(15 downto 8) <= data_i;
+
+            case reg_instruction is
+              when I_ADC | I_SBC | I_CMP | I_CPX | I_CPY | I_ORA | I_EOR | I_AND 
+                | I_LDA | I_LDX | I_LDY 
+                | I_ROL | I_ROR | I_ASL | I_LSR | I_INC | I_DEC
+                | I_BIT
+                =>
+                cpu_state <= load;
+              when I_STA => data_o <= reg_a; write <= '1'; cpu_state <= opcode_fetch;
+              when I_STX => data_o <= reg_x; write <= '1'; cpu_state <= opcode_fetch;
+              when I_STY => data_o <= reg_y; write <= '1'; cpu_state <= opcode_fetch;
+              when others =>
+                assert false report "Unimplemented (zeropage) indexed mode instruction " & instruction'image(reg_instruction);
+            end case;
             
           when others =>
             assert false report "Hit unimplemented CPU state " & cpu_state_t'image(cpu_state);
