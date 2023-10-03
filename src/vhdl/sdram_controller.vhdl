@@ -92,8 +92,10 @@ architecture tacoma_narrows of sdram_controller is
 
   signal last_data_ready_toggle : std_logic := '0';
 
+  -- XXX Don't configure SDRAM by default, while I debug why it sometimes
+  -- powers up in wrong state.
+  signal sdram_prepped         : std_logic             := '1';     
   -- The SDRAM requires a 100us setup time
-  signal sdram_prepped         : std_logic             := '0';
   signal sdram_100us_countdown : integer               := 16_200;
   signal sdram_do_init         : std_logic             := '1';
   signal sdram_init_phase      : integer range 0 to 63 := 0;
