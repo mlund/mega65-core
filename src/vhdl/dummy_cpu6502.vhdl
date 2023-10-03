@@ -103,7 +103,9 @@ architecture vapourware of cpu6502 is
     load,
     store,
     jsrhi,
-    rmw_commit
+    rmw_commit,
+    rts,
+    rts2
     );
 
   signal cpu_state : cpu_state_t := poreset;
@@ -334,7 +336,8 @@ begin
       if ready='1' then
         report("1541CPU: Clock ticks, state=" & cpu_state_t'image(cpu_state)
                & ", data_i = $" & to_hexstring(data_i)
-               & ", addr read=$" & to_hexstring(address));
+               & ", addr read=$" & to_hexstring(address)
+               & ", PC=$" & to_hexstring(reg_pc));        
 
         -- By default, fetch next instruction byte
         address <= reg_pc;              
@@ -399,6 +402,10 @@ begin
                   when I_INX => reg_x <= reg_x_inc; set_nz(reg_x_inc);
                   when I_INY => reg_y <= reg_y_inc; set_nz(reg_y_inc);
                   when I_NOP => null;
+                  when I_RTS => address(15 downto 8) <= x"01";
+                                address(7 downto 0) <= reg_sp + 1;
+                                reg_sp <= sp_inc;
+                                cpu_state <= rts;
                   when I_SEC => flag_c <= '1';
                   when I_SED => flag_d <= '1';
                   when I_SEI => flag_i <= '1';
@@ -484,6 +491,7 @@ begin
               when M_RR =>
                 -- XXX Doesn't charge extra cycle for crossing page boundary
                 cpu_state <= idecode;
+                reg_pc <= reg_pc + 1;
                 case reg_instruction is
                   when I_BNE => if flag_z='0' then take_branch; end if;
                   when I_BEQ => if flag_z='1' then take_branch; end if;
@@ -496,7 +504,11 @@ begin
                   when others =>
                     assert false report "Unimplemented branch instruction " & instruction'image(reg_instruction);
                 end case;
-              when M_NNNN | M_INNNN | M_NNNNX | M_NNNNY => cpu_state <= byte3_fetch; reg_pc <= reg_pc + 1;
+              when M_NNNN | M_INNNN | M_NNNNX | M_NNNNY =>
+                cpu_state <= byte3_fetch;
+                -- Make sure PC is still pointing to last byte of JSR
+                -- instruction when we start pushing things onto the stack
+                if reg_instruction /= I_JSR then reg_pc <= reg_pc + 1; end if;
               when others =>
                 assert false report "Hit unimplemented addressing mode " & addressingmode'image(reg_mode);
                 null;
@@ -576,6 +588,8 @@ begin
                 address <= address;
                 data_o <= data_i;
                 cpu_state <= rmw_commit;
+                -- Don't update PC yet, because we aren't finished yet.
+                reg_pc <= reg_pc;
                 case reg_instruction is
                   when I_INC =>  reg_data <= data_i + 1;
                   when I_DEC =>  reg_data <= data_i - 1;
@@ -608,6 +622,19 @@ begin
             write <= '0';
             address <= address;
             data_o <= reg_data;
+            cpu_state <= opcode_fetch;
+
+          when rts =>
+            reg_pc(15 downto 8) <= data_i;
+            address(15 downto 8) <= x"01";
+            address(7 downto 0) <= reg_sp + 1;
+            reg_sp <= sp_inc;
+            cpu_state <= rts2;
+          when rts2 =>
+            reg_pc(7 downto 0) <= data_i + 1;
+            if data_i=x"ff" then
+              reg_pc(15 downto 8) <= reg_pc(15 downto 8) + 1;
+            end if;
             cpu_state <= opcode_fetch;
             
           when others =>
