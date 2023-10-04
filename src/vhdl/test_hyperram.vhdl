@@ -21,7 +21,7 @@ architecture foo of test_hyperram is
   signal expansionram_rdata : unsigned(7 downto 0);
   signal expansionram_wdata : unsigned(7 downto 0) := x"42";
   signal expansionram_address : unsigned(26 downto 0) := "000000100100011010001010111";
-  signal expansionram_data_ready_strobe : std_logic;
+  signal expansionram_data_ready_toggle : std_logic;
   signal expansionram_busy : std_logic;
   signal current_cache_line : cache_row_t := (others => (others => '0'));
   signal current_cache_line_address : unsigned(26 downto 3) := (others => '0');
@@ -610,7 +610,7 @@ begin
       read_request => expansionram_read,
       write_request => expansionram_write,
       rdata => expansionram_rdata,
-      data_ready_strobe => expansionram_data_ready_strobe,
+      data_ready_toggle_out => expansionram_data_ready_toggle,
       busy => expansionram_busy,
 
       current_cache_line => current_cache_line,
@@ -711,7 +711,7 @@ begin
 --      cart_busy => led,
 --      cart_access_count => cart_access_count,
 
-      expansionram_data_ready_strobe => expansionram_data_ready_strobe,
+      expansionram_data_ready_toggle => expansionram_data_ready_toggle,
       expansionram_busy => expansionram_busy,
       expansionram_read => expansionram_read,
       expansionram_write => expansionram_write,
@@ -806,7 +806,7 @@ begin
   process is
   begin
 
-    report "expansionram_data_ready_strobe=" & std_logic'image(expansionram_data_ready_strobe) 
+    report "expansionram_data_ready_toggle=" & std_logic'image(expansionram_data_ready_toggle) 
       & ", expansionram_busy=" & std_logic'image(expansionram_busy)
       & ", expansionram_read=" & std_logic'image(expansionram_read);
 
@@ -818,7 +818,7 @@ begin
             & " after " & integer'image(current_time - dispatch_time) & "ns.";
         else
           report "DISPATCHER: ERROR: Expected $" & to_hstring(expected_value) & ", but saw $" & to_hstring(slow_access_rdata)
-            & " after " & integer'image(current_time - dispatch_time) & "ns.";            
+            & " after " & integer'image(current_time - dispatch_time) & "ns." severity failure;
         end if;
         dispatch_time <= current_time;
       end if;        
@@ -834,7 +834,7 @@ begin
 
         if mem_jobs(cycles).address = x"FFFFFFF" then
           report "DISPATCHER: Total sequence was " & integer'image(current_time - start_time) & "ns "
-            & "(mean " & integer'image(1+(current_time-start_time)/cycles) & "ns ).";
+            & "(mean " & integer'image(1+(current_time-start_time)/cycles) & "ns )." severity failure;
           cycles <= 0;
           start_time <= current_time;          
         else
@@ -852,7 +852,7 @@ begin
               & " after " & integer'image(current_time - dispatch_time) & "ns.";
           else
             report "DISPATCHER: ERROR: Expected $" & to_hstring(expected_value) & ", but saw $" & to_hstring(slow_prefetched_data)
-              & " after " & integer'image(current_time - dispatch_time) & "ns.";            
+              & " after " & integer'image(current_time - dispatch_time) & "ns." severity failure; 
           end if;            
           dispatch_time <= current_time;
         else                  
@@ -947,6 +947,9 @@ begin
     clock325 <= '0';
     wait for 1.5 ns;
 
+
+    assert false report "Simulation complete";
+    
 --    report "40MHz CPU clock cycle finished";
     
   end process;

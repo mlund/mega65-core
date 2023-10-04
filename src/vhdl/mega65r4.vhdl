@@ -426,13 +426,10 @@ architecture Behavioral of container is
   signal sdram_rdata : unsigned(7 downto 0);
   signal expansionram_wdata : unsigned(7 downto 0);
   signal expansionram_address : unsigned(26 downto 0);
-  signal expansionram_data_ready_strobe : std_logic;
   signal expansionram_data_ready_toggle : std_logic;
   signal expansionram_busy : std_logic;
-  signal hyperram_data_ready_strobe : std_logic;
   signal hyperram_data_ready_toggle : std_logic;
   signal hyperram_busy : std_logic;
-  signal sdram_data_ready_strobe : std_logic;
   signal sdram_data_ready_toggle : std_logic;
   signal sdram_busy : std_logic;
 
@@ -799,7 +796,6 @@ begin
       read_request => expansionram_read,
       write_request => expansionram_write,
       rdata => hyperram_rdata,
-      data_ready_strobe => hyperram_data_ready_strobe,
       data_ready_toggle_out => hyperram_data_ready_toggle,
       busy => hyperram_busy,
 
@@ -922,7 +918,6 @@ begin
       ----------------------------------------------------------------------
       -- Expansion RAM interface (upto 127MB)
       ----------------------------------------------------------------------
-      expansionram_data_ready_strobe => expansionram_data_ready_strobe,
       expansionram_data_ready_toggle => expansionram_data_ready_toggle,
       expansionram_busy => expansionram_busy,
       expansionram_read => expansionram_read,
@@ -1269,7 +1264,6 @@ begin
       expansionram_current_cache_line_address <= sdram_cache_line_address;
       expansionram_busy <= sdram_busy;
       expansionram_data_ready_toggle <= sdram_data_ready_toggle;
-      expansionram_data_ready_strobe <= sdram_data_ready_strobe;
       expansionram_rdata <= sdram_rdata;
       viciv_attic_data_strobe <= sdram_data_strobe;
       viciv_attic_data <= sdram_data;
@@ -1279,7 +1273,6 @@ begin
       expansionram_current_cache_line_address <= hyperram_cache_line_address;
       expansionram_busy <= hyperram_busy;
       expansionram_data_ready_toggle <= hyperram_data_ready_toggle;
-      expansionram_data_ready_strobe <= hyperram_data_ready_strobe;
       expansionram_rdata <= hyperram_rdata;
       viciv_attic_data_strobe <= hyper_data_strobe;
       viciv_attic_data <= hyper_data;

@@ -45,7 +45,6 @@ entity hyperram is
          
          rdata : out unsigned(7 downto 0);
          
-         data_ready_strobe : out std_logic := '0';
          data_ready_toggle_out : out std_logic := '0';
          busy : out std_logic := '0';
 

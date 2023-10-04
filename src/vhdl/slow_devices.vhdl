@@ -61,7 +61,6 @@ ENTITY slow_devices IS
     expansionram_rdata : in unsigned(7 downto 0) := x"FF";
     expansionram_wdata : out unsigned(7 downto 0) := x"FF";
     expansionram_address : out unsigned(26 downto 0);
-    expansionram_data_ready_strobe : in std_logic := '0';
     expansionram_data_ready_toggle : in std_logic := '0';
     expansionram_busy : in std_logic;
 
@@ -281,7 +280,8 @@ begin
 
       if state /= Idle then
         if expansionram_read_timeout /= to_unsigned(0,24) then
-          report "EXRAM-TIMEOUT: Decrementing timeout to " & integer'image(to_integer(expansionram_read_timeout) - 1);
+          report "EXRAM-TIMEOUT: Decrementing timeout to " & integer'image(to_integer(expansionram_read_timeout) - 1)
+            & ", exram_ready_toggle=" & std_logic'image(expansionram_data_ready_toggle);
           expansionram_read_timeout <= expansionram_read_timeout - 1;
         else
           -- Time out if stuck for too long
@@ -583,7 +583,7 @@ begin
         & std_logic'image(expansionram_data_ready_toggle) & ").";
         expansionram_read <= '0';
         expansionram_write <= '0';
-      if (expansionram_data_ready_strobe='1') or (expansionram_data_ready_toggle /= last_expansionram_data_ready_toggle) then
+      if (expansionram_data_ready_toggle /= last_expansionram_data_ready_toggle) then
         last_expansionram_data_ready_toggle <= expansionram_data_ready_toggle;
         report "Saw data. Switching back to Idle state. byte = $" & to_hexstring(expansionram_rdata);
         state <= Idle;
