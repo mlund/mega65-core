@@ -258,6 +258,7 @@ SIDVHDL=		$(VHDLSRCDIR)/sid_6581.vhdl \
 			$(VHDLSRCDIR)/sid_components.vhdl \
 			$(VHDLSRCDIR)/sid_filters.vhdl \
 			$(VHDLSRCDIR)/sid_voice.vhdl \
+			$(VHDLSRCDIR)/sid_tables.vhdl \
 			$(VHDLSRCDIR)/ghdl_8580_voice_stub.vhdl \
 
 CPUVHDL=		$(VHDLSRCDIR)/gs4510.vhdl \
@@ -309,6 +310,8 @@ PERIPHVHDL=		$(VHDLSRCDIR)/sdcardio.vhdl \
 			$(VHDLSRCDIR)/hyperram.vhdl \
 			$(VHDLSRCDIR)/i2c_master.vhdl \
 			$(VHDLSRCDIR)/i2c_wrapper.vhdl \
+			$(VHDLSRCDIR)/i2c_controller.vhdl \
+			$(VHDLSRCDIR)/grove_i2c.vhdl \
 			$(VHDLSRCDIR)/hdmi_i2c.vhdl \
 			$(VHDLSRCDIR)/hdmi_spdif.vhdl \
 			$(VHDLSRCDIR)/spdif_encoder.vhdl \
@@ -407,14 +410,13 @@ NEXYSVHDL=		$(VHDLSRCDIR)/slowram.vhdl \
 
 
 SIMULATIONVHDL=		$(VHDLSRCDIR)/cpu_test.vhdl \
-			$(VHDLSRCDIR)/s27kl0641.vhdl \
+			$(VHDLSRCDIR)/s27kl0641-pgs-modified.vhd \
 			$(VHDLSRCDIR)/fake_expansion_port.vhdl \
 			$(VHDLSRCDIR)/fake_sdcard.vhdl \
 			$(VHDLSRCDIR)/fake_reconfig.vhdl \
 			$(VHDLSRCDIR)/fake_opl2.vhdl \
 			$(VHDLSRCDIR)/gen_utils.vhdl \
 			$(VHDLSRCDIR)/conversions.vhdl \
-			$(VHDLSRCDIR)/vital.vhdl \
 			$(VHDLSRCDIR)/dummy_uart_monitor.vhdl \
 			$(CPUVHDL) \
 			$(M65VHDL)
