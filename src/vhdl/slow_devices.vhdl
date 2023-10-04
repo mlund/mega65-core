@@ -279,6 +279,23 @@ begin
     
     if rising_edge(pixelclock) then
 
+      if state /= Idle then
+        if expansionram_read_timeout /= to_unsigned(0,24) then
+          report "EXRAM-TIMEOUT: Decrementing timeout to " & integer'image(to_integer(expansionram_read_timeout) - 1);
+          expansionram_read_timeout <= expansionram_read_timeout - 1;
+        else
+          -- Time out if stuck for too long
+          report "EXRAM-TIMEOUT: Timeout occurred. Resorting to IDLE state ";
+          state <= Idle;
+          -- XXX Debug reading from HyperRAM
+          slow_access_rdata(5 downto 0) <= expansionram_rdata(5 downto 0);
+          slow_access_rdata(6) <= expansionram_busy;
+          slow_access_rdata(7) <= expansionram_data_ready_toggle;
+          report "PUBLISH: HyperRAM timeout debug read";
+          slow_access_ready_toggle <= slow_access_request_toggle;
+        end if;
+      end if;      
+      
       if slow_prefetched_request_toggle /= last_slow_prefetched_request_toggle then
         report "PREFETCH: slow_prefetched_request_toggle toggled";
         last_slow_prefetched_request_toggle <= slow_prefetched_request_toggle;
@@ -467,12 +484,14 @@ begin
               -- complete a transaction.
               -- There is a bug in the SDRAM controller at least, that can
               -- result in a timeout occurring, which has yet to be tracked down.
+              report "EXRAM-TIMEOUT: Reseting timeout to " & integer'image(to_integer(expansionram_read_timeout_default));
               expansionram_read_timeout <= expansionram_read_timeout_default;
               state <= ExpansionRAMRequest;
             end if;
           elsif slow_access_address(26)='1' then
             -- $4000000-$7FFFFFF = cartridge port
             report "Preparing to access from C64 cartridge port";
+            report "EXRAM-TIMEOUT: Reseting timeout to " & integer'image(1000);
             expansionram_read_timeout <= to_unsigned(1000,24);
             state <= CartridgePortRequest;
           else
@@ -585,7 +604,8 @@ begin
         -- Read about to timeout from expansion RAM
         -- So try re-issuing the request
         expansionram_read <= '1';
-        report "Retrying expansion RAM read";
+        report "EXRAM-TIMEOUT: Retrying expansion RAM read after timeout";
+        report "EXRAM-TIMEOUT: Reseting timeout to " & integer'image(to_integer(expansionram_read_timeout_default));
         expansionram_write <= '0';
         expansionram_read_timeout <= expansionram_read_timeout_default;
       end if;
@@ -621,21 +641,6 @@ begin
         end if;
       end case;
 
-      if state /= Idle then
-        if expansionram_read_timeout /= to_unsigned(0,24) then
-          expansionram_read_timeout <= expansionram_read_timeout - 1;
-        else
-          -- Time out if stuck for too long
-          state <= Idle;
-          -- XXX Debug reading from HyperRAM
-          slow_access_rdata(5 downto 0) <= expansionram_rdata(5 downto 0);
-          slow_access_rdata(6) <= expansionram_busy;
-          slow_access_rdata(7) <= expansionram_data_ready_toggle;
-          report "PUBLISH: HyperRAM timeout debug read";
-          slow_access_ready_toggle <= slow_access_request_toggle;
-        end if;
-      end if;
-      
     end if;
   end process;
   
