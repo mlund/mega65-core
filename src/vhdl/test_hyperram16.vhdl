@@ -21,7 +21,8 @@ architecture foo of test_hyperram16 is
   signal expansionram_rdata : unsigned(15 downto 0);
   signal expansionram_wdata : unsigned(15 downto 0) := x"4242";
   signal expansionram_address : unsigned(26 downto 0) := "000000100100011010001010111";
-  signal expansionram_data_ready_strobe : std_logic;
+  signal expansionram_data_ready_toggle : std_logic;
+  signal last_expansionram_data_ready_toggle : std_logic := '0';
   signal expansionram_busy : std_logic;
   signal current_cache_line : cache_row_t := (others => (others => '0'));
   signal current_cache_line_address : unsigned(26 downto 3) := (others => '0');
@@ -654,7 +655,7 @@ begin
       rdata_16en => '1',
       rdata => expansionram_rdata(7 downto 0),
       rdata_hi =>  expansionram_rdata(15 downto 8),
-      data_ready_strobe => expansionram_data_ready_strobe,
+      data_ready_toggle_out => expansionram_data_ready_toggle,
       busy => expansionram_busy,
 
       current_cache_line => current_cache_line,
@@ -793,14 +794,15 @@ begin
     if rising_edge(pixelclock) then
 
       if true then
-        report "expansionram_data_ready_strobe=" & std_logic'image(expansionram_data_ready_strobe) 
+        report "expansionram_data_ready_toggle=" & std_logic'image(expansionram_data_ready_toggle) 
           & ", expansionram_busy=" & std_logic'image(expansionram_busy)
           & ", expansionram_read=" & std_logic'image(expansionram_read)
           & ", idle_wait=" & std_logic'image(idle_wait)
           & ", expect_value=" & std_logic'image(expect_value);
       end if;
-      
-      if expansionram_data_ready_strobe='1' then
+
+      last_expansionram_data_ready_toggle <= expansionram_data_ready_toggle;
+      if expansionram_data_ready_toggle /= last_expansionram_data_ready_toggle then
         if expect_value = '1' then
           if expected_value = expansionram_rdata then
             report "DISPATCHER: Read correct value $" & to_hstring(expansionram_rdata)

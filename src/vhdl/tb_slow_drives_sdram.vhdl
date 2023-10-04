@@ -48,7 +48,6 @@ architecture test_arch of tb_sdram_controller is
   signal slow_rdata_16en : std_logic := '0';
   signal slow_rdata : unsigned(7 downto 0);
   signal slow_busy : std_logic;
-  signal slow_data_ready_strobe : std_logic := '0';
   signal slow_data_ready_toggle : std_logic;
   signal data_ready_toggle : std_logic := '0';
   signal last_data_ready_toggle : std_logic := '0';
@@ -147,7 +146,6 @@ begin
     expansionram_rdata => slow_rdata,
     expansionram_wdata => slow_wdata,
     expansionram_address => slow_address,
-    expansionram_data_ready_strobe => slow_data_ready_strobe,
     expansionram_data_ready_toggle => slow_data_ready_toggle,
     expansionram_busy => slow_busy,
     
