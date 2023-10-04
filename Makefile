@@ -456,6 +456,9 @@ OPL3VERILOG=		$(VERILOGSRCDIR)/calc_phase_inc.v \
 
 
 # GHDL with mcode backend
+# If unisim errors happen, you need to do something like this first:
+#   ghdl -i --work=unisim /opt/Xilinx/Vivado/2019.2/ids_lite/ISE/vhdl/src/unisims/*.vhd
+#   ghdl -i --work=unisim /opt/Xilinx/Vivado/2019.2/ids_lite/ISE/vhdl/src/unisims/primitive/*.vhd
 simulate:	$(GHDL_DEPEND) $(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
 	$(info =============================================================)
 	$(info ~~~~~~~~~~~~~~~~> Making: $@)
