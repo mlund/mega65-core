@@ -600,14 +600,16 @@ begin
           slow_prefetched_address(2 downto 0) <= slow_access_address(2 downto 0)+1;
           slow_prefetched_data <= expansionram_current_cache_line(to_integer(slow_access_address(2 downto 0))+1);
         end if;
-      elsif expansionram_read_timeout = to_unsigned(1,24) then
-        -- Read about to timeout from expansion RAM
-        -- So try re-issuing the request
-        expansionram_read <= '1';
-        report "EXRAM-TIMEOUT: Retrying expansion RAM read after timeout";
-        report "EXRAM-TIMEOUT: Reseting timeout to " & integer'image(to_integer(expansionram_read_timeout_default));
-        expansionram_write <= '0';
-        expansionram_read_timeout <= expansionram_read_timeout_default;
+-- Don't retry, as this can result in an infinite loop. If we don't get a
+-- response within the allowed time, it's just aborted.
+--      elsif expansionram_read_timeout = to_unsigned(1,24) then
+--        -- Read about to timeout from expansion RAM
+--        -- So try re-issuing the request
+--        expansionram_read <= '1';
+--        report "EXRAM-TIMEOUT: Retrying expansion RAM read after timeout";
+--        report "EXRAM-TIMEOUT: Reseting timeout to " & integer'image(to_integer(expansionram_read_timeout_default));
+--        expansionram_write <= '0';
+--        expansionram_read_timeout <= expansionram_read_timeout_default;
       end if;
         
       when CartridgePortRequest =>
