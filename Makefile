@@ -93,6 +93,7 @@ else
 	GHDL_DEPEND=$(GHDL)
 endif
 
+NVC=	nvc
 
 CBMCONVERT=	cbmconvert/cbmconvert
 
@@ -465,6 +466,15 @@ simulate:	$(GHDL_DEPEND) $(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
 	$(GHDL) -i $(SIMULATIONVHDL)
 	$(GHDL) -m cpu_test
 	$(GHDL) -r cpu_test --assert-level=warning
+
+simulate-nvc:	$(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
+	$(info =============================================================)
+	$(info ~~~~~~~~~~~~~~~~> Making: $@)
+	$(NVC) -a $(VHDLSRCDIR)/debugtools.vhdl $(VHDLSRCDIR)/cputypes.vhdl $(VHDLSRCDIR)/victypes.vhdl
+	$(NVC) -a $(SIMULATIONVHDL)
+	$(NVC) -m cpu_test
+	$(NVC) -r cpu_test
+
 
 # GHDL with llvm backend
 simulate-llvm:	$(GHDL_DEPEND) $(SIMULATIONVHDL) $(VHDLSRCDIR)/cputypes.vhdl $(VHDLSRCDIR)/debugtools.vhdl $(ASSETS)/synthesised-60ns.dat
