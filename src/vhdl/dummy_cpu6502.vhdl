@@ -392,7 +392,7 @@ begin
             reg_mode <= mode_lut(to_integer(data_i));
             report "PC: $" & to_hexstring(reg_pc) & ", A:" & to_hexstring(reg_a) & ", X:" & to_hexstring(reg_x)
               & ", Y:" & to_hexstring(reg_y) & ", SP:" & to_hexstring(reg_sp)
-              & " NVxBDIZC=" & to_string(virt_flags) & ", " &
+              & " NVxBDIZC=" & to_string(std_logic_vector(virt_flags)) & ", " &
               " Decoding " & instruction'image(instruction_lut(to_integer(data_i)))
               & ", mode = " & addressingmode'image(mode_lut(to_integer(data_i)));
             case mode_lut(to_integer(data_i)) is

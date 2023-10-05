@@ -26,7 +26,7 @@ entity iomapper is
 
         accessible_row : out integer range 0 to 255 := 255;
         accessible_key : out unsigned(6 downto 0) := to_unsigned(127,7);
-        dim_shift : out std_logic := '0';
+        dim_shift : buffer std_logic;
 
         protected_hardware_in : in unsigned(7 downto 0);
         virtualised_hardware_in : in unsigned(7 downto 0);
@@ -254,7 +254,7 @@ entity iomapper is
         ps2clock : in std_logic;
         scancode_out : out std_logic_vector(12 downto 0);
         -- Widget board / MEGA65R2 keyboard
-        widget_matrix_col_idx : out integer range 0 to 8 := 0;
+        widget_matrix_col_idx : out integer range 0 to 15 := 0;
         widget_matrix_col : in std_logic_vector(7 downto 0);
         widget_restore : in std_logic;
         widget_capslock : in std_logic;

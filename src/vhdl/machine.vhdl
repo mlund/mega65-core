@@ -128,7 +128,7 @@ entity machine is
          slowram_cache_line_inc_toggle : out std_logic := '0';
          slowram_cache_line_dec_toggle : out std_logic := '0';
          
-         sector_buffer_mapped : buffer std_logic;
+         sector_buffer_mapped : out std_logic;
 
          joy3 : in std_logic_vector(4 downto 0) := "11011";
          joy4 : in std_logic_vector(4 downto 0) := "10111";
@@ -373,7 +373,7 @@ entity machine is
          ----------------------------------------------------------------------
 
         -- Widget board / MEGA65R2 keyboard
-        widget_matrix_col_idx : out integer range 0 to 8 := 0;
+        widget_matrix_col_idx : out integer range 0 to 15 := 0;
         widget_matrix_col : in std_logic_vector(7 downto 0);
         widget_restore : in std_logic;
         widget_capslock : in std_logic;
@@ -831,6 +831,8 @@ architecture Behavioral of machine is
 
   signal interlace_mode : std_logic;
   signal mono_mode : std_logic;
+
+  signal sector_buffer_mapped_int : std_logic;
   
 begin
 
@@ -1237,7 +1239,7 @@ begin
       fastio_write => fastio_write,
       fastio_wdata => fastio_wdata,
       fastio_rdata => fastio_rdata,
-      sector_buffer_mapped => sector_buffer_mapped,
+      sector_buffer_mapped => sector_buffer_mapped_int,
       fastio_vic_rdata => fastio_vic_rdata,
       fastio_colour_ram_rdata => colour_ram_fastio_rdata,
       fastio_charrom_rdata => charrom_fastio_rdata,
@@ -1724,7 +1726,7 @@ begin
       btn => btn,
 --    seg_led => seg_led_data,
       viciii_iomode => viciii_iomode,
-      sector_buffer_mapped => sector_buffer_mapped,
+      sector_buffer_mapped => sector_buffer_mapped_int,
 
       -- CPU status for sending to ethernet frame packer
 
@@ -2047,6 +2049,8 @@ begin
   begin
     if rising_edge(cpuclock) then
 
+      sector_buffer_mapped <= sector_buffer_mapped_int;
+      
       report "tick";
       
       secure_mode_triage_required <= protected_hardware_sig(7) or secure_mode_from_monitor;
