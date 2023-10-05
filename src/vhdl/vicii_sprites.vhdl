@@ -342,6 +342,9 @@ begin
   -- The eight VIC-II sprites.
   -- Sprite 0 is "above" sprite 7, so sprite 7 must be the first in the chain.
   sprite7: entity work.sprite
+    generic map (
+             sprite_number => 7
+             )
     port map(pixelclock => pixelclock,
              -- Receive sprite data chain to receive data from the VIC-IV
              sprite_datavalid_in => sprite_datavalid_in,
@@ -401,7 +404,6 @@ begin
              sprite_colour_out => sprite_colour_7_6,
              
              -- Also pass in sprite data
-             sprite_number => 7,
              sprite_x(9) => sprite_h640_msbs(7),
              sprite_x(8) => vicii_sprite_xmsbs(7),
              sprite_x(7 downto 0) => sprite_x(7),
@@ -422,6 +424,9 @@ begin
              sprite_fg_map_out => sprite_fg_map_7_6
              );
   sprite6: entity work.sprite
+    generic map (
+             sprite_number => 6
+             )
     port map(pixelclock => pixelclock,
              -- Receive sprite data chain to receive data from VIC-IV
              sprite_datavalid_in => sprite_datavalid_7_6,
@@ -480,7 +485,6 @@ begin
              sprite_colour_out => sprite_colour_6_5,
              
              -- Also pass in sprite data
-             sprite_number => 6,
              sprite_x(9) => sprite_h640_msbs(6),
              sprite_x(8) => vicii_sprite_xmsbs(6),
              sprite_x(7 downto 0) => sprite_x(6),
@@ -502,6 +506,9 @@ begin
              sprite_fg_map_out => sprite_fg_map_6_5
              );
     sprite5: entity work.sprite
+    generic map (
+             sprite_number => 5
+             )
     port map(pixelclock => pixelclock,
              -- Receive sprite data chain to receive data from VIC-IV
              sprite_datavalid_in => sprite_datavalid_6_5,
@@ -560,7 +567,6 @@ begin
              sprite_colour_out => sprite_colour_5_4,
              
              -- Also pass in sprite data
-             sprite_number => 5,
              sprite_x(9) => sprite_h640_msbs(5),
              sprite_x(8) => vicii_sprite_xmsbs(5),
              sprite_x(7 downto 0) => sprite_x(5),
@@ -582,6 +588,9 @@ begin
              sprite_fg_map_out => sprite_fg_map_5_4
              );
     sprite4: entity work.sprite
+    generic map (
+             sprite_number => 4
+             )
     port map(pixelclock => pixelclock,
              -- Receive sprite data chain to receive data from VIC-IV
              sprite_datavalid_in => sprite_datavalid_5_4,
@@ -640,7 +649,6 @@ begin
              sprite_colour_out => sprite_colour_4_3,
              
              -- Also pass in sprite data
-             sprite_number => 4,
              sprite_x(9) => sprite_h640_msbs(4),
              sprite_x(8) => vicii_sprite_xmsbs(4),
              sprite_x(7 downto 0) => sprite_x(4),
@@ -662,6 +670,9 @@ begin
              sprite_fg_map_out => sprite_fg_map_4_3
              );
     sprite3: entity work.sprite
+    generic map (
+             sprite_number => 3
+             )
     port map(pixelclock => pixelclock,
              -- Receive sprite data chain to receive data from VIC-IV
              sprite_datavalid_in => sprite_datavalid_4_3,
@@ -720,7 +731,6 @@ begin
              sprite_colour_out => sprite_colour_3_2,
              
              -- Also pass in sprite data
-             sprite_number => 3,
              sprite_x(9) => sprite_h640_msbs(3),
              sprite_x(8) => vicii_sprite_xmsbs(3),
              sprite_x(7 downto 0) => sprite_x(3),
@@ -742,6 +752,9 @@ begin
              sprite_fg_map_out => sprite_fg_map_3_2
              );
     sprite2: entity work.sprite
+    generic map (
+             sprite_number => 2
+             )
     port map(pixelclock => pixelclock,
              -- Receive sprite data chain to receive data from VIC-IV
              sprite_datavalid_in => sprite_datavalid_3_2,
@@ -800,7 +813,6 @@ begin
              sprite_colour_out => sprite_colour_2_1,
              
              -- Also pass in sprite data
-             sprite_number => 2,
              sprite_x(9) => sprite_h640_msbs(2),
              sprite_x(8) => vicii_sprite_xmsbs(2),
              sprite_x(7 downto 0) => sprite_x(2),
@@ -822,6 +834,9 @@ begin
              sprite_fg_map_out => sprite_fg_map_2_1
              );
     sprite1: entity work.sprite
+    generic map (
+             sprite_number => 1
+             )
     port map(pixelclock => pixelclock,
              -- Receive sprite data chain to receive data from VIC-IV
              sprite_datavalid_in => sprite_datavalid_2_1,
@@ -880,7 +895,6 @@ begin
              sprite_colour_out => sprite_colour_1_0,
              
              -- Also pass in sprite data
-             sprite_number => 1,
              sprite_x(9) => sprite_h640_msbs(1),
              sprite_x(8) => vicii_sprite_xmsbs(1),
              sprite_x(7 downto 0) => sprite_x(1),
@@ -902,6 +916,9 @@ begin
              sprite_fg_map_out => sprite_fg_map_1_0
              );
     sprite0: entity work.sprite
+    generic map (
+             sprite_number => 0
+             )
     port map(pixelclock => pixelclock,
              -- Receive sprite data chain to receive data from VIC-IV
              sprite_datavalid_in => sprite_datavalid_1_0,
@@ -960,7 +977,6 @@ begin
              sprite_colour_out => sprite_colour_0_bp,
              
              -- Also pass in sprite data
-             sprite_number => 0,
              sprite_x(9) => sprite_h640_msbs(0),
              sprite_x(8) => vicii_sprite_xmsbs(0),
              sprite_x(7 downto 0) => sprite_x(0),

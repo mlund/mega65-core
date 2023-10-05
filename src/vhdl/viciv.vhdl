@@ -295,7 +295,7 @@ architecture Behavioral of viciv is
   -- The values here are simply those that apply on power up.
   -- NOTE: frame_h_front is deprecated due to the pixel_driver now?
   -- In any case, it seems to cause the trimming of frame_h_front pixels
-  signal frame_h_front : unsigned(7 downto 0) := to_unsigned(0,8);
+  constant frame_h_front : unsigned(7 downto 0) := to_unsigned(0,8);
   -- 800x480 @ 50Hz for 100MHz pixelclock
   signal single_side_border : unsigned(13 downto 0) := to_unsigned(80,14);
   constant display_width : unsigned(11 downto 0) := to_unsigned(800,12);

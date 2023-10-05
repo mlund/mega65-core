@@ -26,13 +26,14 @@ use work.cputypes.all;
 use work.victypes.all;
 
 entity sprite is
+  generic (
+    sprite_number : spritenumber
+    );
   Port (
     ----------------------------------------------------------------------
     -- dot clock
     ----------------------------------------------------------------------
     pixelclock : in  STD_LOGIC;
-
-    signal sprite_number : in spritenumber;
 
     signal sprite_h640 : in std_logic;
     signal sprite_v400 : in std_logic;
@@ -139,6 +140,8 @@ architecture behavioural of sprite is
 
   signal pixel_strobe : std_logic := '0';
   signal pixel_strobe_history : std_logic_vector(31 downto 0) := (others => '0');
+
+  constant sprite_number_mod_4 : integer range 0 to 7 := (sprite_number mod 4) * 2;        
   
 begin  -- behavioural
   
@@ -146,8 +149,7 @@ begin  -- behavioural
   -- type   : sequential
   -- inputs : pixelclock, <reset>
   -- outputs: colour, is_sprite_out
-  main: process (pixelclock,sprite_number,sprite_h640,x640_in,x320_in,x_offset)
-    variable sprite_number_mod_4 : integer range 0 to 7 := (sprite_number mod 4) * 2;
+  main: process (pixelclock,sprite_h640,x640_in,x320_in,x_offset)
     variable pixel_16 : std_logic_vector(3 downto 0);
     variable sprite_color2_bits  : std_logic_vector(1 downto 0);
     variable sprite_color16_bits : std_logic_vector(3 downto 0);
@@ -167,6 +169,7 @@ begin  -- behavioural
     x_offset_bit_0 := x_offset_bits(0);
     
     if pixelclock'event and pixelclock = '1' then  -- rising clock edge
+
 --      report "SPRITE: entering VIC-II sprite #" & integer'image(sprite_number);
       -- copy sprite data chain from input side to output side      
       sprite_spritenumber_out <= sprite_spritenumber_in;
