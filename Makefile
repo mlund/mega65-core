@@ -262,25 +262,24 @@ SIDVHDL=		$(VHDLSRCDIR)/sid_6581.vhdl \
 			$(VHDLSRCDIR)/sid_tables.vhdl \
 			$(VHDLSRCDIR)/ghdl_8580_voice_stub.vhdl \
 
-CPUVHDL=		$(VHDLSRCDIR)/gs4510.vhdl \
-			$(VHDLSRCDIR)/multiply32.vhdl \
+CPUVHDL=		$(VHDLSRCDIR)/multiply32.vhdl \
 			$(VHDLSRCDIR)/divider32.vhdl \
 			$(VHDLSRCDIR)/fast_divide.vhdl \
 			$(VHDLSRCDIR)/shifter32.vhdl \
-			$(VHDLSRCDIR)/neotrng.vhdl
+			$(VHDLSRCDIR)/neotrng.vhdl \
+			$(VHDLSRCDIR)/gs4510.vhdl
 
 NOCPUVHDL=		$(VHDLSRCDIR)/nocpu.vhdl
 
 C65VHDL=		$(SIDVHDL) \
-			$(VHDLSRCDIR)/iomapper.vhdl \
 			$(VHDLSRCDIR)/mouse_input.vhdl \
 			$(VHDLSRCDIR)/cia6526.vhdl \
 			$(VHDLSRCDIR)/c65uart.vhdl \
 			$(VHDLSRCDIR)/UART_TX_CTRL.vhdl \
 			$(VHDLSRCDIR)/cputypes.vhdl \
+			$(VHDLSRCDIR)/iomapper.vhdl \
 
-VICIVVHDL=		$(VHDLSRCDIR)/viciv.vhdl \
-			$(VHDLSRCDIR)/pixel_driver.vhdl \
+VICIVVHDL=		$(VHDLSRCDIR)/pixel_driver.vhdl \
 			$(VHDLSRCDIR)/pixel_fifo.vhdl \
 			$(VHDLSRCDIR)/frame_generator.vhdl \
 			$(VHDLSRCDIR)/sprite.vhdl \
@@ -290,16 +289,18 @@ VICIVVHDL=		$(VHDLSRCDIR)/viciv.vhdl \
 			$(VHDLSRCDIR)/victypes.vhdl \
 			$(VHDLSRCDIR)/pal_simulation.vhdl \
 			$(VHDLSRCDIR)/ghdl_alpha_blend.vhdl \
-			$(OVERLAYVHDL)
+			$(OVERLAYVHDL) \
+			$(VHDLSRCDIR)/viciv.vhdl \
 
-AUDIOVHDL=		$(VHDLSRCDIR)/audio_complex.vhdl \
-			$(VHDLSRCDIR)/audio_mixer.vhdl \
+AUDIOVHDL=		$(VHDLSRCDIR)/audio_mixer.vhdl \
 			$(VHDLSRCDIR)/pdm_to_pcm.vhdl \
 			$(VHDLSRCDIR)/pcm_to_pdm.vhdl \
 			$(VHDLSRCDIR)/i2s_clock.vhdl \
 			$(VHDLSRCDIR)/i2s_transceiver.vhdl \
 			$(VHDLSRCDIR)/pcm_clock.vhdl \
-			$(VHDLSRCDIR)/pcm_transceiver.vhdl
+			$(VHDLSRCDIR)/pcm_transceiver.vhdl \
+			$(VHDLSRCDIR)/audio_complex.vhdl \
+
 
 VFPGAVHDL=		$(VHDLSRCDIR)/vfpga/overlay_IP.vhdl \
 			$(VHDLSRCDIR)/vfpga/vfpga_clock_controller_pausable.vhdl \
@@ -410,17 +411,17 @@ NEXYSVHDL=		$(VHDLSRCDIR)/slowram.vhdl \
 			$(M65VHDL)
 
 
-SIMULATIONVHDL=		$(VHDLSRCDIR)/cpu_test.vhdl \
+SIMULATIONVHDL=		$(VHDLSRCDIR)/gen_utils.vhdl \
+			$(VHDLSRCDIR)/conversions.vhdl \
 			$(VHDLSRCDIR)/s27kl0641-pgs-modified.vhd \
 			$(VHDLSRCDIR)/fake_expansion_port.vhdl \
 			$(VHDLSRCDIR)/fake_sdcard.vhdl \
 			$(VHDLSRCDIR)/fake_reconfig.vhdl \
 			$(VHDLSRCDIR)/fake_opl2.vhdl \
-			$(VHDLSRCDIR)/gen_utils.vhdl \
-			$(VHDLSRCDIR)/conversions.vhdl \
 			$(VHDLSRCDIR)/dummy_uart_monitor.vhdl \
 			$(CPUVHDL) \
-			$(M65VHDL)
+			$(M65VHDL) \
+			$(VHDLSRCDIR)/cpu_test.vhdl
 
 NOCPUSIMULATIONVHDL=	$(VHDLSRCDIR)/cpu_test.vhdl \
 			$(VHDLSRCDIR)/fake_expansion_port.vhdl \
@@ -470,8 +471,10 @@ simulate:	$(GHDL_DEPEND) $(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
 simulate-nvc:	$(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
 	$(info =============================================================)
 	$(info ~~~~~~~~~~~~~~~~> Making: $@)
-	$(NVC) -a $(VHDLSRCDIR)/debugtools.vhdl $(VHDLSRCDIR)/cputypes.vhdl $(VHDLSRCDIR)/victypes.vhdl
-	$(NVC) -a $(SIMULATIONVHDL)
+	$(NVC) -a --relaxed $(VHDLSRCDIR)/debugtools.vhdl $(VHDLSRCDIR)/cputypes.vhdl $(VHDLSRCDIR)/victypes.vhdl
+	$(NVC) -M 256m -a --relaxed $(VHDLSRCDIR)/shadowram-a100t.vhdl
+	$(NVC) -a --relaxed $(VHDLSRCDIR)/ghdl_ram36x1k.vhdl
+	$(NVC) -a --relaxed $(SIMULATIONVHDL)
 	$(NVC) -m cpu_test
 	$(NVC) -r cpu_test
 
