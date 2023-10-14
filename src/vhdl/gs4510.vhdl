@@ -2117,7 +2117,9 @@ begin
       report "MEMORY long_address = $" & to_hstring(long_address);
       -- @IO:C64 $0000000 CPU:PORTDDR 6510/45GS10 CPU port DDR
       -- @IO:C64 $0000001 CPU:PORT 6510/45GS10 CPU port data
-      if (long_address(27 downto 6)&"00" = x"FFD364" or long_address(27 downto 6)&"00" = x"FFD264") and hypervisor_mode='1' then
+      if (long_address(27 downto 6)&unsigned'("00") = unsigned'(x"FFD364")
+          or long_address(27 downto 6)&unsigned'("00") = unsigned'(x"FFD264"))
+        and hypervisor_mode='1' then
         report "Preparing for reading hypervisor register";
         read_source <= HypervisorRegister;
         accessing_hypervisor <= '1';
@@ -2293,7 +2295,7 @@ begin
           end if;
         end if;
         -- @IO:GS $FFF8000-$FFFBFFF SUMMARY:HYPERVISOR 16KB Hyppo/Hypervisor ROM
-        if long_address(19 downto 14)&"00" = x"F8" then
+        if long_address(19 downto 14)&unsigned'("00") = unsigned'(x"F8") then
           accessing_fastio <= '0';
           fastio_read <= '0';
           accessing_hyppo_fastio <= '1';
@@ -3441,8 +3443,8 @@ begin
           reg_mult_b(31 downto 24) <= value;
           div_d(31 downto 24) <= value;
           div_start_over <= '1';
-        elsif (long_address(7 downto 6)&"00"=x"8")
-          or  (long_address(7 downto 6)&"00"=x"8") then
+        elsif (long_address(7 downto 6)&unsigned'("00")=unsigned'(x"8"))
+          or  (long_address(7 downto 6)&unsigned'("00")=unsigned'(x"8")) then
           -- Math unit register writing
           reg_math_write_toggle <= not reg_math_write_toggle;
           reg_math_regnum <= to_integer(long_address(5 downto 2));
@@ -8852,8 +8854,8 @@ begin
           -- @IO:GS $D67F CPU:HTRAP3F @HTRAPXX
           
           -- @IO:GS $D67F HCPU:ENTEREXIT Writing trigger return from hypervisor
-          if (memory_access_address(27 downto 6)&"111111" = x"FFD367F")
-            or (memory_access_address(27 downto 6)&"111111" = x"FFD267F") then
+          if (memory_access_address(27 downto 6)&unsigned'("111111") = unsigned'(x"FFD367F"))
+            or (memory_access_address(27 downto 6)&unsigned'("111111") = unsigned'(x"FFD267F")) then
             hypervisor_trap_port(5 downto 0) <= memory_access_address(5 downto 0);
             hypervisor_trap_port(6) <= '0';
             if hypervisor_mode = '0' then
@@ -9197,9 +9199,9 @@ begin
 
       -- C65 DAT
       report "C65 VIC-III DAT: Address before translation is $" & to_hstring(temp_address);
-      if temp_address(27 downto 3) & "000" = x"FFD1040"
-        or temp_address(27 downto 3) & "000" = x"FFD2040"
-        or temp_address(27 downto 3) & "000" = x"FFD3040" then
+      if temp_address(27 downto 3) & "000" = unsigned'(x"FFD1040")
+        or temp_address(27 downto 3) & "000" = unsigned'(x"FFD2040")
+        or temp_address(27 downto 3) & "000" = unsigned'(x"FFD3040") then
         temp_address(27 downto 20) := (others => '0');
         temp_address(19 downto 17) := dat_bitplane_bank;
         temp_address(16) := temp_address(0); -- odd/even bitplane bank select
@@ -9937,7 +9939,7 @@ begin
               memory_access_address(27 downto 16) := x"000";
             end if;
 
-            if reg_addr(15 downto 2)&"00" = x"DC00" then
+            if reg_addr(15 downto 2)&"00" = unsigned'(x"DC00") then
               -- Writing to keyboard/joystick CIA data ports.
               -- When we are at 50MHz, the M65's keyboard virtualiser can take up
               -- to 16 cycles to update the view.  So whenever we do something
@@ -10144,11 +10146,11 @@ begin
           shadow_address_var := to_integer(pending_dma_address);
         end if;
         
-        if long_address(19 downto 14)&"00" = x"F8" then
+        if long_address(19 downto 14)&"00" = unsigned'(x"F8") then
           hyppo_address_var := std_logic_vector(long_address(13 downto 0));
         end if;
         
-        if long_address(27 downto 20) = x"FF" then
+        if long_address(27 downto 20) = unsigned'(x"FF") then
           fastio_addr_var := std_logic_vector(long_address(19 downto 0));
         end if;
 

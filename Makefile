@@ -253,14 +253,15 @@ tools:	$(TOOLS)
 # assembly files (a65 -> prg)
 utilities:	$(UTILITIES)
 
-SIDVHDL=		$(VHDLSRCDIR)/sid_6581.vhdl \
-			$(VHDLSRCDIR)/sid_coeffs.vhdl \
+SIDVHDL=		$(VHDLSRCDIR)/sid_coeffs.vhdl \
 			$(VHDLSRCDIR)/sid_coeffs_mux.vhdl \
 			$(VHDLSRCDIR)/sid_components.vhdl \
 			$(VHDLSRCDIR)/sid_filters.vhdl \
 			$(VHDLSRCDIR)/sid_voice.vhdl \
 			$(VHDLSRCDIR)/sid_tables.vhdl \
 			$(VHDLSRCDIR)/ghdl_8580_voice_stub.vhdl \
+			$(VHDLSRCDIR)/sid_6581.vhdl \
+
 
 CPUVHDL=		$(VHDLSRCDIR)/multiply32.vhdl \
 			$(VHDLSRCDIR)/divider32.vhdl \
@@ -275,17 +276,16 @@ C65VHDL=		$(SIDVHDL) \
 			$(VHDLSRCDIR)/mouse_input.vhdl \
 			$(VHDLSRCDIR)/cia6526.vhdl \
 			$(VHDLSRCDIR)/c65uart.vhdl \
-			$(VHDLSRCDIR)/UART_TX_CTRL.vhdl \
 			$(VHDLSRCDIR)/cputypes.vhdl \
 			$(VHDLSRCDIR)/iomapper.vhdl \
 
-VICIVVHDL=		$(VHDLSRCDIR)/pixel_driver.vhdl \
+VICIVVHDL=		$(VHDLSRCDIR)/frame_generator.vhdl \
+			$(VHDLSRCDIR)/pixel_driver.vhdl \
 			$(VHDLSRCDIR)/pixel_fifo.vhdl \
-			$(VHDLSRCDIR)/frame_generator.vhdl \
 			$(VHDLSRCDIR)/sprite.vhdl \
-			$(VHDLSRCDIR)/vicii_sprites.vhdl \
 			$(VHDLSRCDIR)/bitplane.vhdl \
 			$(VHDLSRCDIR)/bitplanes.vhdl \
+			$(VHDLSRCDIR)/vicii_sprites.vhdl \
 			$(VHDLSRCDIR)/victypes.vhdl \
 			$(VHDLSRCDIR)/pal_simulation.vhdl \
 			$(VHDLSRCDIR)/ghdl_alpha_blend.vhdl \
@@ -307,20 +307,21 @@ VFPGAVHDL=		$(VHDLSRCDIR)/vfpga/overlay_IP.vhdl \
 			$(VHDLSRCDIR)/vfpga/vfpga_wrapper_8bit.vhdl
 
 
-PERIPHVHDL=		$(VHDLSRCDIR)/sdcardio.vhdl \
-			$(VHDLSRCDIR)/touch.vhdl \
-			$(VHDLSRCDIR)/hyperram.vhdl \
-			$(VHDLSRCDIR)/i2c_master.vhdl \
+PERIPHVHDL=		$(VHDLSRCDIR)/i2c_master.vhdl \
 			$(VHDLSRCDIR)/i2c_wrapper.vhdl \
 			$(VHDLSRCDIR)/i2c_controller.vhdl \
 			$(VHDLSRCDIR)/grove_i2c.vhdl \
 			$(VHDLSRCDIR)/hdmi_i2c.vhdl \
-			$(VHDLSRCDIR)/hdmi_spdif.vhdl \
 			$(VHDLSRCDIR)/spdif_encoder.vhdl \
+			$(VHDLSRCDIR)/hdmi_spdif.vhdl \
+			$(VHDLSRCDIR)/UART_TX_CTRL.vhdl \
+			$(VHDLSRCDIR)/uart_rx.vhdl \
 			$(VHDLSRCDIR)/buffereduart.vhdl \
+			$(VHDLSRCDIR)/touch.vhdl \
+			$(VHDLSRCDIR)/hyperram.vhdl \
+			$(VHDLSRCDIR)/crc1581.vhdl \
 			$(VHDLSRCDIR)/mfm_bits_to_bytes.vhdl \
 			$(VHDLSRCDIR)/mfm_bits_to_gaps.vhdl \
-			$(VHDLSRCDIR)/mfm_decoder.vhdl \
 			$(VHDLSRCDIR)/mfm_gaps_to_bits.vhdl \
 			$(VHDLSRCDIR)/mfm_gaps.vhdl \
 			$(VHDLSRCDIR)/mfm_quantise_gaps.vhdl \
@@ -328,13 +329,14 @@ PERIPHVHDL=		$(VHDLSRCDIR)/sdcardio.vhdl \
 			$(VHDLSRCDIR)/rll27_bits_to_gaps.vhdl \
 			$(VHDLSRCDIR)/rll27_gaps_to_bits.vhdl \
 			$(VHDLSRCDIR)/raw_bits_to_gaps.vhdl \
-			$(VHDLSRCDIR)/crc1581.vhdl \
-			$(VHDLSRCDIR)/ethernet.vhdl \
+			$(VHDLSRCDIR)/mfm_decoder.vhdl \
 			$(VHDLSRCDIR)/ghdl_ram8x2048.vhdl \
 			$(VHDLSRCDIR)/ethernet_miim.vhdl \
+			$(VHDLSRCDIR)/ethernet.vhdl \
 			$(VHDLSRCDIR)/ghdl_fpgatemp.vhdl \
 			$(VHDLSRCDIR)/expansion_port_controller.vhdl \
 			$(VHDLSRCDIR)/slow_devices.vhdl \
+			$(VHDLSRCDIR)/sdcardio.vhdl \
 			$(AUDIOVHDL) \
 			$(KBDVHDL)
 
@@ -349,12 +351,12 @@ KBDVHDL=		$(VHDLSRCDIR)/keymapper.vhdl \
 			$(VHDLSRCDIR)/keymapper.vhdl \
 			$(VHDLSRCDIR)/virtual_to_matrix.vhdl \
 
-OVERLAYVHDL=		$(VHDLSRCDIR)/rain.vhdl \
-			$(VHDLSRCDIR)/lfsr16.vhdl \
+OVERLAYVHDL=		$(VHDLSRCDIR)/lfsr16.vhdl \
+			$(VHDLSRCDIR)/oskmem.vhdl \
 			$(VHDLSRCDIR)/visual_keyboard.vhdl \
 			$(VHDLSRCDIR)/uart_charrom.vhdl \
-			$(VHDLSRCDIR)/oskmem.vhdl \
 			$(VHDLSRCDIR)/termmem.vhdl \
+			$(VHDLSRCDIR)/rain.vhdl \
 
 1541VHDL=		$(VHDLSRCDIR)/internal1541.vhdl \
 			$(VHDLSRCDIR)/driverom.vhdl \
@@ -363,25 +365,25 @@ OVERLAYVHDL=		$(VHDLSRCDIR)/rain.vhdl \
 
 SERMONVHDL=		$(VHDLSRCDIR)/ps2_to_uart.vhdl \
 			$(VHDLSRCDIR)/dummy_uart_monitor.vhdl \
-			$(VHDLSRCDIR)/uart_rx.vhdl \
 
-M65VHDL=		$(VHDLSRCDIR)/machine.vhdl \
-			$(VHDLSRCDIR)/ddrwrapper.vhdl \
-			$(VHDLSRCDIR)/framepacker.vhdl \
+M65VHDL=		$(VHDLSRCDIR)/ddrwrapper.vhdl \
 			$(VHDLSRCDIR)/hyppo.vhdl \
-			$(VHDLSRCDIR)/mega65r2_i2c.vhdl \
-			$(VHDLSRCDIR)/mega65r3_i2c.vhdl \
-			$(VHDLSRCDIR)/mega65r4_i2c.vhdl \
-			$(VHDLSRCDIR)/edid_i2c.vhdl \
 			$(VHDLSRCDIR)/version.vhdl \
-			$(C65VHDL) \
+			$(SUPPORTVHDL) \
+			$(MEMVHDL) \
 			$(VICIVVHDL) \
 			$(PERIPHVHDL) \
 			$(1541VHDL) \
 			$(SERMONVHDL) \
-			$(MEMVHDL) \
-			$(SUPPORTVHDL) \
 			$(VFPGAVHDL) \
+			$(VHDLSRCDIR)/framepacker.vhdl \
+			$(VHDLSRCDIR)/mega65r2_i2c.vhdl \
+			$(VHDLSRCDIR)/mega65r3_i2c.vhdl \
+			$(VHDLSRCDIR)/mega65r4_i2c.vhdl \
+			$(VHDLSRCDIR)/edid_i2c.vhdl \
+			$(C65VHDL) \
+			$(VHDLSRCDIR)/machine.vhdl \
+
 
 SUPPORTVHDL=		$(VHDLSRCDIR)/debugtools.vhdl \
 			$(VHDLSRCDIR)/crc.vhdl \
@@ -419,6 +421,7 @@ SIMULATIONVHDL=		$(VHDLSRCDIR)/gen_utils.vhdl \
 			$(VHDLSRCDIR)/fake_reconfig.vhdl \
 			$(VHDLSRCDIR)/fake_opl2.vhdl \
 			$(VHDLSRCDIR)/dummy_uart_monitor.vhdl \
+			$(MFMVHDL) \
 			$(CPUVHDL) \
 			$(M65VHDL) \
 			$(VHDLSRCDIR)/cpu_test.vhdl
@@ -468,14 +471,17 @@ simulate:	$(GHDL_DEPEND) $(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
 	$(GHDL) -m cpu_test
 	$(GHDL) -r cpu_test --assert-level=warning
 
+UNISIM_VHDL=/opt/Xilinx/Vivado/2019.2/ids_lite/ISE/vhdl/src/unisims/*.vhd /opt/Xilinx/Vivado/2019.2/ids_lite/ISE/vhdl/src/unisims/primitive/*.vhd
+
 simulate-nvc:	$(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
 	$(info =============================================================)
 	$(info ~~~~~~~~~~~~~~~~> Making: $@)
 	$(NVC) -a --relaxed $(VHDLSRCDIR)/debugtools.vhdl $(VHDLSRCDIR)/cputypes.vhdl $(VHDLSRCDIR)/victypes.vhdl
+	$(NVC) -M 256m --work=UNISIM -a --relaxed $(UNISIM_VHDL)
 	$(NVC) -M 256m -a --relaxed $(VHDLSRCDIR)/shadowram-a100t.vhdl
-	$(NVC) -a --relaxed $(VHDLSRCDIR)/ghdl_ram36x1k.vhdl
-	$(NVC) -a --relaxed $(SIMULATIONVHDL)
-	$(NVC) -m cpu_test
+	$(NVC) -M 256m -a --relaxed $(VHDLSRCDIR)/ghdl_ram36x1k.vhdl
+	$(NVC) -M 256m -L . -a --relaxed $(SIMULATIONVHDL)
+	$(NVC) -M 256m -L . -m cpu_test
 	$(NVC) -r cpu_test
 
 
@@ -568,14 +574,14 @@ mmsimulate:	$(GHDL_DEPEND) $(MMFILES) $(TOOLDIR)/osk_image
 	( ./test_matrix || $(GHDL) -r test_matrix ) 2>&1 | $(TOOLDIR)/osk_image matrix.png
 
 MFMFILES=$(VHDLSRCDIR)/mfm_bits_to_bytes.vhdl \
-	 $(VHDLSRCDIR)/mfm_decoder.vhdl \
+	 $(VHDLSRCDIR)/crc1581.vhdl \
+	 $(VHDLSRCDIR)/rll27_gaps_to_bits.vhdl \
+	 $(VHDLSRCDIR)/rll27_quantise_gaps.vhdl \
 	 $(VHDLSRCDIR)/mfm_gaps.vhdl \
 	 $(VHDLSRCDIR)/mfm_gaps_to_bits.vhdl \
 	 $(VHDLSRCDIR)/mfm_quantise_gaps.vhdl \
-	 $(VHDLSRCDIR)/rll27_gaps_to_bits.vhdl \
-	 $(VHDLSRCDIR)/rll27_quantise_gaps.vhdl \
 	 $(VHDLSRCDIR)/raw_bits_to_gaps.vhdl \
-	 $(VHDLSRCDIR)/crc1581.vhdl \
+	 $(VHDLSRCDIR)/mfm_decoder.vhdl \
 	 $(VHDLSRCDIR)/sdcardio.vhdl \
 	 $(VHDLSRCDIR)/cputypes.vhdl \
 	 $(VHDLSRCDIR)/test_mfm.vhdl
@@ -588,14 +594,14 @@ mfmsimulate: $(GHDL_DEPEND) $(MFMFILES) $(ASSETS)/synthesised-60ns.dat
 	( ./test_mfm || $(GHDL) -r test_mfm )
 
 QSPIFILES=$(VHDLSRCDIR)/mfm_bits_to_bytes.vhdl \
-	 $(VHDLSRCDIR)/mfm_decoder.vhdl \
+	 $(VHDLSRCDIR)/crc1581.vhdl \
+	 $(VHDLSRCDIR)/rll27_gaps_to_bits.vhdl \
+	 $(VHDLSRCDIR)/rll27_quantise_gaps.vhdl \
 	 $(VHDLSRCDIR)/mfm_gaps.vhdl \
 	 $(VHDLSRCDIR)/mfm_gaps_to_bits.vhdl \
 	 $(VHDLSRCDIR)/mfm_quantise_gaps.vhdl \
-	 $(VHDLSRCDIR)/rll27_gaps_to_bits.vhdl \
-	 $(VHDLSRCDIR)/rll27_quantise_gaps.vhdl \
 	 $(VHDLSRCDIR)/raw_bits_to_gaps.vhdl \
-	 $(VHDLSRCDIR)/crc1581.vhdl \
+	 $(VHDLSRCDIR)/mfm_decoder.vhdl \
 	 $(VHDLSRCDIR)/sdcardio.vhdl \
 	 $(VHDLSRCDIR)/cputypes.vhdl \
 	 $(VHDLSRCDIR)/s25fl512s.vhd \
