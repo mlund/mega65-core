@@ -476,9 +476,7 @@ simulate-nvc:	$(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
 	$(info =============================================================)
 	$(info ~~~~~~~~~~~~~~~~> Making: $@)
 	$(NVC) -M 256m --work=UNISIM -a --relaxed $(UNISIM_VHDL)
-	$(NVC) -M 256m -L . -a --relaxed $(VHDLSRCDIR)/shadowram-a100t.vhdl $(SIMULATIONVHDL)
-	$(NVC) -e cpu_test
-	$(NVC) -r cpu_test
+	$(NVC) -M 256m -L . -a --relaxed $(VHDLSRCDIR)/shadowram-a100t.vhdl $(SIMULATIONVHDL) $(VHDLSRCDIR)/debugtools.vhdl $(VHDLSRCDIR)/fake_expansion_port.vhdl -e cpu_test -r
 
 
 # GHDL with llvm backend
