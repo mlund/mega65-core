@@ -334,7 +334,7 @@ architecture Behavioural of gs4510 is
 
   
   -- Instruction log
-  signal last_instruction_pc : unsigned(15 downto 0) := x"FFFF";
+  signal last_instruction_pc : unsigned(15 downto 0) := unsigned'(x"FFFF");
   signal last_opcode : unsigned(7 downto 0)  := (others => '0');
   signal last_byte2 : unsigned(7 downto 0)  := (others => '0');
   signal last_byte3 : unsigned(7 downto 0)  := (others => '0');
@@ -354,8 +354,8 @@ architecture Behavioural of gs4510 is
   signal shadow_wdata_next : unsigned(7 downto 0)  := (others => '0');
   signal shadow_write_count : unsigned(7 downto 0)  := (others => '0');
   signal shadow_no_write_count : unsigned(7 downto 0)  := (others => '0');
-  signal shadow_try_write_count : unsigned(7 downto 0) := x"00";
-  signal shadow_observed_write_count : unsigned(7 downto 0) := x"00";
+  signal shadow_try_write_count : unsigned(7 downto 0) := to_unsigned(0,8);
+  signal shadow_observed_write_count : unsigned(7 downto 0) := to_unsigned(0,8);
   signal shadow_write : std_logic := '0';
   signal shadow_write_next : std_logic := '0';
 
@@ -412,7 +412,7 @@ architecture Behavioural of gs4510 is
     signed(to_unsigned(79+128,8)),signed(to_unsigned(103+128,8))    
     );
   
-  signal audio_dma_base_addr : u23_0to3 := (others => x"050000"); -- to_unsigned(0,24));
+  signal audio_dma_base_addr : u23_0to3 := (others => unsigned'(x"050000")); -- to_unsigned(0,24));
   signal audio_dma_time_base : u23_0to3 := (others => to_unsigned(0,24));
   signal audio_dma_top_addr : u15_0to3 := (others => to_unsigned(0,16));
   signal audio_dma_volume : u7_0to3 := (others => to_unsigned(0,8));
@@ -421,12 +421,12 @@ architecture Behavioural of gs4510 is
   signal audio_dma_repeat : std_logic_vector(0 to 3) := (others => '0');
   signal audio_dma_stop : std_logic_vector(0 to 3) := (others => '0');
   signal audio_dma_signed : std_logic_vector(0 to 3) := (others => '0');
-  signal audio_dma_sample_width : u1_0to3 := (others => "00");
+  signal audio_dma_sample_width : u1_0to3 := (others => to_unsigned(0,8));
   signal audio_dma_sine_wave : std_logic_vector(0 to 3) := (others => '0');
 
   signal audio_dma_pending : std_logic_vector(0 to 3) := (others => '0');
   signal audio_dma_pending_msb: std_logic_vector(0 to 3) := (others => '0');
-  signal audio_dma_current_addr : u23_0to3 := (others => x"050000"); -- to_unsigned(0,24));
+  signal audio_dma_current_addr : u23_0to3 := (others => unsigned'(x"050000")); -- to_unsigned(0,24));
   signal audio_dma_current_addr_set : u23_0to3 := (others => to_unsigned(0,24));
   signal audio_dma_current_addr_set_flag : std_logic_vector(0 to 3) := (others => '0');
   signal audio_dma_last_current_addr_set_flag : std_logic_vector(0 to 3) := (others => '0');
@@ -484,35 +484,35 @@ architecture Behavioural of gs4510 is
   
   -- C65 RAM Expansion Controller
   -- bit 7 = indicate error status?
-  signal rec_status : unsigned(7 downto 0) := x"80";
+  signal rec_status : unsigned(7 downto 0) := unsigned'(x"80");
   
   -- GeoRAM emulation: by default point it the 128KB of extra memory at the
   -- 256KB mark
   -- georam_page is the address x 256, so 256KB = page $400
-  signal georam_page : unsigned(19 downto 0) := x"00400";
+  signal georam_page : unsigned(19 downto 0) := unsigned'(x"00400");
   -- GeoRAM is organised in 16KB blocks.  The block mask is thus in units of 16KB.
   -- Note that a 128KB GeoRAM is not standard, and some software may think it
   -- is 512KB, which will of course cause problems.
   signal georam_blockmask : unsigned(7 downto 0) := to_unsigned(128/16,8);
-  signal georam_block : unsigned(7 downto 0) := x"00";
-  signal georam_blockpage : unsigned(7 downto 0) := x"00";
+  signal georam_block : unsigned(7 downto 0) := to_unsigned(0,8);
+  signal georam_blockpage : unsigned(7 downto 0) := to_unsigned(0,8);
 
   -- REU emulation
   signal reu_reg_status : unsigned(7 downto 0) := x"00"; -- read only
   signal reu_cmd_autoload : std_logic := '0';
   signal reu_cmd_ff00decode : std_logic := '0';
   signal reu_cmd_operation : std_logic_vector(1 downto 0) := "00";
-  signal reu_c64_startaddr : unsigned(15 downto 0) := x"0000";
-  signal reu_reu_startaddr : unsigned(23 downto 0) := x"000000";
-  signal reu_transfer_length : unsigned(15 downto 0) := x"0000";
-  signal reu_useless_interrupt_mask : unsigned(7 downto 5) := "000";
+  signal reu_c64_startaddr : unsigned(15 downto 0) := to_unsigned(0,16);
+  signal reu_reu_startaddr : unsigned(23 downto 0) := to_unsigned(0,24);
+  signal reu_transfer_length : unsigned(15 downto 0) := to_unsigned(0,16);
+  signal reu_useless_interrupt_mask : unsigned(7 downto 5) := unsigned'("000");
   signal reu_hold_c64_address : std_logic := '0';
   signal reu_hold_reu_address : std_logic := '0';
   signal reu_ff00_pending : std_logic := '0';
 
   signal last_fastio_addr : std_logic_vector(19 downto 0)  := (others => '0');
   signal last_write_address : unsigned(27 downto 0)  := (others => '0');
-  signal shadow_write_flags : unsigned(3 downto 0) := "0000";
+  signal shadow_write_flags : unsigned(3 downto 0) := unsigned'("0000");
   -- Registers to hold delayed write to hypervisor and related CPU registers
   -- to improve CPU timing closure.
   signal last_write_value : unsigned(7 downto 0)  := (others => '0');
@@ -540,12 +540,12 @@ architecture Behavioural of gs4510 is
   -- memories like colour ram.
   -- XXX The palette RAMs take even longer, because the access is first latched
   -- by the VIC-IV before being passed out.
-  constant ioread_48mhz : unsigned(7 downto 0) := x"01";
-  constant colourread_48mhz : unsigned(7 downto 0) := x"02";
+  constant ioread_48mhz : unsigned(7 downto 0) := to_unsigned(1,8);
+  constant colourread_48mhz : unsigned(7 downto 0) := to_unsigned(2,8);
   -- XXX Try outrageously many waitstates on palette
-  constant palette_48mhz : unsigned(7 downto 0) := x"03";
-  constant iowrite_48mhz : unsigned(7 downto 0) := x"00";
-  constant shadow_48mhz :  unsigned(7 downto 0) := x"00";
+  constant palette_48mhz : unsigned(7 downto 0) := to_unsigned(3,8);
+  constant iowrite_48mhz : unsigned(7 downto 0) := to_unsigned(0,8);
+  constant shadow_48mhz :  unsigned(7 downto 0) := to_unsigned(0,8);
 
   signal shadow_wait_states : unsigned(7 downto 0) := shadow_48mhz;
   signal io_read_wait_states : unsigned(7 downto 0) := ioread_48mhz;

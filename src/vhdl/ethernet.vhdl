@@ -1682,8 +1682,8 @@ begin  -- behavioural
       if fastio_write='0' then
         txbuffer_write <= '0';          
       else
-        if (fastio_addr(19 downto 11)&"000" = x"DE8")
-          or (fastio_addr(19 downto 11)&"000" = x"D20")
+        if (fastio_addr(19 downto 11)&unsigned'("000") = unsigned'(x"DE8"))
+          or (fastio_addr(19 downto 11)&unsigned'("000") = unsigned'(x"D20"))
         then
           -- Writing to TX buffer
           -- (we don't need toclear the write lines, as noone else can write to

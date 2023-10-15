@@ -276,7 +276,6 @@ C65VHDL=		$(SIDVHDL) \
 			$(VHDLSRCDIR)/mouse_input.vhdl \
 			$(VHDLSRCDIR)/cia6526.vhdl \
 			$(VHDLSRCDIR)/c65uart.vhdl \
-			$(VHDLSRCDIR)/cputypes.vhdl \
 			$(VHDLSRCDIR)/iomapper.vhdl \
 
 VICIVVHDL=		$(VHDLSRCDIR)/frame_generator.vhdl \
@@ -286,7 +285,6 @@ VICIVVHDL=		$(VHDLSRCDIR)/frame_generator.vhdl \
 			$(VHDLSRCDIR)/bitplane.vhdl \
 			$(VHDLSRCDIR)/bitplanes.vhdl \
 			$(VHDLSRCDIR)/vicii_sprites.vhdl \
-			$(VHDLSRCDIR)/victypes.vhdl \
 			$(VHDLSRCDIR)/pal_simulation.vhdl \
 			$(VHDLSRCDIR)/ghdl_alpha_blend.vhdl \
 			$(OVERLAYVHDL) \
@@ -340,9 +338,7 @@ PERIPHVHDL=		$(VHDLSRCDIR)/i2c_master.vhdl \
 			$(AUDIOVHDL) \
 			$(KBDVHDL)
 
-KBDVHDL=		$(VHDLSRCDIR)/keymapper.vhdl \
-			$(VHDLSRCDIR)/accessible_keyboard.vhdl \
-			$(VHDLSRCDIR)/keyboard_complex.vhdl \
+KBDVHDL=		$(VHDLSRCDIR)/accessible_keyboard.vhdl \
 			$(VHDLSRCDIR)/kb_matrix_ram.vhdl \
 			$(VHDLSRCDIR)/keyboard_to_matrix.vhdl \
 			$(VHDLSRCDIR)/matrix_to_ascii.vhdl \
@@ -350,6 +346,7 @@ KBDVHDL=		$(VHDLSRCDIR)/keymapper.vhdl \
 			$(VHDLSRCDIR)/ps2_to_matrix.vhdl \
 			$(VHDLSRCDIR)/keymapper.vhdl \
 			$(VHDLSRCDIR)/virtual_to_matrix.vhdl \
+			$(VHDLSRCDIR)/keyboard_complex.vhdl \
 
 OVERLAYVHDL=		$(VHDLSRCDIR)/lfsr16.vhdl \
 			$(VHDLSRCDIR)/oskmem.vhdl \
@@ -358,10 +355,10 @@ OVERLAYVHDL=		$(VHDLSRCDIR)/lfsr16.vhdl \
 			$(VHDLSRCDIR)/termmem.vhdl \
 			$(VHDLSRCDIR)/rain.vhdl \
 
-1541VHDL=		$(VHDLSRCDIR)/internal1541.vhdl \
-			$(VHDLSRCDIR)/driverom.vhdl \
+1541VHDL=		$(VHDLSRCDIR)/driverom.vhdl \
 			$(VHDLSRCDIR)/dpram8x4096.vhdl \
 			$(VHDLSRCDIR)/dummy_cpu6502.vhdl \
+			$(VHDLSRCDIR)/internal1541.vhdl \
 
 SERMONVHDL=		$(VHDLSRCDIR)/ps2_to_uart.vhdl \
 			$(VHDLSRCDIR)/dummy_uart_monitor.vhdl \
@@ -369,7 +366,6 @@ SERMONVHDL=		$(VHDLSRCDIR)/ps2_to_uart.vhdl \
 M65VHDL=		$(VHDLSRCDIR)/ddrwrapper.vhdl \
 			$(VHDLSRCDIR)/hyppo.vhdl \
 			$(VHDLSRCDIR)/version.vhdl \
-			$(SUPPORTVHDL) \
 			$(MEMVHDL) \
 			$(VICIVVHDL) \
 			$(PERIPHVHDL) \
@@ -382,11 +378,14 @@ M65VHDL=		$(VHDLSRCDIR)/ddrwrapper.vhdl \
 			$(VHDLSRCDIR)/mega65r4_i2c.vhdl \
 			$(VHDLSRCDIR)/edid_i2c.vhdl \
 			$(C65VHDL) \
+			$(CPUVHDL) \
 			$(VHDLSRCDIR)/machine.vhdl \
 
 
 SUPPORTVHDL=		$(VHDLSRCDIR)/debugtools.vhdl \
 			$(VHDLSRCDIR)/crc.vhdl \
+			$(VHDLSRCDIR)/victypes.vhdl \
+			$(VHDLSRCDIR)/cputypes.vhdl \
 
 MEMVHDL=		$(VHDLSRCDIR)/ghdl_chipram8bit.vhdl \
 			$(VHDLSRCDIR)/ghdl_farstack.vhdl \
@@ -413,7 +412,8 @@ NEXYSVHDL=		$(VHDLSRCDIR)/slowram.vhdl \
 			$(M65VHDL)
 
 
-SIMULATIONVHDL=		$(VHDLSRCDIR)/gen_utils.vhdl \
+SIMULATIONVHDL=		$(SUPPORTVHDL) \
+			$(VHDLSRCDIR)/gen_utils.vhdl \
 			$(VHDLSRCDIR)/conversions.vhdl \
 			$(VHDLSRCDIR)/s27kl0641-pgs-modified.vhd \
 			$(VHDLSRCDIR)/fake_expansion_port.vhdl \
@@ -422,7 +422,6 @@ SIMULATIONVHDL=		$(VHDLSRCDIR)/gen_utils.vhdl \
 			$(VHDLSRCDIR)/fake_opl2.vhdl \
 			$(VHDLSRCDIR)/dummy_uart_monitor.vhdl \
 			$(MFMVHDL) \
-			$(CPUVHDL) \
 			$(M65VHDL) \
 			$(VHDLSRCDIR)/cpu_test.vhdl
 
@@ -476,12 +475,9 @@ UNISIM_VHDL=/opt/Xilinx/Vivado/2019.2/ids_lite/ISE/vhdl/src/unisims/*.vhd /opt/X
 simulate-nvc:	$(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
 	$(info =============================================================)
 	$(info ~~~~~~~~~~~~~~~~> Making: $@)
-	$(NVC) -a --relaxed $(VHDLSRCDIR)/debugtools.vhdl $(VHDLSRCDIR)/cputypes.vhdl $(VHDLSRCDIR)/victypes.vhdl
 	$(NVC) -M 256m --work=UNISIM -a --relaxed $(UNISIM_VHDL)
-	$(NVC) -M 256m -a --relaxed $(VHDLSRCDIR)/shadowram-a100t.vhdl
-	$(NVC) -M 256m -a --relaxed $(VHDLSRCDIR)/ghdl_ram36x1k.vhdl
-	$(NVC) -M 256m -L . -a --relaxed $(SIMULATIONVHDL)
-	$(NVC) -M 256m -L . -m cpu_test
+	$(NVC) -M 256m -L . -a --relaxed $(VHDLSRCDIR)/shadowram-a100t.vhdl $(SIMULATIONVHDL)
+	$(NVC) -e cpu_test
 	$(NVC) -r cpu_test
 
 
