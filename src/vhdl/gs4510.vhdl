@@ -421,7 +421,7 @@ architecture Behavioural of gs4510 is
   signal audio_dma_repeat : std_logic_vector(0 to 3) := (others => '0');
   signal audio_dma_stop : std_logic_vector(0 to 3) := (others => '0');
   signal audio_dma_signed : std_logic_vector(0 to 3) := (others => '0');
-  signal audio_dma_sample_width : u1_0to3 := (others => to_unsigned(0,8));
+  signal audio_dma_sample_width : u1_0to3 := (others => (others => '0'));
   signal audio_dma_sine_wave : std_logic_vector(0 to 3) := (others => '0');
 
   signal audio_dma_pending : std_logic_vector(0 to 3) := (others => '0');
