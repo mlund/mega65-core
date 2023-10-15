@@ -343,10 +343,10 @@ begin
       write_n <= '1';
 
       if ready='1' then
-        report("1541CPU: Clock ticks, state=" & cpu_state_t'image(cpu_state)
-               & ", data_i = $" & to_hexstring(data_i)
-               & ", addr read=$" & to_hexstring(address)
-               & ", PC=$" & to_hexstring(reg_pc));        
+        -- report("1541CPU: Clock ticks, state=" & cpu_state_t'image(cpu_state)
+        --        & ", data_i = $" & to_hexstring(data_i)
+        --        & ", addr read=$" & to_hexstring(address)
+        --        & ", PC=$" & to_hexstring(reg_pc));        
 
         -- By default, fetch next instruction byte
         address <= reg_pc;              
@@ -635,7 +635,9 @@ begin
                 reg_pc <= reg_pc;
                 case reg_instruction is
                   when I_INC =>  reg_data <= data_i + 1;
+                                 set_nz(data_i + 1);
                   when I_DEC =>  reg_data <= data_i - 1;
+                                 set_nz(data_i - 1);
                   when I_ROR =>  reg_data(6 downto 0) <= data_i(7 downto 1);
                                  reg_data(7) <= flag_c;
                                  flag_c <= reg_data(0);
