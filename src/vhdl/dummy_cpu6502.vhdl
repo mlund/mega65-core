@@ -25,7 +25,7 @@ entity cpu6502 is
     reset : in std_logic;
     sync : buffer std_logic;
     t : out unsigned(2 downto 0);
-    write : out std_logic;
+    write_n : out std_logic;
     write_next : buffer std_logic
     );
 end entity cpu6502;
@@ -142,6 +142,8 @@ architecture vapourware of cpu6502 is
   signal reg_addr_y : unsigned(8 downto 0);
 
   signal reg_data : unsigned(7 downto 0) := x"00";
+
+  signal instruction_counter : integer := 0;
   
 begin
   process (clk) is
@@ -297,6 +299,8 @@ begin
 
     if rising_edge(clk) then
 
+      -- report "data_i = $" & to_hexstring(data_i);
+      
       if data_i(7)='0' then
         branch_addr := reg_pc + to_integer(data_i);
       else
@@ -336,7 +340,7 @@ begin
       address_next <= reg_pc;
 
       -- Disassert /write line, i.e., read by default
-      write <= '1';
+      write_n <= '1';
 
       if ready='1' then
         report("1541CPU: Clock ticks, state=" & cpu_state_t'image(cpu_state)
@@ -390,7 +394,8 @@ begin
             reg_opcode <= data_i;
             reg_instruction <= instruction_lut(to_integer(data_i));
             reg_mode <= mode_lut(to_integer(data_i));
-            report "PC: $" & to_hexstring(reg_pc) & ", A:" & to_hexstring(reg_a) & ", X:" & to_hexstring(reg_x)
+            instruction_counter <= instruction_counter + 1;
+            report "Instr#:" & integer'image(instruction_counter) & " PC: $" & to_hexstring(to_unsigned(to_integer(reg_pc)-1,16)) & ", A:" & to_hexstring(reg_a) & ", X:" & to_hexstring(reg_x)
               & ", Y:" & to_hexstring(reg_y) & ", SP:" & to_hexstring(reg_sp)
               & " NVxBDIZC=" & to_string(std_logic_vector(virt_flags)) & ", " &
               " Decoding " & instruction'image(instruction_lut(to_integer(data_i)))
@@ -409,13 +414,13 @@ begin
                   when I_NOP => null;
                   when I_PHA => address(15 downto 8) <= x"01";
                                 address(7 downto 0) <= reg_sp;
-                                write <= '0';
+                                write_n <= '0';
                                 data_o <= reg_a;
                                 reg_sp <= sp_dec;
                                 cpu_state <= opcode_fetch;
                   when I_PHP => address(15 downto 8) <= x"01";
                                 address(7 downto 0) <= reg_sp;
-                                write <= '0';
+                                write_n <= '0';
                                 data_o <= virt_flags;
                                 reg_sp <= sp_dec;
                                 cpu_state <= opcode_fetch;
@@ -507,9 +512,10 @@ begin
                     | I_BIT
                     =>
                     cpu_state <= load;
-                  when I_STA => data_o <= reg_a; write <= '1'; cpu_state <= opcode_fetch;
-                  when I_STX => data_o <= reg_x; write <= '1'; cpu_state <= opcode_fetch;
-                  when I_STY => data_o <= reg_y; write <= '1'; cpu_state <= opcode_fetch;
+                  when I_STA => data_o <= reg_a; write_n <= '0'; cpu_state <= opcode_fetch;
+                  when I_STX => data_o <= reg_x; write_n <= '0'; cpu_state <= opcode_fetch;
+                                report "STXZP: Writing $" & to_hexstring(reg_x);
+                  when I_STY => data_o <= reg_y; write_n <= '0'; cpu_state <= opcode_fetch;
                   when others =>
                     assert false report "Unimplemented zeropage mode instruction " & instruction'image(reg_instruction);
                 end case;
@@ -576,7 +582,7 @@ begin
                     if reg_instruction = I_JSR then
                       reg_addr <= reg_pc;
                       cpu_state <= jsrhi;
-                      write <= '0';
+                      write_n <= '0';
                       address(15 downto 8) <= x"01"; -- stack
                       address(7 downto 0) <= reg_sp;
                       data_o <= reg_pc(7 downto 0);
@@ -590,9 +596,9 @@ begin
                     | I_BIT
                     =>
                     cpu_state <= load;
-                  when I_STA => data_o <= reg_a; write <= '1'; cpu_state <= opcode_fetch;
-                  when I_STX => data_o <= reg_x; write <= '1'; cpu_state <= opcode_fetch;
-                  when I_STY => data_o <= reg_y; write <= '1'; cpu_state <= opcode_fetch;
+                  when I_STA => data_o <= reg_a; write_n <= '0'; cpu_state <= opcode_fetch;
+                  when I_STX => data_o <= reg_x; write_n <= '0'; cpu_state <= opcode_fetch;
+                  when I_STY => data_o <= reg_y; write_n <= '0'; cpu_state <= opcode_fetch;
                   when others =>
                     assert false report "Unimplemented absolute mode instruction " & instruction'image(reg_instruction);
                 end case;
@@ -621,7 +627,7 @@ begin
                 -- Read-modify-write instruction
                 -- These write back the original value, before writing back the
                 -- updated value
-                write <= '0';
+                write_n <= '0';
                 address <= address;
                 data_o <= data_i;
                 cpu_state <= rmw_commit;
@@ -649,14 +655,14 @@ begin
                 assert false report "Unimplemented load instruction " & instruction'image(reg_instruction);
             end case;
           when jsrhi =>
-            write <= '0';
+            write_n <= '0';
             address(15 downto 8) <= x"01"; -- stack
             address(7 downto 0) <= reg_sp;
             data_o <= reg_addr(15 downto 8);
             reg_sp <= sp_dec;
             cpu_state <= opcode_fetch;
           when rmw_commit =>
-            write <= '0';
+            write_n <= '0';
             address <= address;
             data_o <= reg_data;
             cpu_state <= opcode_fetch;
@@ -674,20 +680,36 @@ begin
             end if;
             cpu_state <= opcode_fetch;
           when izp =>
+            report "IZP: Reading low byte of vector = $" & to_hexstring(data_i) & " from $" & to_hexstring(reg_addr);
             reg_addr(7 downto 0) <= data_i;
+            -- Prevent address from being stomped with the automatic reading of
+            -- address PC+1 
             address(15 downto 8) <= address(15 downto 8);
+            -- And advance the lower byte of the address to read the 2nd half
+            -- of the pointer.
             address(7 downto 0) <= address(7 downto 0) + 1;
             cpu_state <= izp2;
           when izp2 =>
             -- We now have the vector, so generate the load address
             reg_addr(15 downto 8) <= data_i;
+            report "IZP: Dereferencing pointer at $" & to_hexstring(data_i) & to_hexstring(reg_addr(7 downto 0));
             if reg_mode = M_InnX then
-              address <= reg_addr;
+              address(7 downto 0) <= reg_addr(7 downto 0);
+              address(15 downto 8) <= data_i;
+              report "IZP: Vector address = $" & to_hexstring(data_i) & to_hexstring(reg_addr(7 downto 0));
             else
-              address <= reg_addr + to_integer(reg_y);
+              address(7 downto 0) <= reg_addr(7 downto 0) + to_integer(reg_y);
+              if ( to_integer(reg_addr(7 downto 0)) + to_integer(reg_y) ) > 255 then
+                address(15 downto 8) <= data_i + 1;
+                reg_addr(15 downto 8) <= data_i + 1;
+              else
+                address(15 downto 8) <= data_i;
+                reg_addr(15 downto 8) <= data_i;
+              end if;
             end if;
             cpu_state <= izpvector;
           when izpvector =>
+            report "IZP: Reading vector from address $" & to_hexstring(reg_addr);
             reg_addr(7 downto 0) <= data_i;
             address <= address + 1;
             cpu_state <= izpvector2;
@@ -701,9 +723,9 @@ begin
                 | I_BIT
                 =>
                 cpu_state <= load;
-              when I_STA => data_o <= reg_a; write <= '1'; cpu_state <= opcode_fetch;
-              when I_STX => data_o <= reg_x; write <= '1'; cpu_state <= opcode_fetch;
-              when I_STY => data_o <= reg_y; write <= '1'; cpu_state <= opcode_fetch;
+              when I_STA => data_o <= reg_a; write_n <= '0'; cpu_state <= opcode_fetch;
+              when I_STX => data_o <= reg_x; write_n <= '0'; cpu_state <= opcode_fetch;
+              when I_STY => data_o <= reg_y; write_n <= '0'; cpu_state <= opcode_fetch;
               when others =>
                 assert false report "Unimplemented (zeropage) indexed mode instruction " & instruction'image(reg_instruction);
             end case;

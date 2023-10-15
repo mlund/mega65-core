@@ -73,7 +73,7 @@ architecture romanesque_revival of internal1541 is
   signal nmi : std_logic := '1';
   signal irq : std_logic := '1';
   
-  signal cpu_write : std_logic := '0';
+  signal cpu_write_n : std_logic := '1';
 
   -- Internal CS lines for the 1541
   signal cs_ram : std_logic;
@@ -127,7 +127,7 @@ begin
     nmi => nmi,
     irq => irq,
     ready => drive_clock_cycle_strobe,
-    write => cpu_write,
+    write_n => cpu_write_n,
 --    sync => cpu_sync,
     address => address,
     address_next => address_next_internal,
@@ -135,10 +135,10 @@ begin
     data_o => wdata   
     );
   
-  process(clock,address,address_next_internal,cs_ram,ram_rdata,cs_rom,rom_rdata,cpu_write)
+  process(clock,address,address_next_internal,cs_ram,ram_rdata,cs_rom,rom_rdata,cpu_write_n)
   begin
 
-    ram_write_enable <= not cpu_write;
+    ram_write_enable <= not cpu_write_n;
   
     if rising_edge(clock) then
       -- report "1541TICK: address = $" & to_hexstring(address) & ", drive_cycle = "
