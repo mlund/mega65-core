@@ -16,7 +16,8 @@ use work.cputypes.all;
 
 
 entity hyperram is
-  generic ( in_simulation : in boolean := false);
+  generic ( in_simulation : in boolean := false;
+            no_start_delay : in boolean := false);
   Port ( pixelclock : in STD_LOGIC; -- For slow devices bus interface is
          -- actually on pixelclock to reduce latencies
          -- Also pixelclock is the natural clock speed we apply to the HyperRAM.
@@ -1659,8 +1660,13 @@ begin
       write_request_held <= write_request;
 
       if start_delay_expired='0' then
-        start_delay_counter <= start_delay_counter - 1;
+        if no_start_delay then
+          start_delay_counter <= 0;
+        else
+          start_delay_counter <= start_delay_counter - 1;
+        end if;
         if start_delay_counter = 0 then
+          report "HYPERRAM: Start delay expired";
           start_delay_expired <= '1';
           state <= WriteSetup;
         end if;

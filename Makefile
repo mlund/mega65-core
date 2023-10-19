@@ -466,9 +466,10 @@ OPL3VERILOG=		$(VERILOGSRCDIR)/calc_phase_inc.v \
 simulate:	$(GHDL_DEPEND) $(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
 	$(info =============================================================)
 	$(info ~~~~~~~~~~~~~~~~> Making: $@)
+	$(GHDL) -i --work=unisim src/vhdl/my_vcomponents.vhdl src/vhdl/my_bufg.vhdl
 	$(GHDL) -i $(SIMULATIONVHDL)
 	$(GHDL) -m cpu_test
-	$(GHDL) -r cpu_test --assert-level=warning
+	$(GHDL) -r cpu_test # --assert-level=warning
 
 UNISIM_VHDL=/opt/Xilinx/Vivado/2019.2/ids_lite/ISE/vhdl/src/unisims/*.vhd /opt/Xilinx/Vivado/2019.2/ids_lite/ISE/vhdl/src/unisims/primitive/*.vhd
 

@@ -186,7 +186,7 @@ architecture behavior of cpu_test is
   
 begin
 
-  fh0: if false generate
+  fh0: if true generate
   fakehyper0: entity work.s27kl0641
     generic map (
       id => "$8000000",
@@ -265,6 +265,7 @@ begin
       );
 
   hyperram0: entity work.hyperram
+    generic map ( no_start_delay => true )
     port map (
       pixelclock => pixelclock,
       clock163 => clock163,
@@ -318,7 +319,7 @@ begin
       right_in => audio_right
       );  
 
-  sd0: if false generate
+  sd0: if true generate
   slow_devices0: entity work.slow_devices
     port map (
       cpuclock => cpuclock,
