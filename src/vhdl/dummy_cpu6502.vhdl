@@ -492,6 +492,7 @@ begin
                     flag_c <= add_result(8);  flag_z <= add_result(9);
                     flag_v <= add_result(10); flag_n <= add_result(11);
                   when I_CMP => alu_op_cmp(reg_a,data_i);
+                                report "CMP: Comparing A=$" & to_hexstring(reg_a) & " with data_i=$" & to_hexstring(data_i);
                   when I_CPX => alu_op_cmp(reg_x,data_i);
                   when I_CPY => alu_op_cmp(reg_y,data_i);
                   when others =>
@@ -614,6 +615,7 @@ begin
             
             case reg_instruction is
               when I_CMP => alu_op_cmp(reg_a,data_i);
+                            report "CMP: Comparing A=$" & to_hexstring(reg_a) & " with data_i=$" & to_hexstring(data_i);
               when I_CPX => alu_op_cmp(reg_x,data_i);
               when I_CPY => alu_op_cmp(reg_y,data_i);
               when I_LDA => reg_a <= data_i; set_nz(data_i);

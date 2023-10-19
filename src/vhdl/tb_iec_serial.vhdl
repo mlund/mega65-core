@@ -144,9 +144,9 @@ begin
     while test_suite loop
 
       if run("Simulated 1541 runs") then
-        -- 10^6 x 81MHz ticks = ~10msec. Plenty enough for getting to main loop
-        -- of drive
-        for i in 1 to 1_000_000 loop
+        -- 3x10^6 x 81MHz ticks = ~20msec. Plenty enough for getting to main loop
+        -- of drive. (Needs >3x10^6 to get to $73 in DOS error code table).
+        for i in 1 to 3_000_000 loop
           clock_tick;
         end loop;
       elsif run("ATN Sequence with no device gets DEVICE NOT PRESENT") then
