@@ -108,8 +108,6 @@ architecture vapourware of cpu6502 is
     rts2,
     izp,
     izp2,
-    izpvector,
-    izpvector2,
     pull
     );
 
@@ -700,7 +698,7 @@ begin
             if reg_mode = M_InnX then
               address(7 downto 0) <= reg_addr(7 downto 0);
               address(15 downto 8) <= data_i;
-              report "IZP: Vector address = $" & to_hexstring(data_i) & to_hexstring(reg_addr(7 downto 0));
+              report "IZP: Target address = $" & to_hexstring(data_i) & to_hexstring(reg_addr(7 downto 0));
             else
               address(7 downto 0) <= reg_addr(7 downto 0) + to_integer(reg_y);
               if ( to_integer(reg_addr(7 downto 0)) + to_integer(reg_y) ) > 255 then
@@ -711,14 +709,6 @@ begin
                 reg_addr(15 downto 8) <= data_i;
               end if;
             end if;
-            cpu_state <= izpvector;
-          when izpvector =>
-            report "IZP: Reading vector from address $" & to_hexstring(reg_addr);
-            reg_addr(7 downto 0) <= data_i;
-            address <= address + 1;
-            cpu_state <= izpvector2;
-          when izpvector2 =>
-            reg_addr(15 downto 8) <= data_i;
 
             case reg_instruction is
               when I_ADC | I_SBC | I_CMP | I_CPX | I_CPY | I_ORA | I_EOR | I_AND 
