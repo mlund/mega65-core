@@ -270,7 +270,7 @@ begin
     end function;
 
     -- TODO: better determine timeout at runtime, depending if hyperram is activated (mega65r4: switchable sdram/hyperram?)
-    constant expansionram_read_timeout_default : unsigned := cond_uint(target = mega65r4, to_unsigned(32,24), to_unsigned(64, 24));
+    constant expansionram_read_timeout_default : unsigned := cond_uint(target = mega65r4, to_unsigned(128,24), to_unsigned(128, 24));
 
   begin
 
