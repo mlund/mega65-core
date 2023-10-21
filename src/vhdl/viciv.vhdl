@@ -2916,7 +2916,8 @@ begin
             hw_errata_enable_toggle <= not hw_errata_enable_toggle;
           end if;
 
-          viciv_legacy_mode_registers_touched <= '1';
+          -- Do NOT mess with VIC-II legacy registers here. Anyone touching the
+          -- errata level is assumed to know if they need to adjust things after.
         elsif register_number=123 then
           -- @IO:GS $D07B VIC-IV:DISP!ROWS Number of text rows to display
           display_row_count <= unsigned(fastio_wdata);
