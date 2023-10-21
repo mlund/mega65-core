@@ -17,11 +17,11 @@ lib.add_source_files("src/vhdl/ghdl_ram8x4096_sync.vhdl")
 lib.add_source_files("src/vhdl/internal1541.vhdl")
 lib.add_source_files("src/vhdl/dpram8x4096.vhdl")
 lib.add_source_files("src/vhdl/driverom1541.vhdl")
-lib.add_source_files("src/vhdl/dummy_cpu6502.vhdl")
+lib.add_source_files("src/vhdl/simple_cpu6502.vhdl")
+lib.add_source_files("src/vhdl/m6522.vhdl")
 
-vu.set_compile_option("ghdl.a_flags", ["-frelaxed-rules"])
-vu.set_compile_option("ghdl.flags", ["-frelaxed-rules"])
-vu.set_sim_option("ghdl.elab_flags", ["-frelaxed-rules"])
+vu.set_compile_option("ghdl.a_flags", ["-frelaxed-rules","-fsynopsys"])
+vu.set_sim_option("ghdl.elab_flags", ["-frelaxed-rules","-fsynopsys"])
 vu.set_sim_option("ghdl.sim_flags", ["--ieee-asserts=disable"])
 
 # Run vunit function

@@ -51,7 +51,7 @@ library ieee ;
 --library UNISIM;
 --  use UNISIM.Vcomponents.all;
 
-entity M6522 is
+entity mos6522 is
   port (
 
     I_RS              : in    std_logic_vector(3 downto 0);
@@ -94,7 +94,7 @@ entity M6522 is
     );
 end;
 
-architecture RTL of M6522 is
+architecture RTL of mos6522 is
 
   signal phase             : std_logic_vector(1 downto 0);
   signal p2_h_t1           : std_logic;
@@ -200,7 +200,14 @@ begin
       if (p2_h_t1 = '0') and (I_P2_H = '1') then
         phase <= "11";
       else
-        phase <= phase + "1";
+        -- PGS 20231022 Gracefully handle situation where
+        -- CLK > 4x Phase 2 clock rate. This will leave phase
+        -- stuck at "10" between cycles, which is fine, because
+        -- nothing uses that phase to do stuff. All other phases
+        -- DO have things attached to them.
+        if phase /= "10" then
+          phase <= phase + "1";
+        end if;
       end if;
     end if;
   end process;

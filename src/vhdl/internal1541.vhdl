@@ -85,11 +85,153 @@ architecture romanesque_revival of internal1541 is
   signal rom_rdata : unsigned(7 downto 0);
   
   signal address_next_internal : unsigned(15 downto 0);
-  
+
+  signal via_address : unsigned(3 downto 0) := to_unsigned(0,4);
+  signal via_data_in : unsigned(7 downto 0) := to_unsigned(0,8);
+  signal via_data_out : unsigned(7 downto 0);
+  signal via1_data_out_en_n : std_logic := '1';
+  signal via2_data_out_en_n : std_logic := '1';
+  signal via_write_n : std_logic := '1';
+  signal via1_irq_n : std_logic;
+  signal via2_irq_n : std_logic;
+  signal via1_ca1_in : std_logic := '1';
+  signal via2_ca1_in : std_logic := '1';
+  signal via1_ca1_out : std_logic;
+  signal via2_ca1_out : std_logic;
+  signal via1_ca2_in : std_logic := '1';
+  signal via2_ca2_in : std_logic := '1';
+  signal via1_ca2_out : std_logic;
+  signal via2_ca2_out : std_logic;
+  signal via1_ca2_out_en_n : std_logic;
+  signal via2_ca2_out_en_n : std_logic;
+  signal via1_porta_in : std_logic_vector(7 downto 0) := (others => '1');
+  signal via2_porta_in : std_logic_vector(7 downto 0) := (others => '1');
+  signal via1_porta_out : std_logic_vector(7 downto 0);
+  signal via2_porta_out : std_logic_vector(7 downto 0);
+  signal via1_porta_out_en_n : std_logic_vector(7 downto 0);
+  signal via2_porta_out_en_n : std_logic_vector(7 downto 0);
+  signal via1_cb1_in : std_logic := '1';
+  signal via2_cb1_in : std_logic := '1';
+  signal via1_cb1_out : std_logic;
+  signal via2_cb1_out : std_logic;
+  signal via1_cb1_out_en_n : std_logic;
+  signal via2_cb1_out_en_n : std_logic;
+  signal via1_cb2_in : std_logic := '1';
+  signal via2_cb2_in : std_logic := '1';
+  signal via1_cb2_out : std_logic;
+  signal via2_cb2_out : std_logic;
+  signal via1_cb2_out_en_n : std_logic;
+  signal via2_cb2_out_en_n : std_logic;
+  signal via1_portb_in : std_logic_vector(7 downto 0) := (others => '1');
+  signal via2_portb_in : std_logic_vector(7 downto 0) := (others => '1');
+  signal via1_portb_out : std_logic_vector(7 downto 0);
+  signal via2_portb_out : std_logic_vector(7 downto 0);
+  signal via1_portb_out_en_n : std_logic_vector(7 downto 0);
+  signal via2_portb_out_en_n : std_logic_vector(7 downto 0);
+  signal via_phase2_clock : std_logic := '1';
+  signal via_reset_in_n : std_logic := '0';
 begin
   
-  -- XXX Add the missing 6522 VIAs
+  -- 2x 6522 VIAs 
+  via2: entity work.mos6522 port map (
+    I_RS   => std_logic_vector(via_address),
+    I_DATA => std_logic_vector(via_data_in),
+    unsigned(O_DATA) => via_data_out,
+    O_DATA_OE_L => via2_data_out_en_n,
 
+    I_RW_L => via_write_n,
+    I_CS1  => cs_via2,
+    I_CS2_L  => '0',
+
+    O_IRQ_L => via2_irq_n,
+
+    -- Port A
+    I_CA1 => via2_ca1_in,
+    I_CA2 => via2_ca2_in,
+    O_CA2 => via2_ca2_out,
+    O_CA2_OE_L => via2_ca2_out_en_n,
+
+    I_PA => via2_porta_in,
+    O_PA => via2_porta_out,
+    O_PA_OE_L => via2_porta_out_en_n,
+
+    -- Port B
+    I_CB1 => via2_cb1_in,
+    O_CB1 => via2_cb1_out,
+    O_CB1_OE_L => via2_cb1_out_en_n,
+
+    I_CB2 => via2_cb2_in,
+    O_CB2 => via2_cb2_out,
+    O_CB2_OE_L => via2_cb2_out_en_n,
+
+    I_PB => via2_portb_in,
+    O_PB => via2_portb_out,
+    O_PB_OE_L => via2_portb_out_en_n,
+
+    -- Phase 2 clock (active high)
+    I_P2_H => via_phase2_clock,
+    -- Fast FPGA clock
+    CLK => clock,
+    -- ENA_4 needs to be asserted at not less than 4x the Phase 2
+    -- clock rate.  We have modified m6522.vhdl to gracefully
+    -- handle this line being high always.
+    ENA_4 => '1',
+
+    RESET_L => via_reset_in_n
+
+    );
+    
+
+  via1: entity work.mos6522 port map (
+    I_RS   => std_logic_vector(via_address),
+    I_DATA => std_logic_vector(via_data_in),
+    unsigned(O_DATA) => via_data_out,
+    O_DATA_OE_L => via1_data_out_en_n,
+
+    I_RW_L => via_write_n,
+    I_CS1  => cs_via1,
+    I_CS2_L  => '0',
+
+    O_IRQ_L => via1_irq_n,
+
+    -- Port A
+    I_CA1 => via1_ca1_in,
+    I_CA2 => via1_ca2_in,
+    O_CA2 => via1_ca2_out,
+    O_CA2_OE_L => via1_ca2_out_en_n,
+
+    I_PA => via1_porta_in,
+    O_PA => via1_porta_out,
+    O_PA_OE_L => via1_porta_out_en_n,
+
+    -- Port B
+    I_CB1 => via1_cb1_in,
+    O_CB1 => via1_cb1_out,
+    O_CB1_OE_L => via1_cb1_out_en_n,
+
+    I_CB2 => via1_cb2_in,
+    O_CB2 => via1_cb2_out,
+    O_CB2_OE_L => via1_cb2_out_en_n,
+
+    I_PB => via1_portb_in,
+    O_PB => via1_portb_out,
+    O_PB_OE_L => via1_portb_out_en_n,
+
+    -- Phase 2 clock (active high)
+    I_P2_H => via_phase2_clock,
+    -- Fast FPGA clock
+    CLK => clock,
+    -- ENA_4 needs to be asserted at not less than 4x the Phase 2
+    -- clock rate.  We have modified m6522.vhdl to gracefully
+    -- handle this line being high always.
+    ENA_4 => '1',
+
+    RESET_L => via_reset_in_n
+
+    );
+    
+  
+  
   ram: entity work.dpram8x4096 port map (
     -- Fastio interface
     clka => clock,
