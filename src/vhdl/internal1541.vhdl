@@ -88,7 +88,8 @@ architecture romanesque_revival of internal1541 is
 
   signal via_address : unsigned(3 downto 0) := to_unsigned(0,4);
   signal via_data_in : unsigned(7 downto 0) := to_unsigned(0,8);
-  signal via_data_out : unsigned(7 downto 0);
+  signal via1_data_out : unsigned(7 downto 0);
+  signal via2_data_out : unsigned(7 downto 0);
   signal via1_data_out_en_n : std_logic := '1';
   signal via2_data_out_en_n : std_logic := '1';
   signal via_write_n : std_logic := '1';
@@ -129,15 +130,13 @@ architecture romanesque_revival of internal1541 is
   signal via1_portb_out_en_n : std_logic_vector(7 downto 0);
   signal via2_portb_out_en_n : std_logic_vector(7 downto 0);
   signal via_phase2_clock : std_logic := '1';
-  signal via_reset_in_n : std_logic := '0';
 begin
   
   -- 2x 6522 VIAs 
   via2: entity work.mos6522 port map (
     I_RS   => std_logic_vector(via_address),
     I_DATA => std_logic_vector(via_data_in),
-    unsigned(O_DATA) => via_data_out,
-    O_DATA_OE_L => via2_data_out_en_n,
+    unsigned(O_DATA) => via2_data_out,
 
     I_RW_L => via_write_n,
     I_CS1  => cs_via2,
@@ -177,7 +176,7 @@ begin
     -- handle this line being high always.
     ENA_4 => '1',
 
-    RESET_L => via_reset_in_n
+    RESET_L => drive_reset_n
 
     );
     
@@ -185,8 +184,7 @@ begin
   via1: entity work.mos6522 port map (
     I_RS   => std_logic_vector(via_address),
     I_DATA => std_logic_vector(via_data_in),
-    unsigned(O_DATA) => via_data_out,
-    O_DATA_OE_L => via1_data_out_en_n,
+    unsigned(O_DATA) => via2_data_out,
 
     I_RW_L => via_write_n,
     I_CS1  => cs_via1,
@@ -226,7 +224,7 @@ begin
     -- handle this line being high always.
     ENA_4 => '1',
 
-    RESET_L => via_reset_in_n
+    RESET_L => drive_reset_n
 
     );
     
@@ -309,11 +307,19 @@ begin
       end case;
     end if;
 
-    rdata <= (others => '0'); -- This avoids a latch
+    via_address <= address(3 downto 0);
+    via_data_in <= wdata;
+    
     if cs_ram='1' then
       rdata <= ram_rdata;
     elsif cs_rom='1' then
       rdata <= rom_rdata;
+    elsif cs_via1='1' then
+      rdata <= via1_data_out;
+    elsif cs_via2='1' then
+      rdata <= via2_data_out;
+    else
+      rdata <= (others => '0'); -- This avoids a latch      
     end if;
     
   end process;
