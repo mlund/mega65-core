@@ -357,7 +357,7 @@ OVERLAYVHDL=		$(VHDLSRCDIR)/lfsr16.vhdl \
 
 1541VHDL=		$(VHDLSRCDIR)/driverom.vhdl \
 			$(VHDLSRCDIR)/dpram8x4096.vhdl \
-			$(VHDLSRCDIR)/dummy_cpu6502.vhdl \
+			$(VHDLSRCDIR)/simple_cpu6502.vhdl \
 			$(VHDLSRCDIR)/internal1541.vhdl \
 
 SERMONVHDL=		$(VHDLSRCDIR)/ps2_to_uart.vhdl \
