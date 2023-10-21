@@ -278,6 +278,8 @@ begin
     
     if rising_edge(pixelclock) then
 
+      last_expansionram_data_ready_toggle <= expansionram_data_ready_toggle;
+      
       if state /= Idle then
         if expansionram_read_timeout /= to_unsigned(0,24) then
           report "EXRAM-TIMEOUT: Decrementing timeout to " & integer'image(to_integer(expansionram_read_timeout) - 1)
@@ -584,7 +586,6 @@ begin
         expansionram_read <= '0';
         expansionram_write <= '0';
       if (expansionram_data_ready_toggle /= last_expansionram_data_ready_toggle) then
-        last_expansionram_data_ready_toggle <= expansionram_data_ready_toggle;
         report "Saw data. Switching back to Idle state. byte = $" & to_hexstring(expansionram_rdata);
         state <= Idle;
         slow_access_rdata <= expansionram_rdata;
