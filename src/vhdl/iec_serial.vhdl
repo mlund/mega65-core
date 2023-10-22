@@ -596,12 +596,15 @@ begin
 
         when 123 =>
           -- Wait upto 1ms for DATA to go low
-          report "IEC: Waiting for DATA to go low (device responding to ATN)";
+          if prev_iec_state /= 123 then
+            report "IEC: Waiting for DATA to go low (device responding to ATN)";
+          end if;
           if iec_data_i = '0' then
             iec_state <= iec_state + 2; -- Proceed with ATN send
             wait_msec <= 0;
           else
             milli_wait(1);
+            iec_state <= iec_state;
           end if;
         when 124 =>
           -- Timeout has occurred: DEVICE NOT PRESENT
@@ -669,46 +672,53 @@ begin
           report "IEC: Sending data byte under ATN";
           null;
         when 129 => c('0'); d('1'); micro_wait(5);
-        when 130 => null;
+        when 130 => null;                    
         when 131 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 132 => null;
         when 133 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
+                    report "IEC: Sending bit 0 = " & std_logic'image(iec_data_out(0));
         when 134 => null;
         when 135 => c('0'); d('1'); micro_wait(5);
         when 136 => null;
         when 137 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 138 => null;
         when 139 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
+                    report "IEC: Sending bit 1 = " & std_logic'image(iec_data_out(0));
         when 140 => null;
         when 141 => c('0'); d('1'); micro_wait(5);
         when 142 => null;
         when 143 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 144 => null;
         when 145 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(15);
+                    report "IEC: Sending bit 2 = " & std_logic'image(iec_data_out(0));
         when 146 => null;
         when 147 => c('0'); d('1'); micro_wait(5);
         when 148 => null;
         when 149 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 150 => null;
         when 151 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
+                    report "IEC: Sending bit 3 = " & std_logic'image(iec_data_out(0));
         when 152 => null;
         when 153 => c('0'); d('1'); micro_wait(5);
         when 154 => null;
         when 155 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 156 => null;
         when 157 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
+                    report "IEC: Sending bit 4 = " & std_logic'image(iec_data_out(0));
         when 158 => null;
         when 159 => c('0'); d('1'); micro_wait(5);
         when 160 => null;
         when 161 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 162 => null;
         when 163 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
+                    report "IEC: Sending bit 5 = " & std_logic'image(iec_data_out(0));
         when 164 => null;
         when 165 => c('0'); d('1'); micro_wait(5);
         when 166 => null;
         when 167 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 168 => null;
         when 169 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
+                    report "IEC: Sending bit 6 = " & std_logic'image(iec_data_out(0));
         when 170 => null;
            -- Now we have sent 7 bits, release data, keeping clock at 0V, and
            -- check for DATA being pulled low
@@ -728,6 +738,7 @@ begin
         when 173 => c('0'); d(iec_data_out(0)); micro_wait(15);
         when 174 => null;
         when 175 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(20);
+                    report "IEC: Sending bit 7 = " & std_logic'image(iec_data_out(0));
         when 176 => null;
         when 177 => c('0'); d('1');
         when 178 =>
@@ -740,6 +751,7 @@ begin
             wait_msec <= 0;
           else
             milli_wait(1);
+            iec_state <= iec_state;
           end if;
         when 179 =>
           -- Timeout detected acknowledging byte
