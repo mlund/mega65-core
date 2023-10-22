@@ -518,7 +518,7 @@ begin
                                  flag_c <= reg_a(7);
                   when I_LSR =>  reg_a(6 downto 0) <= reg_a(7 downto 1);
                                  reg_a(7) <= '0';
-                                 flag_c <= reg_data(0);
+                                 flag_c <= reg_a(0);
                   when I_ASL =>  reg_a(7 downto 1) <= reg_a(6 downto 0);
                                  reg_a(0) <= '0';
                                  flag_c <= reg_a(7);
