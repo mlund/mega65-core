@@ -339,18 +339,19 @@ int openFile(char *port)
 
 long long time_val;
 unsigned int atn, clk_c64, clk_1541, data_c64, data_1541, data_dummy;
-unsigned int iec_state;
+unsigned int iec_state,instr_num,pc;
 char time_units[8192];
 
 int getUpdate(void)
 {
+
   int line_len=0;
-  char line[1024];
+ char line[1024];
 
   char bytes[1024];
 
   while(!feof(f)) {   
-    int n = fread(bytes,1,1024,f);
+    int n = fread(bytes,1,1,f);
     if (n>0) {
       for(int i=0;i<n;i++) {
 	int c=bytes[i];
@@ -358,16 +359,40 @@ int getUpdate(void)
 	  if (line_len) {
 	    // Parse lines like this:	    
 	    // /home/paul/Projects/mega65/mega65-core/src/vhdl/tb_iec_serial.vhdl:176:9:@6173ps:(report note): IECBUSSTATE: ATN='1', CLK(c64)='1', CLK(1541)='1', DATA(c64)='1', DATA(1541)='1', DATA(dummy)='1'
-	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/tb_iec_serial.vhdl:176:9:@%lld%[^:]:(report note): IECBUSSTATE: ATN='%d', CLK(c64)='%d', CLK(1541)='%d', DATA(c64)='%d', DATA(1541)='%d', DATA(dummy)='%d'",
+	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/tb_iec_serial.vhdl:%*d:%*d:@%lld%[^:]:(report note): IECBUSSTATE: ATN='%d', CLK(c64)='%d', CLK(1541)='%d', DATA(c64)='%d', DATA(1541)='%d', DATA(dummy)='%d'",
 		       &time_val,time_units,
 		       &atn,&clk_c64,&clk_1541,&data_c64,&data_1541,&data_dummy) == 8)
 
 	      // fprintf(stderr,"DEBUG: line = '%s'\n",line);
 	      return 0;
 
-	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/iec_serial.vhdl:490:9:@%lld%[^:]:(report note): iec_state = %d",
+	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/iec_serial.vhdl:%*d:%*d:@%lld%[^:]:(report note): iec_state = %d",
 		       &time_val,time_units,&iec_state)==3) {
-	      fprintf(stderr,"  iec_state = %d\n",iec_state);
+	      fprintf(stderr,"            iec_state = %d\n",iec_state);
+	    }
+
+	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/simple_cpu6502.vhdl:%*d:%*d:@%lld%[^:]:(report note): Instr#:%d PC: $%x",
+		       &time_val,time_units,&instr_num,&pc)==4) {
+	      int show_pc=1;
+
+	      pc=pc &0xffff;
+	      
+	      switch(pc) {
+	      case 0xE85B: fprintf(stderr,"$%04X            1541: Service ATN from C64\n",pc); break;
+	      case 0xE9C9: fprintf(stderr,"$%04X            1541: ACPTR (Serial bus receive byte)\n",pc); break;
+	      case 0xE9CD: fprintf(stderr,"$%04X            1541: ACP00A (wait for CLK to go to 5V)\n",pc); break;
+	      case 0xE9DF: fprintf(stderr,"$%04X            1541: ACP00 (saw CLK get released)\n",pc); break;
+	      case 0xE9F2: fprintf(stderr,"$%04X            1541: ACP00B (Pulse data low and wait for turn-around)\n",pc); break;
+	      case 0xE9FD: fprintf(stderr,"$%04X            1541: ACP02A (EOI check)\n",pc); break;
+	      case 0xEA07: fprintf(stderr,"$%04X            1541:   Clear EOI flag\n",pc); break;
+	      case 0xEA12: fprintf(stderr,"$%04X            1541: ACP03+7 Received bit of serial bus byte\n",pc); break;
+	      case 0xEA1A: fprintf(stderr,"$%04X            1541: ACP03A Got bit of serial bus byte\n",pc); break;
+	      case 0xEA2B: fprintf(stderr,"$%04X            1541: ACP03A+17 Got all 8 bits\n",pc); break;
+	      case 0xEBE7: fprintf(stderr,"$%04X            1541: Enter IDLE loop\n",pc); break;
+	      default:
+		show_pc=0;
+	      }
+
 	    }
 	  }
 	  line[0]=0; line_len=0;
@@ -382,6 +407,25 @@ int getUpdate(void)
 
 }
 
+char *describe_line(int c64, int drive, int dummy)
+{
+  int v=0;
+  if (c64) v|=1;
+  if (drive) v|=2;
+  if (dummy) v|=4;
+
+  switch(v) {
+  case 0: return "0(ALL)";
+  case 1: return "0(DRIVES)";
+  case 2: return "0(C64+DUMMY)";
+  case 3: return "0(DUMMY)";
+  case 4: return "0(C64+DRIVE)";
+  case 5: return "0(DRIVE)";
+  case 6: return "0(C64)";
+  case 7: return "1";
+  }
+  return "UNKNOWN";
+}
 
 int iecDataTrace(char *msg)
 {
@@ -403,11 +447,11 @@ int iecDataTrace(char *msg)
     double time_diff = time_norm - prev_time;
     prev_time = time_norm;
     
-    printf(" % +12.3f : ATN=%d, DATA=%d/%d/%d, CLK=%d/%d\n",
+    printf(" % +12.3f : ATN=%d, DATA=%s, CLK=%s\n",
 	   time_diff,
 	   atn,
-	   data_c64,data_1541,data_dummy,
-	   clk_c64,clk_1541
+	   describe_line(data_c64,data_1541,data_dummy),
+	   describe_line(clk_c64,clk_1541,1)
 	   );
     fflush(stdout);
   }
