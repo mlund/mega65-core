@@ -283,6 +283,21 @@ begin
     if rising_edge(clock) then
       -- report "1541TICK: address = $" & to_hexstring(address) & ", drive_cycle = "
       --   & std_logic'image(drive_clock_cycle_strobe) & ", reset=" & std_logic'image(drive_reset_n);
+
+      via1_portb_in(0) <= iec_data_i;
+      via1_portb_in(2) <= iec_clk_i;
+      via1_portb_in(4) <= iec_atn_i;
+      via1_ca1_in <= iec_atn_i;
+
+      iec_data_o <= '1';
+      iec_clk_o <= '1';
+      if via1_portb_out(1) = '1' and via1_portb_out_en_n(1)='0' then
+        iec_data_o <= '0';
+      end if;
+      if via1_portb_out(3) = '1' and via1_portb_out_en_n(3)='0' then
+        iec_clk_o <= '0';
+      end if;
+      
     end if;
     
     address_next <= address_next_internal;

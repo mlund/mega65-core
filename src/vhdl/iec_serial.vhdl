@@ -43,9 +43,9 @@ entity iec_serial is
     --------------------------------------------------
     iec_reset : out std_logic := '1';
     iec_atn : out std_logic := '1';
-    iec_clk_en : out std_logic := '1';
-    iec_data_en : out std_logic := '1';
-    iec_srq_en : out std_logic := '1';
+    iec_clk_en_n : out std_logic := '1';
+    iec_data_en_n : out std_logic := '1';
+    iec_srq_en_n : out std_logic := '1';
     iec_clk_o : out std_logic;
     iec_data_o : out std_logic;
     iec_srq_o : out std_logic;
@@ -186,7 +186,7 @@ begin
         report "SIGNAL: Setting DATA to " & std_logic'image(v);
         last_iec_data <= v;
       end if;
-      iec_data_o <= v; iec_data_en <= v;
+      iec_data_o <= v; iec_data_en_n <= v;
       iec_data_o_int <= v;
     end procedure;
     procedure c(v : std_logic) is
@@ -195,7 +195,7 @@ begin
         report "SIGNAL: Setting CLK to " & std_logic'image(v);
         last_iec_clk <= v;
       end if;
-      iec_clk_o <= v; iec_clk_en <= v;
+      iec_clk_o <= v; iec_clk_en_n <= v;
       iec_clk_o_int <= v;
     end procedure;
     procedure s(v : std_logic) is
@@ -204,7 +204,7 @@ begin
         report "SIGNAL: Setting SRQ to " & std_logic'image(v);
         last_iec_srq <= v;
       end if;
-      iec_srq_o <= v; iec_srq_en <= v;
+      iec_srq_o <= v; iec_srq_en_n <= v;
       iec_srq_o_int <= v;
     end procedure;
     procedure a(v : std_logic) is
@@ -601,7 +601,7 @@ begin
             iec_state <= iec_state + 2; -- Proceed with ATN send
             wait_msec <= 0;
           else
-            milli_wait(1);            
+            milli_wait(1);
           end if;
         when 124 =>
           -- Timeout has occurred: DEVICE NOT PRESENT
@@ -622,7 +622,8 @@ begin
           
         when 125 =>
           -- At least one device has responded
-
+          report "IEC: At least one device responded by pulling DATA low.";
+          
           c('1'); -- CLK to 5V
 
         when 126 =>
@@ -631,10 +632,12 @@ begin
           -- but we place a limit on it for now.
           if iec_data_i='1' then
             -- Listener ready for data
+            report "IEC: Saw DATA go high: Advancing";
             iec_state <= iec_state + 2;
             wait_msec <= 0;
           else
             milli_wait(64);
+            iec_state <= iec_state;        
           end if;
         when 127 =>
           -- Timeout on listener ready for data

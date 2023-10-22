@@ -32,9 +32,9 @@ architecture test_arch of tb_iec_serial is
 
   signal iec_reset : std_logic;
   signal iec_atn : std_logic;
-  signal iec_clk_en : std_logic;
-  signal iec_data_en : std_logic;
-  signal iec_srq_en : std_logic;
+  signal iec_clk_en_n : std_logic;
+  signal iec_data_en_n : std_logic;
+  signal iec_srq_en_n : std_logic;
   signal iec_clk_o : std_logic;
   signal iec_data_o : std_logic;
   signal iec_srq_o : std_logic;
@@ -44,12 +44,22 @@ architecture test_arch of tb_iec_serial is
     
   signal atn_state : integer := 0;
 
+  signal dummy_iec_data : std_logic := '1';
+  
   signal f1541_pc : unsigned(15 downto 0);
   signal f1541_reset_n : std_logic := '1';
   signal f1541_cycle_strobe : std_logic := '0';
   signal f1541_clk : std_logic;
   signal f1541_data : std_logic;
   signal f1541_srq : std_logic;
+
+  signal dummy_iec_data_last : std_logic := '1';
+  signal f1541_data_last : std_logic := '1';
+  signal f1541_clk_last : std_logic := '1';
+  signal iec_clk_en_n_last : std_logic := '1';
+  signal iec_data_en_n_last : std_logic := '1';
+  signal iec_atn_last : std_logic := '1';
+  signal power_up : boolean := true;
   
 begin
 
@@ -75,9 +85,9 @@ begin
 
     iec_reset => iec_reset,
     iec_atn => iec_atn,
-    iec_clk_en => iec_clk_en,
-    iec_data_en => iec_data_en,
-    iec_srq_en => iec_srq_en,
+    iec_clk_en_n => iec_clk_en_n,
+    iec_data_en_n => iec_data_en_n,
+    iec_srq_en_n => iec_srq_en_n,
     iec_clk_o => iec_clk_o,
     iec_data_o => iec_data_o,
     iec_srq_o => iec_srq_o,
@@ -104,10 +114,15 @@ begin
       drive_reset_n => f1541_reset_n,
       drive_suspend => '0',
 
+      -- A bit of a simplification for the IEC lines:
+      -- If the IEC controller is driving the lines, we assume
+      -- it is driving them low, not high (which it never does).
+      -- Ideally we would have <= (iec_clk_en_n and iec_clk_out)
+      -- etc.
       iec_atn_i => iec_atn,
-      iec_clk_i => iec_clk_en,
-      iec_data_i => iec_data_en,
-      iec_srq_i => iec_srq_en,
+      iec_clk_i => iec_clk_en_n,
+      iec_data_i => iec_data_en_n,
+      iec_srq_i => iec_srq_en_n,
 
       iec_clk_o => f1541_clk,
       iec_data_o => f1541_data,
@@ -117,6 +132,59 @@ begin
       sd_data_ready_toggle => '0'
       
       );
+
+  process (clock41) is
+    variable show_update : boolean := false;
+  begin
+    if rising_edge(clock41) then
+            
+      -- Compute effective IEC line voltages
+      iec_data_i <= dummy_iec_data and f1541_data and iec_data_en_n;
+      iec_clk_i <= f1541_clk and iec_clk_en_n;
+
+      -- Do we need to show an update to the IEC bus state?
+      show_update := false;
+      if power_up then
+        power_up <= false;
+        show_update := true;
+      end if;
+      f1541_data_last <= f1541_data;
+      f1541_clk_last <= f1541_clk;
+      iec_clk_en_n_last <= iec_clk_en_n;
+      iec_data_en_n_last <= iec_data_en_n;
+      iec_atn_last <= iec_atn;
+      dummy_iec_data_last <= dummy_iec_data;
+      if f1541_clk /= f1541_clk_last then
+        show_update := true;
+      end if;
+      if f1541_data /= f1541_data_last then
+        show_update := true;
+      end if;
+      if iec_clk_en_n /= iec_clk_en_n_last then
+        show_update := true;
+      end if;
+      if iec_data_en_n /= iec_data_en_n_last then
+        show_update := true;
+      end if;
+      if iec_atn /= iec_atn_last then
+        show_update := true;
+      end if;
+      if dummy_iec_data /= dummy_iec_data_last then
+        show_update := true;
+      end if;
+      if show_update then
+        report "IECBUSSTATE: "
+          & "ATN=" & std_logic'image(iec_atn)
+          & ", CLK(c64)=" & std_logic'image(iec_clk_en_n)
+          & ", CLK(1541)=" & std_logic'image(f1541_clk)
+          & ", DATA(c64)=" & std_logic'image(iec_data_en_n)
+          & ", DATA(1541)=" & std_logic'image(f1541_data)
+          & ", DATA(dummy)=" & std_logic'image(dummy_iec_data)
+          ;
+      end if;
+    end if;
+  end process;
+  
   
   main : process
 
@@ -139,8 +207,8 @@ begin
     end procedure;
 
   begin
-    test_runner_setup(runner, runner_cfg);
-
+    test_runner_setup(runner, runner_cfg);    
+    
     while test_suite loop
 
       if run("Simulated 1541 runs") then
@@ -257,11 +325,11 @@ begin
               if atn_state = 0 and iec_clk_o = '0' then
                 atn_state <= 1;
                 report "TESTBED: Pulling DATA to 0V";
-                iec_data_i <= '0';
+                dummy_iec_data <= '0';
               end if;
               if atn_state = 1 and iec_clk_o = '1' then
                 atn_state <= 2;
-                iec_data_i <= '1';
+                dummy_iec_data <= '1';
                 report "TESTBED: Releasing DATA to 5V";
               end if;
               if atn_state = 2 and iec_clk_o = '0' then
@@ -287,17 +355,17 @@ begin
               if atn_state = 15 and iec_clk_o = '1' then atn_state <= atn_state + 1; end if;
               if atn_state = 16 and iec_clk_o = '0' then
                 atn_state <= atn_state + 1;
-                iec_data_i <= '0';
+                dummy_iec_data <= '0';
                 report "TESTBED: Pulling DATA to 0V to kludge indication of JiffyDOS support ";
                 for j in 1 to 12 loop
                   clock_tick;
                 end loop;
-                iec_data_i <= '1';
+                dummy_iec_data <= '1';
               end if;
               if atn_state = 17 and iec_clk_o = '1' then atn_state <= atn_state + 1; end if;
               if atn_state = 18 and iec_clk_o = '0' then
                 atn_state <= atn_state + 1;
-                iec_data_i <= '0';
+                dummy_iec_data <= '0';
                 report "TESTBED: Pulling DATA to 0V to kludge indication of byte acknowledgement ";
               end if;
             end if;
