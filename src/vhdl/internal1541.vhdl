@@ -92,7 +92,6 @@ architecture romanesque_revival of internal1541 is
   signal via2_data_out : unsigned(7 downto 0);
   signal via1_data_out_en_n : std_logic := '1';
   signal via2_data_out_en_n : std_logic := '1';
-  signal via_write_n : std_logic := '1';
   signal via1_irq_n : std_logic;
   signal via2_irq_n : std_logic;
   signal via1_ca1_in : std_logic := '1';
@@ -138,7 +137,7 @@ begin
     I_DATA => std_logic_vector(via_data_in),
     unsigned(O_DATA) => via2_data_out,
 
-    I_RW_L => via_write_n,
+    I_RW_L => cpu_write_n,
     I_CS1  => cs_via2,
     I_CS2_L  => '0',
 
@@ -184,9 +183,9 @@ begin
   via1: entity work.mos6522 port map (
     I_RS   => std_logic_vector(via_address),
     I_DATA => std_logic_vector(via_data_in),
-    unsigned(O_DATA) => via2_data_out,
+    unsigned(O_DATA) => via1_data_out,
 
-    I_RW_L => via_write_n,
+    I_RW_L => cpu_write_n,
     I_CS1  => cs_via1,
     I_CS2_L  => '0',
 
@@ -233,12 +232,13 @@ begin
   ram: entity work.dpram8x4096 port map (
     -- Fastio interface
     clka => clock,
-    ena => cs_driveram,
+    ena => cs_driveram, -- host CPU side
     wea(0) => fastio_write,
     addra => std_logic_vector(fastio_address(11 downto 0)),
     dina => std_logic_vector(fastio_wdata),
     unsigned(douta) => fastio_rdata,
 
+    enb => cs_ram,  -- 1541 CPU side
     clkb => clock,
     web(0) => ram_write_enable,
     addrb => std_logic_vector(address(11 downto 0)),
@@ -283,11 +283,15 @@ begin
     if rising_edge(clock) then
       -- report "1541TICK: address = $" & to_hexstring(address) & ", drive_cycle = "
       --   & std_logic'image(drive_clock_cycle_strobe) & ", reset=" & std_logic'image(drive_reset_n);
+      
+      irq <= via2_irq_n and via1_irq_n;
+    
+      via1_portb_in(0) <= not iec_data_i;
+      via1_portb_in(2) <= not iec_clk_i;
+      via1_portb_in(4) <= not iec_atn_i;
+      via1_ca1_in <= not iec_atn_i;
 
-      via1_portb_in(0) <= iec_data_i;
-      via1_portb_in(2) <= iec_clk_i;
-      via1_portb_in(4) <= iec_atn_i;
-      via1_ca1_in <= iec_atn_i;
+      -- report "1541: iec_data_i = " & std_logic'image(iec_data_i);
 
       iec_data_o <= '1';
       iec_clk_o <= '1';
@@ -323,13 +327,16 @@ begin
     end if;
 
     via_address <= address(3 downto 0);
-    via_data_in <= wdata;
+    via_data_in <= wdata;    
     
     if cs_ram='1' then
       rdata <= ram_rdata;
     elsif cs_rom='1' then
       rdata <= rom_rdata;
     elsif cs_via1='1' then
+--      if cpu_write_n='1' then
+--        report "MEMBUS: Reading VIA1 register value $" & to_hexstring(via1_data_out);
+--      end if;
       rdata <= via1_data_out;
     elsif cs_via2='1' then
       rdata <= via2_data_out;

@@ -29,7 +29,7 @@ entity dpram8x4096 is
     dina	 : in	std_logic_vector(NB_COL*COL_WIDTH-1 downto 0);
     douta	 : out std_logic_vector(NB_COL*COL_WIDTH-1 downto 0);
     clkb	: in	std_logic;
-    -- enb	 : in	std_logic;
+    enb	 : in	std_logic;
     web	 : in	std_logic_vector(NB_COL-1 downto 0);
     addrb : in	std_logic_vector(ADDR_WIDTH-1 downto 0);
     dinb	 : in	std_logic_vector(NB_COL*COL_WIDTH-1 downto 0);
@@ -70,15 +70,15 @@ begin
   process (clkb)
   begin
     if rising_edge(clkb) then
-      --if enb = '1' then
-      for i in 0 to NB_COL-1 loop
-        if web(i) = '1' then
-          RAM(to_integer(unsigned(addrb(11 downto 0))))((i+1)*COL_WIDTH-1 downto i*COL_WIDTH)	 := dinb((i+1)*COL_WIDTH-1 downto i*COL_WIDTH);
-          report "1541RAM: Writing $" & to_hexstring(dinb) & " to address $" & to_hexstring(to_unsigned(to_integer(unsigned(addrb)),16));
-        end if;			 
-      end loop;
-      doutb <= RAM(to_integer(unsigned(addrb(11 downto 0))));
-    --end if;
+      if enb = '1' then
+        for i in 0 to NB_COL-1 loop
+          if web(i) = '1' then
+            RAM(to_integer(unsigned(addrb(11 downto 0))))((i+1)*COL_WIDTH-1 downto i*COL_WIDTH)	 := dinb((i+1)*COL_WIDTH-1 downto i*COL_WIDTH);
+            report "1541RAM: Writing $" & to_hexstring(dinb) & " to address $" & to_hexstring(to_unsigned(to_integer(unsigned(addrb)),16));
+          end if;			 
+        end loop;
+        doutb <= RAM(to_integer(unsigned(addrb(11 downto 0))));
+      end if;
     end if;
   end process;
 end behavioural;

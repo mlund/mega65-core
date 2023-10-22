@@ -47,7 +47,8 @@ library ieee ;
   use ieee.std_logic_1164.all ;
   use ieee.std_logic_unsigned.all;
   use ieee.numeric_std.all;
-
+  use work.debugtools.all;
+  
 --library UNISIM;
 --  use UNISIM.Vcomponents.all;
 
@@ -101,23 +102,23 @@ architecture RTL of mos6522 is
   signal cs                : std_logic;
 
   -- registers
-  signal r_ddra            : std_logic_vector(7 downto 0);
-  signal r_ora             : std_logic_vector(7 downto 0);
-  signal r_ira             : std_logic_vector(7 downto 0);
+  signal r_ddra            : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_ora             : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_ira             : std_logic_vector(7 downto 0) := (others => '0');
 
-  signal r_ddrb            : std_logic_vector(7 downto 0);
-  signal r_orb             : std_logic_vector(7 downto 0);
-  signal r_irb             : std_logic_vector(7 downto 0);
+  signal r_ddrb            : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_orb             : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_irb             : std_logic_vector(7 downto 0) := (others => '0');
 
-  signal r_t1l_l           : std_logic_vector(7 downto 0);
-  signal r_t1l_h           : std_logic_vector(7 downto 0);
-  signal r_t2l_l           : std_logic_vector(7 downto 0);
-  signal r_t2l_h           : std_logic_vector(7 downto 0); -- not in real chip
-  signal r_sr              : std_logic_vector(7 downto 0);
-  signal r_acr             : std_logic_vector(7 downto 0);
-  signal r_pcr             : std_logic_vector(7 downto 0);
-  signal r_ifr             : std_logic_vector(7 downto 0);
-  signal r_ier             : std_logic_vector(6 downto 0);
+  signal r_t1l_l           : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_t1l_h           : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_t2l_l           : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_t2l_h           : std_logic_vector(7 downto 0) := (others => '0'); -- not in real chip
+  signal r_sr              : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_acr             : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_pcr             : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_ifr             : std_logic_vector(7 downto 0) := (others => '0');
+  signal r_ier             : std_logic_vector(6 downto 0) := (others => '0');
 
   signal sr_write_ena      : boolean;
   signal sr_read_ena       : boolean;
@@ -189,7 +190,11 @@ architecture RTL of mos6522 is
   signal ca2_irq           : std_logic;
   signal cb2_irq           : std_logic;
 
-  signal final_irq         : std_logic;
+  signal final_irq         : std_logic := '0';
+
+  signal prev_was_read : std_logic := '0';
+  signal prev_was_write : std_logic := '0';
+ 
 begin
   p_phase : process
   begin
@@ -263,10 +268,15 @@ begin
       w_orb_hs <= '0';
       w_ora_hs <= '0';
     elsif rising_edge(CLK) then
+      prev_was_write <= '0';
       if (ENA_4 = '1') then
         w_orb_hs <= '0';
         w_ora_hs <= '0';
         if (cs = '1') and (I_RW_L = '0') then
+          prev_was_write <= '1';
+          if prev_was_write = '0' then
+            report "VIA6522: Writing $" & to_hexstring(I_DATA) & " to register $" & to_hexstring(I_RS);
+          end if;
           case I_RS is
             when x"0" => r_orb     <= I_DATA; w_orb_hs <= '1';
             when x"1" => r_ora     <= I_DATA; w_ora_hs <= '1';
@@ -338,7 +348,8 @@ begin
   p_read : process
   begin
 	wait until rising_edge(CLK);
-	
+
+        prev_was_read <= '0';
 	if ENA_4 = '1' then
 		t1_r_reset_int <= false;
 		t2_r_reset_int <= false;
@@ -347,10 +358,24 @@ begin
 		r_ira_hs <= '0';
 		
 		if (cs = '1') and (I_RW_L = '1') then
+                  prev_was_read <= '1';
+                  if prev_was_read = '0' then
+                    report "VIA6522: Reading register $" & to_hexstring(I_RS);
+                    report "VIA6522: port B = " & to_string(I_PB)
+                      & ", r_acr = " & to_string(r_acr);
+                  end if;
 		  case I_RS is
 			--when x"0" => O_DATA <= r_irb; r_irb_hs <= '1';
 			-- fix from Mark McDougall, untested
-			when x"0" => O_DATA <= (r_irb and not r_ddrb) or (r_orb and r_ddrb); r_irb_hs <= '1';
+                    when x"0" => O_DATA <= (r_irb and not r_ddrb) or (r_orb and r_ddrb); r_irb_hs <= '1';
+                                 if prev_was_read = '0' then
+                                   report "VIA6522: register 0 (Port B data) = $"
+                                     & to_hexstring((r_irb and not r_ddrb) or (r_orb and r_ddrb))
+                                     & ", r_irb = $" & to_hexstring(r_irb)
+                                     & ", r_ddrb = $" & to_hexstring(r_ddrb)
+                                     & ", r_orb = $" & to_hexstring(r_orb)
+                                     ;
+                                 end if;
 			when x"1" => O_DATA <= r_ira; r_ira_hs <= '1';
 			when x"2" => O_DATA <= r_ddrb;
 			when x"3" => O_DATA <= r_ddra;
@@ -876,6 +901,10 @@ begin
         if ((r_ifr(6 downto 0) and r_ier(6 downto 0)) = "0000000") then
           final_irq <= '0'; -- no interrupts
         else
+          report "VIA6522: Triggering IRQ "
+            & "r_ifr = " & to_string(r_ifr(6 downto 0))
+            & "r_ier = " & to_string(r_ier(6 downto 0))
+            ;
           final_irq <= '1';
         end if;
       end if;
