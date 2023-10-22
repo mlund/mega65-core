@@ -94,6 +94,9 @@ architecture vapourware of cpu6502 is
   type cpu_state_t is (
     poreset,
     interrupt,
+    interrupt_push_pcl,
+    interrupt_push_p,
+    interrupt_vector_fetch,
     vector0,
     vector1,
     opcode_fetch,
@@ -104,6 +107,9 @@ architecture vapourware of cpu6502 is
     store,
     jsrhi,
     rmw_commit,
+    rti,
+    rti2,
+    rti3,
     rts,
     rts2,
     izp,
@@ -301,8 +307,9 @@ begin
 
     if rising_edge(clk) then
 
-      prev_irq <= '1';
+      prev_irq <= irq;
       if irq='0' and prev_irq='1' then
+        report "1541CPU: Saw IRQ go low";
         irq_pending <= '1';
       end if;
       if reset='0' then
@@ -367,6 +374,40 @@ begin
             report "1541CPU: Power-on RESET commenced";
             cpu_state <= vector0;
           when interrupt =>
+            -- Push PCH
+            reg_addr <= reg_pc;
+            write_n <= '0';
+            address(15 downto 8) <= x"01"; -- stack
+            address(7 downto 0) <= reg_sp;
+            data_o <= reg_pc(15 downto 8);
+            reg_sp <= sp_dec;
+            cpu_state <= interrupt_push_pcl;
+            reg_pc <= reg_pc;
+          when interrupt_push_pcl =>
+            -- Push PCL
+            reg_addr <= reg_pc;
+            write_n <= '0';
+            address(15 downto 8) <= x"01"; -- stack
+            address(7 downto 0) <= reg_sp;
+            data_o <= reg_pc(7 downto 0);
+            reg_sp <= sp_dec;
+            cpu_state <= interrupt_push_p;
+          when interrupt_push_p =>
+            -- Push processor flags
+            write_n <= '0';
+            address(15 downto 8) <= x"01"; -- stack
+            address(7 downto 0) <= reg_sp;
+            data_o(7) <= flag_n;
+            data_o(6) <= flag_v;
+            data_o(5) <= '1';
+            data_o(4) <= '0'; -- BRK flag
+            data_o(3) <= flag_d;
+            data_o(2) <= flag_i;
+            data_o(1) <= flag_z;
+            data_o(0) <= flag_c;
+            reg_sp <= sp_dec;
+            cpu_state <= interrupt_vector_fetch;
+          when interrupt_vector_fetch =>
             address <= x"FFF8";
             if reset='0' then
               address(3 downto 0) <= x"c";
@@ -380,9 +421,12 @@ begin
               report "1541CPU: IRQ commenced";
             end if;
             cpu_state <= vector0;
-
+            -- XXX Push flags and return address to stack
+            flag_i <= '1';
           when vector0 =>
+            report "1541CPU: Reading interrupt vector from $" & to_hexstring(address);
             reg_pc(7 downto 0) <= data_i;
+            address <= address;
             address(0) <= '1';
             cpu_state <= vector1;
           when vector1 =>
@@ -392,10 +436,12 @@ begin
             cpu_state <= opcode_fetch;
             report "1541CPU: Read interrupt vector. Jumping to $" & to_hexstring(data_i) & to_hexstring(reg_pc(7 downto 0));
           when opcode_fetch =>
-            if irq_pending='1' or nmi='0' or reset='0' then
+            if (irq_pending='1' and flag_i='0') then
               if irq_pending = '1' then
                 irq_pending <= '0';
               end if;
+            end if;
+            if (irq_pending='1' and flag_i='0') or nmi='0' or reset='0' then
               cpu_state <= interrupt;
             else
               reg_pc <= reg_pc + 1;
@@ -445,7 +491,11 @@ begin
                                 address(7 downto 0) <= sp_inc;
                                 reg_sp <= sp_inc;
                                 cpu_state <= pull;
-                    
+
+                  when I_RTI => address(15 downto 8) <= x"01";
+                                address(7 downto 0) <= sp_inc;
+                                reg_sp <= sp_inc;
+                                cpu_state <= rti;
                   when I_RTS => address(15 downto 8) <= x"01";
                                 address(7 downto 0) <= sp_inc;
                                 reg_sp <= sp_inc;
@@ -684,6 +734,33 @@ begin
             data_o <= reg_data;
             cpu_state <= opcode_fetch;
 
+          when rti =>
+            flag_n <= data_i(7);
+            flag_v <= data_i(6);
+            flag_d <= data_i(3);
+            flag_i <= data_i(2);
+            flag_z <= data_i(1);
+            flag_c <= data_i(0);
+
+            address(15 downto 8) <= x"01";
+            address(7 downto 0) <= sp_inc;
+            reg_sp <= sp_inc;
+            
+            report "1541CPU: Restored flags $" & to_hexstring(data_i);
+            cpu_state <= rti2;
+          when rti2 =>
+            report "1541CPU: Restored PCL $" & to_hexstring(data_i);
+            reg_pc(7 downto 0) <= data_i;
+            address(15 downto 8) <= x"01";
+            address(7 downto 0) <= reg_sp + 1;
+            reg_sp <= sp_inc;
+            cpu_state <= rti3;
+          when rti3 =>
+            report "1541CPU: Restored PCH $" & to_hexstring(data_i);
+            reg_pc <= reg_pc;
+            reg_pc(15 downto 8) <= data_i;
+            cpu_state <= opcode_fetch;
+            
           when rts =>
             reg_pc(15 downto 8) <= data_i;
             address(15 downto 8) <= x"01";
