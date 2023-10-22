@@ -700,7 +700,7 @@ begin
             -- the JiffyDOS protocol.  More on that when we get to it.
             
             -- Send the first 7 bits
-            report "IEC: Sending data byte under ATN";
+            report "IEC: Sending data byte $" & to_hexstring(iec_data_out) & "  under ATN";
             null;
           when 129 => c('0'); d(iec_data_out(0)); micro_wait(35);
           when 130 => c('1'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(35);
