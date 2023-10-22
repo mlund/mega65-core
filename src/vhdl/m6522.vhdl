@@ -901,10 +901,12 @@ begin
         if ((r_ifr(6 downto 0) and r_ier(6 downto 0)) = "0000000") then
           final_irq <= '0'; -- no interrupts
         else
-          report "VIA6522: Triggering IRQ "
-            & "r_ifr = " & to_string(r_ifr(6 downto 0))
-            & "r_ier = " & to_string(r_ier(6 downto 0))
-            ;
+          if final_irq = '0' then
+            report "VIA6522: Triggering IRQ "
+              & "r_ifr = " & to_string(r_ifr(6 downto 0))
+              & "r_ier = " & to_string(r_ier(6 downto 0))
+              ;
+          end if;
           final_irq <= '1';
         end if;
       end if;
