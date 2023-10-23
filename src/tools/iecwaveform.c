@@ -379,6 +379,10 @@ int getUpdate(void)
 	      
 	      switch(pc) {
 	      case 0xE85B: fprintf(stderr,"$%04X            1541: Service ATN from C64\n",pc); break;
+	      case 0xE89F: fprintf(stderr,"$%04X            1541: Received TALK command for device\n",pc); break;
+	      case 0xE8BE: fprintf(stderr,"$%04X            1541: Received secondary address\n",pc); break;
+	      case 0xE8F1: fprintf(stderr,"$%04X            1541: TURNAROUND (Serial bus wants to become talker)\n",pc); break;
+	      case 0xE909: fprintf(stderr,"$%04X            1541: TALK (Serial bus wants to send a byte)\n",pc); break;
 	      case 0xE9C9: fprintf(stderr,"$%04X            1541: ACPTR (Serial bus receive byte)\n",pc); break;
 	      case 0xE9CD: fprintf(stderr,"$%04X            1541: ACP00A (wait for CLK to go to 5V)\n",pc); break;
 	      case 0xE9DF: fprintf(stderr,"$%04X            1541: ACP00 (saw CLK get released)\n",pc); break;

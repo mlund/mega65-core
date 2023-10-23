@@ -413,7 +413,10 @@ begin
         report "IEC: Commencing sending byte under ATN";
         
         fastio_addr(3 downto 0) <= x"9"; -- set write data
-        fastio_wdata <= x"28"; -- Access device 8
+        fastio_wdata <= x"28"; -- Access device 8 (which isn't actually
+                               -- present, the VHDL device is 11, but
+                               -- this situation doesn't get detected as
+                               -- device not present).
         fastio_write <= '1';
         for i in 1 to 4 loop
           clock_tick;
@@ -458,6 +461,176 @@ begin
           assert false report "Expected to not see TIMEOUT indicated in bit 1 of $D698, but it was";
         end if;
 
+        
+      elsif run("Read from Error Channel (15) of VHDL 1541 device succeeds") then
+
+        -- Send $48, $6F under ATN, then do turn-around to listen, and receive
+        -- 73,... status message from the drive.
+        
+        report "IEC: Allowing time for 1541 to boot";
+        
+        -- Give the 1541 just time enough to boot
+        for i in 1 to 1_950_000 loop
+          clock_tick;
+        end loop;
+
+        report "IEC: Commencing sending DEVICE 11 TALK ($4B) byte under ATN";
+
+        fastio_addr(3 downto 0) <= x"9"; -- set write data
+        fastio_wdata <= x"4B"; -- Access device 11
+        fastio_write <= '1';
+        for i in 1 to 4 loop
+          clock_tick;
+        end loop;
+        fastio_addr(3 downto 0) <= x"8";
+        fastio_wdata <= x"30"; -- Trigger ATN write
+        for i in 1 to 4 loop
+          clock_tick;
+        end loop;
+        fastio_write <= '0';
+
+        -- Allow time for everything to happen
+        for i in 1 to 800000 loop
+          clock_tick;
+        end loop;
+        report "IEC state reached = $" & to_hexstring(iec_state_reached) & " = " & integer'image(to_integer(iec_state_reached));
+
+        -- Expect BUSY flag to have cleared
+        fastio_addr(3 downto 0) <= x"7";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC IRQ status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(5)='0' then
+          assert false report "Expected to see ready for command indicated in bit 5 of $D697, but it wasn't";
+        end if;
+
+        -- Read status byte
+        fastio_addr(3 downto 0) <= x"8";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(7)='1' then
+          assert false report "Expected to not see DEVICE NOT PRESENT indicated in bit 7 of $D698, but it was";
+        end if;
+        if fastio_rdata(1)='1' then
+          assert false report "Expected to not see TIMEOUT indicated in bit 1 of $D698, but it was";
+        end if;
+
+
+        report "IEC: Commencing sending SECONDARY ADDRESS 15 byte under ATN";
+
+        fastio_addr(3 downto 0) <= x"9"; -- set write data
+        fastio_wdata <= x"6F"; -- Secondary address 15
+        fastio_write <= '1';
+        for i in 1 to 4 loop
+          clock_tick;
+        end loop;
+        fastio_addr(3 downto 0) <= x"8";
+        fastio_wdata <= x"30"; -- Trigger ATN write
+        for i in 1 to 4 loop
+          clock_tick;
+        end loop;
+        fastio_write <= '0';
+
+        -- Allow time for everything to happen
+        for i in 1 to 800000 loop
+          clock_tick;
+        end loop;
+        report "IEC state reached = $" & to_hexstring(iec_state_reached) & " = " & integer'image(to_integer(iec_state_reached));
+
+        -- Expect BUSY flag to have cleared
+        fastio_addr(3 downto 0) <= x"7";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC IRQ status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(5)='0' then
+          assert false report "Expected to see ready for command indicated in bit 5 of $D697, but it wasn't";
+        end if;
+
+        -- Read status byte
+        fastio_addr(3 downto 0) <= x"8";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(7)='1' then
+          assert false report "Expected to not see DEVICE NOT PRESENT indicated in bit 7 of $D698, but it was";
+        end if;
+        if fastio_rdata(1)='1' then
+          assert false report "Expected to not see TIMEOUT indicated in bit 1 of $D698, but it was";
+        end if;
+
+
+        report "IEC: Commencing turn-around to listen";
+
+        fastio_write <= '1';
+        fastio_addr(3 downto 0) <= x"8";
+        fastio_wdata <= x"35"; -- Trigger turn-around to listen
+        for i in 1 to 4 loop
+          clock_tick;
+        end loop;
+        fastio_write <= '0';
+
+        -- Allow a little time and check status goes busy
+        for i in 1 to 100 loop
+          clock_tick;
+        end loop;
+
+        -- Expect BUSY flag to have set
+        fastio_addr(3 downto 0) <= x"7";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC IRQ status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(5)='1' then
+          assert false report "Expected to see IEC bus busy in bit 5 of $D697, but it wasn't";
+        end if;
+        
+        -- Allow time for everything to happen
+        for i in 1 to 50000 loop
+          clock_tick;
+        end loop;
+        report "IEC state reached = $" & to_hexstring(iec_state_reached) & " = " & integer'image(to_integer(iec_state_reached));
+
+        -- Expect BUSY flag to have cleared
+        fastio_addr(3 downto 0) <= x"7";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC IRQ status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(5)='0' then
+          assert false report "Expected to see ready for command indicated in bit 5 of $D697, but it wasn't";
+        end if;
+
+        -- Read status byte
+        fastio_addr(3 downto 0) <= x"8";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(7)='1' then
+          assert false report "Expected to not see DEVICE NOT PRESENT indicated in bit 7 of $D698, but it was";
+        end if;
+        if fastio_rdata(1)='1' then
+          assert false report "Expected to not see TIMEOUT indicated in bit 1 of $D698, but it was";
+        end if;
         
 
         
