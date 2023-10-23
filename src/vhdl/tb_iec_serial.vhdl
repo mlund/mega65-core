@@ -633,6 +633,67 @@ begin
         end if;
         
 
+        report "IEC: Trying to receive a byte";
+
+        fastio_write <= '1';
+        fastio_addr(3 downto 0) <= x"8";
+        fastio_wdata <= x"32"; -- Trigger RECEIVE BYTE
+        for i in 1 to 4 loop
+          clock_tick;
+        end loop;
+        fastio_write <= '0';
+
+        -- Allow a little time and check status goes busy
+        for i in 1 to 100 loop
+          clock_tick;
+        end loop;
+
+        -- Expect BUSY flag to have set
+        fastio_addr(3 downto 0) <= x"7";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC IRQ status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(5)='1' then
+          assert false report "Expected to see IEC bus busy in bit 5 of $D697, but it wasn't";
+        end if;
+        
+        -- Allow time for everything to happen
+        for i in 1 to 50000 loop
+          clock_tick;
+        end loop;
+        report "IEC state reached = $" & to_hexstring(iec_state_reached) & " = " & integer'image(to_integer(iec_state_reached));
+
+        -- Expect BUSY flag to have cleared
+        fastio_addr(3 downto 0) <= x"7";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC IRQ status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(5)='0' then
+          assert false report "Expected to see ready for command indicated in bit 5 of $D697, but it wasn't";
+        end if;
+
+        -- Read status byte
+        fastio_addr(3 downto 0) <= x"8";
+        fastio_read <= '1';
+        for i in 1 to 8 loop
+          clock_tick;
+        end loop;
+        fastio_read <= '0';
+        report "IEC status byte = $" & to_hexstring(fastio_rdata);
+        if fastio_rdata(7)='1' then
+          assert false report "Expected to not see DEVICE NOT PRESENT indicated in bit 7 of $D698, but it was";
+        end if;
+        if fastio_rdata(1)='1' then
+          assert false report "Expected to not see TIMEOUT indicated in bit 1 of $D698, but it was";
+        end if;
+        
+        
         
       end if;
     end loop;

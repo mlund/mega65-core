@@ -145,7 +145,7 @@ begin
   
   -- @IO:GS $D699 AUTOIEC:DATA Data byte read from IEC bus
   -- @IO:GS $D69A.7 AUTOIEC:DIPRESENT Device is present
-  -- @IO:GS $D69A.5-6 AUTOIEC:DIPROT Device protocol (00=1541,01=C128/C65 FAST, 10 = JiffyDOS(tm), 11=both
+  -- @IO:GS $D69A.5-6 AUTOIEC:DIPROT Device protocol support (5=C128/C65 FAST, bit 6 = JiffyDOS(tm))
   -- @IO:GS $D69A.4 AUTOIEC:DIATN Device is currently held under attention
   -- @IO:GS $D69A.0-3 AUTOIEC:DIDEVNUM Lower 4 bits of currently selected device number
 
@@ -462,6 +462,16 @@ begin
             
           when x"31" => -- Send byte
           when x"32" => -- Receive byte
+            report "IEC: RECEIVE BYTE COMMAND received";
+            iec_dev_listening <= '0';
+            iec_state <= 300;
+            iec_busy <= '1';
+
+            wait_clk_high <= '0'; wait_clk_low <= '0';
+            wait_data_high <= '0'; wait_data_low <= '0';
+            wait_srq_high <= '0'; wait_srq_low <= '0';
+            wait_usec <= 0; wait_msec <= 0;
+            
           when x"33" => -- Send EOI without byte
           when x"34" => -- Send byte with EOI
           when x"35" => -- Turn around from talk to listen
@@ -844,6 +854,108 @@ begin
             
             iec_state_reached <= to_unsigned(iec_state,12);
             iec_state <= 0;
+
+
+          -- RECEIVE BYTE FROM THE IEC BUS
+          when 300 => wait_clk_high <= '1';
+          when 301 => d('1'); wait_clk_low <= '1';
+          when 302 =>
+            -- Get ready to receive first bit
+            -- If CLK goes high first, it's slow protocol.
+            -- But if SRQ goes low first, it's fast protocol
+            iec_state <= iec_state;
+            if iec_srq_i='0' then
+              iec_state <= 350; -- FAST
+              iec_devinfo(5) <= '1'; -- Device using FAST protocol
+            end if;
+            if iec_clk_i='1' then
+              -- Slow protocol, and it's the first bit
+              iec_data(0) <= iec_data_i;
+              iec_data(7 downto 1) <= iec_data(6 downto 0);
+              
+              iec_state <= iec_state + 1;
+            end if;
+          when 303 => wait_clk_low <= '1';
+          when 304 => wait_clk_high <= '1';
+          when 305 => iec_data(0) <= iec_data_i;
+                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+                      wait_clk_low <= '1';
+          when 306 => wait_clk_high <= '1';
+          when 307 => iec_data(0) <= iec_data_i;
+                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+                      wait_clk_low <= '1';
+          when 308 => wait_clk_high <= '1';
+          when 309 => iec_data(0) <= iec_data_i;
+                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+                      wait_clk_low <= '1';
+          when 310 => wait_clk_high <= '1';
+          when 311 => iec_data(0) <= iec_data_i;
+                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+                      wait_clk_low <= '1';
+          when 312 => wait_clk_high <= '1';
+          when 313 => iec_data(0) <= iec_data_i;
+                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+                      wait_clk_low <= '1';
+          when 314 => wait_clk_high <= '1';
+          when 315 => iec_data(0) <= iec_data_i;
+                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+                      wait_clk_low <= '1';
+          when 316 => wait_clk_high <= '1';
+          when 317 => iec_data(0) <= iec_data_i;
+                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+                      wait_clk_low <= '1';
+          when 318 =>
+            d('0');
+            report "IEC: Successfully completed receiving SLOW byte = $" & to_hexstring(iec_data);
+            iec_devinfo(7) <= '1';
+            iec_busy <= '0';
+            
+            iec_dev_listening <= '0';
+            
+            -- And we are still under attention
+            iec_under_attention <= '0';
+            
+            iec_state_reached <= to_unsigned(iec_state,12);
+            iec_state <= 0;
+
+            -- Receiving using fast protocol
+          when 350 => wait_srq_high <= '1';
+          when 351 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 352 => wait_srq_high <= '1';
+          when 353 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 354 => wait_srq_high <= '1';
+          when 355 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 356 => wait_srq_high <= '1';
+          when 357 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 358 => wait_srq_high <= '1';
+          when 359 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 360 => wait_srq_high <= '1';
+          when 361 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 362 => wait_srq_high <= '1';
+          when 363 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 364 => wait_srq_high <= '1';
+          when 365 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 366 => wait_srq_high <= '1';
+          when 367 =>
+            -- Acknowledge receipt of byte.
+            -- Then wait a little while to make sure the sender has time to
+            -- notice our ACK, before we might release DATA to say we are ready
+            -- for the next byte.
+            -- XXX Not sure how long this wait needs to be.
+            d('0'); micro_wait(40);
+          when 368 =>
+            report "IEC: Successfully completed receiving FAST byte = $" & to_hexstring(iec_data);
+            iec_devinfo(7) <= '1';
+            iec_busy <= '0';
+            
+            iec_dev_listening <= '0';
+            
+            -- And we are still under attention
+            iec_under_attention <= '0';
+            
+            iec_state_reached <= to_unsigned(iec_state,12);
+            iec_state <= 0;
+            
             
             
           when others => iec_state <= 0; iec_busy <= '0';
