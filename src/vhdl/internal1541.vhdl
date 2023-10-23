@@ -288,7 +288,7 @@ begin
     
       via1_portb_in(0) <= not iec_data_i;
       via1_portb_in(2) <= not iec_clk_i;
-      via1_portb_in(4) <= not iec_atn_i;
+      via1_portb_in(7) <= not iec_atn_i;
       via1_ca1_in <= not iec_atn_i;
 
       -- report "1541: iec_data_i = " & std_logic'image(iec_data_i);
