@@ -219,31 +219,29 @@ begin
     end procedure;
     procedure micro_wait(usecs : integer) is
     begin
-      if not_waiting_usec then
 
-        wait_clk_high <= '0'; wait_clk_low <= '0';
-        wait_data_high <= '0'; wait_data_low <= '0';
-        wait_srq_high <= '0'; wait_srq_low <= '0';
-        wait_msec <= 0;
-        
-        wait_usec <= usecs;
-        not_waiting_usec <= false;
-        not_waiting_msec <= true;
-      end if;
+      wait_clk_high <= '0'; wait_clk_low <= '0';
+      wait_data_high <= '0'; wait_data_low <= '0';
+      wait_srq_high <= '0'; wait_srq_low <= '0';
+      wait_msec <= 0;
+      
+      wait_usec <= usecs;
+      not_waiting_usec <= false;
+      not_waiting_msec <= true;
+
     end procedure;
     procedure milli_wait(msecs : integer) is
     begin
-      if not_waiting_msec then
 
-        wait_clk_high <= '0'; wait_clk_low <= '0';
-        wait_data_high <= '0'; wait_data_low <= '0';
-        wait_srq_high <= '0'; wait_srq_low <= '0';
-        wait_usec <= 0;
-        
-        wait_msec <= msecs;
-        not_waiting_msec <= false;
-        not_waiting_usec <= true;
-      end if;
+      wait_clk_high <= '0'; wait_clk_low <= '0';
+      wait_data_high <= '0'; wait_data_low <= '0';
+      wait_srq_high <= '0'; wait_srq_low <= '0';
+      wait_usec <= 0;
+      
+      wait_msec <= msecs;
+      not_waiting_msec <= false;
+      not_waiting_usec <= true;
+
     end procedure;
   begin
 
@@ -272,6 +270,7 @@ begin
       and (to_integer(fastio_addr(3 downto 0))>3)
       and (to_integer(fastio_addr(3 downto 0))<11)
       and fastio_read='1' then
+      report "REG: Reading register $" & to_hexstring(fastio_addr(3 downto 0));
       case fastio_addr(3 downto 0) is
         when x"4" => -- debug read register
           if with_debug then
@@ -293,7 +292,7 @@ begin
           else
             fastio_rdata <= (others => 'Z');
           end if;
-        when x"7" => -- Read IRQ register
+        when x"7" => -- Read IRQ register          
           fastio_rdata <= iec_irq;
         when x"8" => -- Read from status register
           fastio_rdata <= iec_status;
@@ -466,7 +465,16 @@ begin
           when x"33" => -- Send EOI without byte
           when x"34" => -- Send byte with EOI
           when x"35" => -- Turn around from talk to listen
+            report "IEC: TURNAROUND COMMAND received";
             iec_dev_listening <= '0';
+            iec_state <= 200;
+            iec_busy <= '1';
+
+            wait_clk_high <= '0'; wait_clk_low <= '0';
+            wait_data_high <= '0'; wait_data_low <= '0';
+            wait_srq_high <= '0'; wait_srq_low <= '0';
+            wait_usec <= 0; wait_msec <= 0;
+            
           when others => null;
         end case;
       end if;
@@ -790,6 +798,53 @@ begin
             
             iec_state_reached <= to_unsigned(iec_state,12);
             iec_state <= 0;
+
+
+            
+            -- TURNAROUND FROM TALKER TO LISTENER
+            -- Wait 20 usec, release ATN, wait 20usec
+            -- Computer pulls DATA low and releases CLK.
+            -- Device then pulls CLK low and releases DATA.
+            
+          when 200 => micro_wait(20);
+          when 201 => a('1'); micro_wait(20);
+          when 202 => d('0'); c('1'); micro_wait(20);
+          when 203 => milli_wait(64); wait_clk_low <= '1';
+          when 204 =>
+            if iec_clk_i = '0' then
+              report "IEC: TURNAROUND complete";
+              iec_state <= iec_state + 2;
+            else
+              -- Timeout
+              report "IEC: TURNAROUND TIMEOUT: Device failed to turn-aruond to talker wihtin 64ms";
+              iec_state_reached <= to_unsigned(iec_state,12);
+              iec_state <= 0;
+              iec_devinfo <= x"00";
+              iec_status(1) <= '1'; -- TIMEOUT OCCURRED ...
+              iec_status(0) <= '1'; -- ... WHILE WE WERE TALKING
+            
+              iec_busy <= '0';
+            
+              -- Release all IEC lines
+              a('1');
+              d('1');
+            end if;
+          when 205 =>
+
+            -- Device is present
+            iec_devinfo(7) <= '1';
+            iec_busy <= '0';
+
+            -- Device is now talking
+            iec_dev_listening <= '0';
+            
+            -- We are no longer under attention
+            iec_under_attention <= '0';
+            iec_devinfo(4) <= '1';
+            
+            iec_state_reached <= to_unsigned(iec_state,12);
+            iec_state <= 0;
+            
             
           when others => iec_state <= 0; iec_busy <= '0';
                          iec_state_reached <= to_unsigned(iec_state,12);
