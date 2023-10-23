@@ -270,7 +270,6 @@ begin
       and (to_integer(fastio_addr(3 downto 0))>3)
       and (to_integer(fastio_addr(3 downto 0))<11)
       and fastio_read='1' then
-      report "REG: Reading register $" & to_hexstring(fastio_addr(3 downto 0));
       case fastio_addr(3 downto 0) is
         when x"4" => -- debug read register
           if with_debug then
@@ -870,39 +869,39 @@ begin
             end if;
             if iec_clk_i='1' then
               -- Slow protocol, and it's the first bit
-              iec_data(0) <= iec_data_i;
-              iec_data(7 downto 1) <= iec_data(6 downto 0);
+              iec_data(7) <= iec_data_i;
+              iec_data(6 downto 0) <= iec_data(7 downto 1);
               
               iec_state <= iec_state + 1;
             end if;
           when 303 => wait_clk_low <= '1';
           when 304 => wait_clk_high <= '1';
-          when 305 => iec_data(0) <= iec_data_i;
-                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+          when 305 => iec_data(7) <= iec_data_i;
+                      iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
           when 306 => wait_clk_high <= '1';
-          when 307 => iec_data(0) <= iec_data_i;
-                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+          when 307 => iec_data(7) <= iec_data_i;
+                      iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
           when 308 => wait_clk_high <= '1';
-          when 309 => iec_data(0) <= iec_data_i;
-                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+          when 309 => iec_data(7) <= iec_data_i;
+                      iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
           when 310 => wait_clk_high <= '1';
-          when 311 => iec_data(0) <= iec_data_i;
-                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+          when 311 => iec_data(7) <= iec_data_i;
+                      iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
           when 312 => wait_clk_high <= '1';
-          when 313 => iec_data(0) <= iec_data_i;
-                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+          when 313 => iec_data(7) <= iec_data_i;
+                      iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
           when 314 => wait_clk_high <= '1';
-          when 315 => iec_data(0) <= iec_data_i;
-                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+          when 315 => iec_data(7) <= iec_data_i;
+                      iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
           when 316 => wait_clk_high <= '1';
-          when 317 => iec_data(0) <= iec_data_i;
-                      iec_data(7 downto 1) <= iec_data(6 downto 0);
+          when 317 => iec_data(7) <= iec_data_i;
+                      iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
           when 318 =>
             d('0');
@@ -920,21 +919,21 @@ begin
 
             -- Receiving using fast protocol
           when 350 => wait_srq_high <= '1';
-          when 351 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 351 => wait_srq_low <= '1'; iec_data(6) <= iec_data_i; iec_data(7 downto 1) <= iec_data(6 downto 0);
           when 352 => wait_srq_high <= '1';
-          when 353 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 353 => wait_srq_low <= '1'; iec_data(6) <= iec_data_i; iec_data(7 downto 1) <= iec_data(6 downto 0);
           when 354 => wait_srq_high <= '1';
-          when 355 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 355 => wait_srq_low <= '1'; iec_data(6) <= iec_data_i; iec_data(7 downto 1) <= iec_data(6 downto 0);
           when 356 => wait_srq_high <= '1';
-          when 357 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 357 => wait_srq_low <= '1'; iec_data(6) <= iec_data_i; iec_data(7 downto 1) <= iec_data(6 downto 0);
           when 358 => wait_srq_high <= '1';
-          when 359 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 359 => wait_srq_low <= '1'; iec_data(6) <= iec_data_i; iec_data(7 downto 1) <= iec_data(6 downto 0);
           when 360 => wait_srq_high <= '1';
-          when 361 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 361 => wait_srq_low <= '1'; iec_data(6) <= iec_data_i; iec_data(7 downto 1) <= iec_data(6 downto 0);
           when 362 => wait_srq_high <= '1';
-          when 363 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 363 => wait_srq_low <= '1'; iec_data(6) <= iec_data_i; iec_data(7 downto 1) <= iec_data(6 downto 0);
           when 364 => wait_srq_high <= '1';
-          when 365 => wait_srq_low <= '1'; iec_data(7) <= iec_data_i; iec_data(6 downto 0) <= iec_data(7 downto 1);
+          when 365 => wait_srq_low <= '1'; iec_data(6) <= iec_data_i; iec_data(7 downto 1) <= iec_data(6 downto 0);
           when 366 => wait_srq_high <= '1';
           when 367 =>
             -- Acknowledge receipt of byte.
