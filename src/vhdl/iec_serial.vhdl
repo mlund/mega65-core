@@ -459,7 +459,17 @@ begin
             -- Trigger begin collecting debug info during job
             debug_ram_waddr_int <= 0;
             
-          when x"31" => -- Send byte
+          when x"31" => -- Send byte (without attention)
+            iec_dev_listening <= '0';
+            iec_state <= 400;
+            iec_busy <= '1';
+
+            wait_clk_high <= '0'; wait_clk_low <= '0';
+            wait_data_high <= '0'; wait_data_low <= '0';
+            wait_srq_high <= '0'; wait_srq_low <= '0';
+            wait_usec <= 0; wait_msec <= 0;
+
+            
           when x"32" => -- Receive byte
             report "IEC: RECEIVE BYTE COMMAND received";
             iec_dev_listening <= '0';
@@ -954,6 +964,12 @@ begin
             
             iec_state_reached <= to_unsigned(iec_state,12);
             iec_state <= 0;
+            
+
+
+            -- SEND A BYTE (no attention)
+          when 400 =>
+            -- XXX Decide whether to send using slow, fast or JiffyDOS protocol
             
             
             
