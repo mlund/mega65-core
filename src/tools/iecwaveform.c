@@ -371,6 +371,8 @@ int getUpdate(void)
 	      fprintf(stderr,"            iec_state = %d\n",iec_state);
 	    }
 
+	    if (strstr(line,"IEC:")) { fprintf(stderr,"%s\n",&line[99]); fflush(stderr); }
+	    
 	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/simple_cpu6502.vhdl:%*d:%*d:@%lld%[^:]:(report note): Instr#:%d PC: $%x",
 		       &time_val,time_units,&instr_num,&pc)==4) {
 	      int show_pc=1;
@@ -393,6 +395,7 @@ int getUpdate(void)
 	      case 0xEA1A: fprintf(stderr,"$%04X            1541: ACP03A Got bit of serial bus byte\n",pc); break;
 	      case 0xEA2B: fprintf(stderr,"$%04X            1541: ACP03A+17 Got all 8 bits\n",pc); break;
 	      case 0xEBE7: fprintf(stderr,"$%04X            1541: Enter IDLE loop\n",pc); break;
+	      case 0xFF0D: fprintf(stderr,"$%04X            1541: NNMI10 (Set C64/VIC20 speed)\n",pc); break;
 	      default:
 		show_pc=0;
 	      }

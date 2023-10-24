@@ -216,6 +216,31 @@ begin
       end loop;
     end procedure;
 
+    procedure atn_release is
+    begin
+      report "IEC: Release ATN line and abort any command in progress";
+      fastio_write <= '1';
+      fastio_addr(3 downto 0) <= x"8";
+      fastio_wdata <= x"00"; -- Cancel any command in progress
+      for i in 1 to 4 loop
+        clock_tick;
+      end loop;
+      fastio_write <= '0';
+
+      fastio_write <= '1';
+      fastio_addr(3 downto 0) <= x"8";
+      fastio_wdata <= x"41"; -- Trigger release ATN
+      for i in 1 to 4 loop
+        clock_tick;
+      end loop;
+      fastio_write <= '0';
+      
+      -- Allow some time after releasing ATN
+      for i in 1 to 10000 loop
+        clock_tick;
+      end loop;
+    end procedure;
+    
     procedure atn_tx_byte(v : unsigned(7 downto 0)) is
     begin 
       fastio_addr(3 downto 0) <= x"9"; -- set write data
@@ -267,6 +292,7 @@ begin
 
     procedure iec_tx(v : unsigned(7 downto 0)) is
     begin 
+      report "IEC: iec_tx($" & to_hexstring(v) & ")";
       fastio_addr(3 downto 0) <= x"9"; -- set write data
       fastio_wdata <= v; -- byte to send
       fastio_write <= '1';
@@ -274,7 +300,7 @@ begin
         clock_tick;
       end loop;
       fastio_addr(3 downto 0) <= x"8";
-      fastio_wdata <= x"32"; -- Trigger TX byte without attention
+      fastio_wdata <= x"31"; -- Trigger TX byte without attention
       for i in 1 to 4 loop
         clock_tick;
       end loop;
@@ -377,6 +403,7 @@ begin
 
     procedure iec_rx(expected : unsigned(7 downto 0)) is
     begin
+      report "IEC: iec_rx($" & to_hexstring(expected) & ")";
       fastio_write <= '1';
       fastio_addr(3 downto 0) <= x"8";
       fastio_wdata <= x"32"; -- Trigger RECEIVE BYTE
@@ -745,13 +772,16 @@ begin
         atn_tx_byte(x"6F");
 
         report "IEC: Sending UI- command";
-        iec_tx(x"55");
-        iec_tx(x"49");
-        iec_tx(x"2D");
+        iec_tx(x"55");  -- U
+        iec_tx(x"49");  -- I
+        iec_tx(x"2D");  -- +
 
         report "IEC: Sending UNLISTEN to device 11";
         atn_tx_byte(x"3F");
 
+        report "Clearing ATN";
+        atn_release;
+        
         report "IEC: Request read command channel 15 of device 11";
         atn_tx_byte(x"4b");
         atn_tx_byte(x"6f");

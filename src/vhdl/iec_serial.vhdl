@@ -375,7 +375,7 @@ begin
         and (to_integer(fastio_addr(3 downto 0))>3)
         and (to_integer(fastio_addr(3 downto 0))<11) then
         if fastio_write='1' then
-          report "REG: register write: $" & to_hexstring(fastio_wdata) & " -> reg $" & to_hexstring(fastio_addr(3 downto 0));
+          report "IEC: REG: register write: $" & to_hexstring(fastio_wdata) & " -> reg $" & to_hexstring(fastio_addr(3 downto 0));
           case fastio_addr(3 downto 0) is
             when x"4" =>
               if with_debug then
@@ -408,7 +408,7 @@ begin
       end if;
 
       if iec_new_cmd='1' then
-        report "IEC Command Dispatch: $" & to_hexstring(iec_cmd);
+        report "IEC: Command Dispatch: $" & to_hexstring(iec_cmd);
         iec_new_cmd <= '0';
         case iec_cmd is
 
@@ -422,6 +422,7 @@ begin
           
           -- Low-level / bitbashing commands
           when x"41" => -- ATN to +5V
+            report "IEC: Released ATN line";
             a('1');
           when x"61" => -- ATN low to 0V
             a('0');
@@ -970,8 +971,103 @@ begin
             -- SEND A BYTE (no attention)
           when 400 =>
             -- XXX Decide whether to send using slow, fast or JiffyDOS protocol
+
+            -- First, make sure ATN has been released.
+            a('1');
+            -- T_R -- Release of ATN at end of frame: 20 usec
+            -- But we don't need to pay it if ATN was already released
+            if iec_atn_int = '0' then
+              micro_wait(20);
+            end if;
+          when 401 =>
+            -- Announce we are ready to send, and wait for receiver to indicate
+            -- readiness to receive.
+            c('1'); wait_data_high <= '1';
+          when 402 =>
+            -- Receive is ready: Select SLOW, FAST or JiffyDOS protocol based on
+            -- device capability.
+
+            -- SLOW protocol send
+            -- As previously noted, bit times from host to device have to be
+            -- 70usec or longer, because the 1541's RX loop requires 68 cycles.
+          when 403 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(35);
+                      report "IEC: Sending bit 0 = " & std_logic'image(iec_data_out(0));
+          when 404 => c('1'); micro_wait(35);
+          when 405 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(35);
+                      report "IEC: Sending bit 1 = " & std_logic'image(iec_data_out(0));
+          when 406 => c('1'); micro_wait(35);
+          when 407 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(35);
+                      report "IEC: Sending bit 2 = " & std_logic'image(iec_data_out(0));
+          when 408 => c('1'); micro_wait(35);
+          when 409 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(35);
+                      report "IEC: Sending bit 3 = " & std_logic'image(iec_data_out(0));
+          when 410 => c('1'); micro_wait(35);
+          when 411 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(35);
+                      report "IEC: Sending bit 4 = " & std_logic'image(iec_data_out(0));
+          when 412 => c('1'); micro_wait(35);
+          when 413 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(35);
+                      report "IEC: Sending bit 5 = " & std_logic'image(iec_data_out(0));
+          when 414 => c('1'); micro_wait(35);
+          when 415 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(35);
+                      report "IEC: Sending bit 6 = " & std_logic'image(iec_data_out(0));
+          when 416 => c('1'); micro_wait(35);
+          when 417 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(35);
+                      report "IEC: Sending bit 7 = " & std_logic'image(iec_data_out(0));
+          when 418 => c('1'); micro_wait(35);
+          when 419 => c('0'); d('1');
+            -- Allow device 1000usec = 1ms to acknowledge byte by
+            -- pulling data low
+                      micro_wait(1000);
+                      wait_data_low <= '1';
+                      report "IEC: Waiting for device to acknowledge byte";
+          when 420 =>
+            if iec_data_i='1' then
+              report "IEC: Device acknowledged receipt of byte";
+              iec_state <= iec_state + 2;
+              wait_msec <= 0;
+            else
+              report "IEC: Timedout waiting for device to acknowledge receipt of byte";
+            end if;
+          when 421 =>
+            -- Timeout detected acknowledging byte
             
+            -- Timeout has occurred: DEVICE NOT PRESENT
+            -- (which is not strictly true, it's that device
+            -- did not respond in time)
+            report "IEC: DEVICE NOT PRESENT: Device failed to acknowledge byte";
+            iec_state_reached <= to_unsigned(iec_state,12);
+            iec_state <= 0;
+            iec_devinfo <= x"00";
+            iec_status(7) <= '1'; -- DEVICE NOT PRESENT
+            iec_status(1) <= '1'; -- TIMEOUT OCCURRED ...
+            iec_status(0) <= '1'; -- ... WHILE WE WERE TALKING
             
+            iec_busy <= '0';
+            
+            -- Release all IEC lines
+            a('1');
+            c('1');
+            
+          when 422 =>
+            -- Successfully sent byte
+            report "IEC: Successfully completed sending byte under attention";
+            iec_devinfo(7) <= '1';
+            iec_busy <= '0';
+            
+            iec_dev_listening <= '0';
+            
+            -- And we are still under attention
+            iec_under_attention <= '1';
+            iec_devinfo(4) <= '1';
+            
+            iec_state_reached <= to_unsigned(iec_state,12);
+            iec_state <= 0;
+
+          
+            
+
+
+                      
             
           when others => iec_state <= 0; iec_busy <= '0';
                          iec_state_reached <= to_unsigned(iec_state,12);
