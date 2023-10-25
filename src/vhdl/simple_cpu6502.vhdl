@@ -149,10 +149,6 @@ architecture vapourware of cpu6502 is
 
   signal instruction_counter : integer := 0;
 
-  -- Don't allow IRQ on reset
-  signal prev_irq : std_logic := '0';
-  signal irq_pending : std_logic := '0';
-  
 begin
   process (clk) is
 
@@ -307,15 +303,6 @@ begin
 
     if rising_edge(clk) then
 
-      prev_irq <= irq;
-      if irq='0' and prev_irq='1' then
-        report "1541CPU: Saw IRQ go low";
-        irq_pending <= '1';
-      end if;
-      if reset='0' then
-        irq_pending <= '0';
-      end if;      
-      
       -- report "data_i = $" & to_hexstring(data_i);
       
       if data_i(7)='0' then
@@ -436,12 +423,7 @@ begin
             cpu_state <= opcode_fetch;
             report "1541CPU: Read interrupt vector. Jumping to $" & to_hexstring(data_i) & to_hexstring(reg_pc(7 downto 0));
           when opcode_fetch =>
-            if (irq_pending='1' and flag_i='0') then
-              if irq_pending = '1' then
-                irq_pending <= '0';
-              end if;
-            end if;
-            if (irq_pending='1' and flag_i='0') or nmi='0' or reset='0' then
+            if (irq='0' and flag_i='0') or nmi_pending='1' or reset='0' then
               cpu_state <= interrupt;
             else
               reg_pc <= reg_pc + 1;
