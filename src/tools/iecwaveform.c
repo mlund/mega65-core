@@ -358,13 +358,19 @@ int getUpdate(void)
 	if (c=='\n'||c=='\r') {
 	  if (line_len) {
 	    // Parse lines like this:	    
-	    // /home/paul/Projects/mega65/mega65-core/src/vhdl/tb_iec_serial.vhdl:176:9:@6173ps:(report note): IECBUSSTATE: ATN='1', CLK(c64)='1', CLK(1541)='1', DATA(c64)='1', DATA(1541)='1', DATA(dummy)='1'
-	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/tb_iec_serial.vhdl:%*d:%*d:@%lld%[^:]:(report note): IECBUSSTATE: ATN='%d', CLK(c64)='%d', CLK(1541)='%d', DATA(c64)='%d', DATA(1541)='%d', DATA(dummy)='%d'",
-		       &time_val,time_units,
-		       &atn,&clk_c64,&clk_1541,&data_c64,&data_1541,&data_dummy) == 8)
+	    // /home/paul/Projects/mega65/mega65-core/src/vhdl/tb_iec_serial.vhdl:%*d:9:@6173ps:(report note): IECBUSSTATE: ATN='1', CLK(c64)='1', CLK(1541)='1', DATA(c64)='1', DATA(1541)='1', DATA(dummy)='1'
+	    int r = sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/tb_iec_serial.vhdl:%*d:%*d:@%lld%[^:]:(report note): IECBUSSTATE: ATN='%d', CLK(c64)='%d', CLK(1541)='%d', DATA(c64)='%d', DATA(1541)='%d', DATA(dummy)='%d'",
+			   &time_val,time_units,
+			   &atn,&clk_c64,&clk_1541,&data_c64,&data_1541,&data_dummy);
+	    // if (strstr(line,"IECBUSSTATE")) fprintf(stderr,"DEBUG: r=%d, Line = '%s'\n",r,line);
 
-	      // fprintf(stderr,"DEBUG: line = '%s'\n",line);
+	    if (r==8) {
+	      int ofs=0;
+	      int colons=5;
+	      while(colons) if (line[ofs++]==':') colons--;
+	      // fprintf(stderr,"%s\n",&line[ofs+1]);
 	      return 0;
+	    }
 
 	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/iec_serial.vhdl:%*d:%*d:@%lld%[^:]:(report note): iec_state = %d",
 		       &time_val,time_units,&iec_state)==3) {
@@ -372,6 +378,13 @@ int getUpdate(void)
 	    }
 
 	    if (strstr(line,"IEC:")) { fprintf(stderr,"%s\n",&line[99]); fflush(stderr); }
+	    if (strstr(line,"MOS6522:")) {
+	      int ofs=0;
+	      int colons=5;
+	      while(colons) if (line[ofs++]==':') colons--;
+	      // fprintf(stderr,"%s\n",&line[ofs+1]);
+	      return 0;
+	    }
 	    
 	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/simple_cpu6502.vhdl:%*d:%*d:@%lld%[^:]:(report note): Instr#:%d PC: $%x",
 		       &time_val,time_units,&instr_num,&pc)==4) {
@@ -380,7 +393,9 @@ int getUpdate(void)
 	      pc=pc &0xffff;
 	      
 	      switch(pc) {
-	      case 0xE85B: fprintf(stderr,"$%04X            1541: Service ATN from C64\n",pc); break;
+	      case 0xCFB7: fprintf(stderr,"$%04X            1541: Write to channel \n",pc); break;
+	      case 0xCFE8: fprintf(stderr,"$%04X            1541: Check for end of command \n",pc); break;
+	      case 0xCFED: fprintf(stderr,"$%04X            1541: L45 (Indicate command waiting for processing) \n",pc); break;
 	      case 0xE89F: fprintf(stderr,"$%04X            1541: Received TALK command for device\n",pc); break;
 	      case 0xE8BE: fprintf(stderr,"$%04X            1541: Received secondary address\n",pc); break;
 	      case 0xE8F1: fprintf(stderr,"$%04X            1541: TURNAROUND (Serial bus wants to become talker)\n",pc); break;
@@ -391,9 +406,14 @@ int getUpdate(void)
 	      case 0xE9F2: fprintf(stderr,"$%04X            1541: ACP00B (Pulse data low and wait for turn-around)\n",pc); break;
 	      case 0xE9FD: fprintf(stderr,"$%04X            1541: ACP02A (EOI check)\n",pc); break;
 	      case 0xEA07: fprintf(stderr,"$%04X            1541:   Clear EOI flag\n",pc); break;
+	      case 0xEA0C: fprintf(stderr,"$%04X            1541:   Set EOI flag\n",pc); break;
 	      case 0xEA12: fprintf(stderr,"$%04X            1541: ACP03+7 Received bit of serial bus byte\n",pc); break;
 	      case 0xEA1A: fprintf(stderr,"$%04X            1541: ACP03A Got bit of serial bus byte\n",pc); break;
+	      case 0xEA28: fprintf(stderr,"$%04X            1541: ACKNOWLEDGE BYTE\n",pc); break;
 	      case 0xEA2B: fprintf(stderr,"$%04X            1541: ACP03A+17 Got all 8 bits\n",pc); break;
+	      case 0xEA2E: fprintf(stderr,"$%04X            1541: LISTEN (Starting to receive a byte)\n",pc); break;
+	      case 0xEA41: fprintf(stderr,"$%04X            1541: LISTEN BAD CHANNEL (abort listening, due to lack of active channel)\n",pc); break;
+	      case 0xEA44: fprintf(stderr,"$%04X            1541: LISTEN OPEN  (abort listening, due to lack of active channel)\n",pc); break;
 	      case 0xEBE7: fprintf(stderr,"$%04X            1541: Enter IDLE loop\n",pc); break;
 	      case 0xFF0D: fprintf(stderr,"$%04X            1541: NNMI10 (Set C64/VIC20 speed)\n",pc); break;
 	      default:
