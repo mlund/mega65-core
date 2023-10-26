@@ -382,8 +382,7 @@ int getUpdate(void)
 	      int ofs=0;
 	      int colons=5;
 	      while(colons) if (line[ofs++]==':') colons--;
-	      // fprintf(stderr,"%s\n",&line[ofs+1]);
-	      return 0;
+	      fprintf(stderr,"%s\n",&line[ofs+1]);
 	    }
 	    
 	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/simple_cpu6502.vhdl:%*d:%*d:@%lld%[^:]:(report note): Instr#:%d PC: $%x",
@@ -467,6 +466,7 @@ int iecDataTrace(char *msg)
     if (!strcmp(time_units,"ps")) time_norm /= 1000000.0;
     else if (!strcmp(time_units,"ns")) time_norm /= 1000.0;
     else if (!strcmp(time_units,"us")) time_norm *= 1.0;
+    else if (!strcmp(time_units,"ms")) time_norm *= 1000.0;
     else {
       fprintf(stderr,"FATAL: Unknown time units '%s'\n",time_units);
     }
