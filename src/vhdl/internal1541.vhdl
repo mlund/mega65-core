@@ -96,8 +96,8 @@ architecture romanesque_revival of internal1541 is
   signal via2_data_out_en_n : std_logic := '1';
   signal via1_irq_n : std_logic;
   signal via2_irq_n : std_logic;
-  signal via1_ca1_in : std_logic := '1';
-  signal via2_ca1_in : std_logic := '1';
+  signal via1_ca1_in : std_logic;
+  signal via2_ca1_in : std_logic := '0';
   signal via1_ca1_out : std_logic;
   signal via2_ca1_out : std_logic;
   signal via1_ca2_in : std_logic := '1';
@@ -134,7 +134,9 @@ architecture romanesque_revival of internal1541 is
 begin
   
   -- 2x 6522 VIAs 
-  via2: entity work.mos6522 port map (
+  via2: entity work.mos6522
+    generic map ( name => "@$1C00" )
+    port map (
     I_RS   => std_logic_vector(via_address),
     I_DATA => std_logic_vector(via_data_in),
     unsigned(O_DATA) => via2_data_out,
@@ -182,7 +184,9 @@ begin
     );
     
 
-  via1: entity work.mos6522 port map (
+  via1: entity work.mos6522
+    generic map ( name => "@$1800" )
+    port map (
     I_RS   => std_logic_vector(via_address),
     I_DATA => std_logic_vector(via_data_in),
     unsigned(O_DATA) => via1_data_out,
@@ -348,7 +352,9 @@ begin
       rdata <= rom_rdata;
     elsif cs_via1='1' then
 --      if cpu_write_n='1' then
---        report "MEMBUS: Reading VIA1 register value $" & to_hexstring(via1_data_out);
+--        report "MEMBUS: Reading VIA1 register $" & to_hexstring(address(3 downto 0)) & " value $" & to_hexstring(via1_data_out);
+--      else
+--        report "MEMBUS: Writing VIA1 register $" & to_hexstring(address(3 downto 0)) & " with value $" & to_hexstring(via_data_in);        
 --      end if;
       rdata <= via1_data_out;
     elsif cs_via2='1' then

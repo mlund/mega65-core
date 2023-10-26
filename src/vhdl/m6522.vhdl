@@ -52,7 +52,8 @@ library ieee ;
 --library UNISIM;
 --  use UNISIM.Vcomponents.all;
 
-entity mos6522 is
+  entity mos6522 is
+      generic ( name : string );
   port (
 
     I_RS              : in    std_logic_vector(3 downto 0);
@@ -217,10 +218,10 @@ begin
     end if;
   end process;
 
-  p_cs : process(I_CS1, I_CS2_L, I_P2_H)
+  p_cs : process(I_CS1, I_CS2_L)
   begin
     cs <= '0';
-    if (I_CS1 = '1') and (I_CS2_L = '0') and (I_P2_H = '1') then
+    if (I_CS1 = '1') and (I_CS2_L = '0') then
       cs <= '1';
     end if;
   end process;
@@ -258,7 +259,7 @@ begin
   --        01 continuous interrupts                    pb7 square wave output
   --
 
-  p_write_reg_reset : process(RESET_L, CLK)
+  p_write_reg_reset : process(RESET_L, CLK, cs, I_RW_L)
   begin
     if (RESET_L = '0') then
       r_ora   <= x"00";    r_orb   <= x"00";
@@ -275,7 +276,7 @@ begin
         if (cs = '1') and (I_RW_L = '0') then
           prev_was_write <= '1';
           if prev_was_write = '0' then
-            report "VIA6522: Writing $" & to_hexstring(I_DATA) & " to register $" & to_hexstring(I_RS);
+            report "MOS6522" & name & ": Writing $" & to_hexstring(I_DATA) & " to register $" & to_hexstring(I_RS);
           end if;
           case I_RS is
             when x"0" => r_orb     <= I_DATA; w_orb_hs <= '1';
@@ -360,8 +361,8 @@ begin
 		if (cs = '1') and (I_RW_L = '1') then
                   prev_was_read <= '1';
                   if prev_was_read = '0' then
-                    report "VIA6522: Reading register $" & to_hexstring(I_RS);
-                    report "VIA6522: port B = " & to_string(I_PB)
+                    report "MOS6522"&name&": Reading register $" & to_hexstring(I_RS);
+                    report "MOS6522"&name&": port B = " & to_string(I_PB)
                       & ", r_acr = " & to_string(r_acr);
                   end if;
 		  case I_RS is
@@ -369,7 +370,7 @@ begin
 			-- fix from Mark McDougall, untested
                     when x"0" => O_DATA <= (r_irb and not r_ddrb) or (r_orb and r_ddrb); r_irb_hs <= '1';
                                  if prev_was_read = '0' then
-                                   report "VIA6522: register 0 (Port B data) = $"
+                                   report "MOS6522"&name&": register 0 (Port B data) = $"
                                      & to_hexstring((r_irb and not r_ddrb) or (r_orb and r_ddrb))
                                      & ", r_irb = $" & to_hexstring(r_irb)
                                      & ", r_ddrb = $" & to_hexstring(r_ddrb)
@@ -379,11 +380,13 @@ begin
 			when x"1" => O_DATA <= r_ira; r_ira_hs <= '1';
 			when x"2" => O_DATA <= r_ddrb;
 			when x"3" => O_DATA <= r_ddra;
-			when x"4" => O_DATA <= t1c( 7 downto 0);  t1_r_reset_int <= true;
+                        when x"4" => O_DATA <= t1c( 7 downto 0);  t1_r_reset_int <= true;
+                                     -- report "MOS6522"&name&": Reading t1c low byte and asserting t1_r_reset_int";
 			when x"5" => O_DATA <= t1c(15 downto 8);
 			when x"6" => O_DATA <= r_t1l_l;
 			when x"7" => O_DATA <= r_t1l_h;
 			when x"8" => O_DATA <= t2c( 7 downto 0);  t2_r_reset_int <= true;
+                                     -- report "MOS6522"&name&": Reading t2c low byte and asserting t2_r_reset_int";
 			when x"9" => O_DATA <= t2c(15 downto 8);
 			when x"A" => O_DATA <= r_sr;              sr_read_ena <= true;
 			when x"B" => O_DATA <= r_acr;
@@ -537,6 +540,7 @@ begin
       if (ENA_4 = '1') then
         -- not pretty
         if ca1_int then
+          report "MOS6522"&name&": Asserting ca1_irq";
           ca1_irq <= '1';
         elsif (r_ira_hs = '1') or (w_ora_hs = '1') or (clear_irq(1) = '1') then
           ca1_irq <= '0';
@@ -594,6 +598,7 @@ begin
           r_ira <= I_PA;
         else -- enable latching
           if ca1_int then
+            report "MOS6522"&name&": Copying I_PA to r_ira due to ca1_int. I_PA=" & to_string(I_PA);
             r_ira <= I_PA;
           end if;
         end if;
@@ -643,13 +648,13 @@ begin
   begin
     wait until rising_edge(CLK);
     if (ENA_4 = '1') then
-      -- report "MOS6522: phase = " & to_string(phase);
+      -- report "MOS6522"&name&": phase = " & to_string(phase);
       if t1_load_counter or (t1_reload_counter and phase = "11") then
         t1c( 7 downto 0) <= r_t1l_l;
         t1c(15 downto 8) <= r_t1l_h;
       elsif (phase="11") then
         if to_integer(unsigned(t1c)) /= 0 then
-          report "MOS6522: Decrementing t1c from " & integer'image(to_integer(unsigned(t1c)));
+          -- report "MOS6522"&name&": Decrementing t1c from " & integer'image(to_integer(unsigned(t1c)));
           t1c <= std_logic_vector(to_unsigned(to_integer(unsigned(t1c)) - 1,16));
         end if;
       end if;
@@ -906,7 +911,7 @@ begin
           final_irq <= '0'; -- no interrupts
         else
           if final_irq = '0' then
-            report "VIA6522: Triggering IRQ "
+            report "MOS6522"&name&": Triggering IRQ "
               & "r_ifr = " & to_string(r_ifr(6 downto 0))
               & "r_ier = " & to_string(r_ier(6 downto 0))
               ;
