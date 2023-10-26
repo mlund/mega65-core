@@ -362,8 +362,8 @@ begin
                   prev_was_read <= '1';
                   if prev_was_read = '0' then
                     report "MOS6522"&name&": Reading register $" & to_hexstring(I_RS);
-                    report "MOS6522"&name&": port B = " & to_string(I_PB)
-                      & ", r_acr = " & to_string(r_acr);
+                    -- report "MOS6522"&name&": port B = " & to_string(I_PB)
+                    -- & ", r_acr = " & to_string(r_acr);
                   end if;
 		  case I_RS is
 			--when x"0" => O_DATA <= r_irb; r_irb_hs <= '1';
@@ -377,7 +377,10 @@ begin
                                      & ", r_orb = $" & to_hexstring(r_orb)
                                      ;
                                  end if;
-			when x"1" => O_DATA <= r_ira; r_ira_hs <= '1';
+                    when x"1" => O_DATA <= r_ira; r_ira_hs <= '1';
+                                 if prev_was_read = '0' then
+                                   report "MOS6522"&name&": register 1 (IRA) = " & to_hexstring(r_ira);
+                                 end if;
 			when x"2" => O_DATA <= r_ddrb;
 			when x"3" => O_DATA <= r_ddra;
                         when x"4" => O_DATA <= t1c( 7 downto 0);  t1_r_reset_int <= true;
@@ -638,10 +641,8 @@ begin
     variable done : boolean;
   begin
       done := (t1c = x"0000");
-      t1c_done <= done and (phase = "11");
-      --if (phase = "11") then
-        t1_reload_counter <= done and (r_acr(6) = '1');
-      --end if;
+      t1c_done <= done; -- PGS and (phase = "11");
+      t1_reload_counter <= done and (r_acr(6) = '1');
   end process;
 
   p_timer1 : process
@@ -654,7 +655,9 @@ begin
         t1c(15 downto 8) <= r_t1l_h;
       elsif (phase="11") then
         if to_integer(unsigned(t1c)) /= 0 then
-          -- report "MOS6522"&name&": Decrementing t1c from " & integer'image(to_integer(unsigned(t1c)));
+          if name = "@$1800" then
+            report "MOS6522"&name&": Decrementing t1c from " & integer'image(to_integer(unsigned(t1c)));
+          end if;
           t1c <= std_logic_vector(to_unsigned(to_integer(unsigned(t1c)) - 1,16));
         end if;
       end if;
@@ -670,10 +673,16 @@ begin
 
       t1_toggle <= '0';
       if t1c_active and t1c_done then
+        if t1_irq = '0' then
+          report "MOS6522"&name&": Asserting t1_irq";
+        end if;
         t1_toggle <= '1';
         t1_irq <= '1';
       elsif RESET_L = '0' or t1_w_reset_int or t1_r_reset_int or (clear_irq(6) = '1') then
         t1_irq <= '0';
+        if t1_irq = '0' then
+          report "MOS6522"&name&": Releasing t1_irq";
+        end if;
       end if;
     end if;
   end process;
