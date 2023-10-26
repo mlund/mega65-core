@@ -77,6 +77,8 @@ architecture questionable of iec_serial is
   signal prev_iec_state : integer := 0;
   signal iec_busy : std_logic := '0';
   signal iec_under_attention : std_logic := '0';
+  signal send_eoi : std_logic := '0';
+
   
   signal wait_clk_high : std_logic := '0';
   signal wait_clk_low : std_logic := '0';
@@ -464,6 +466,7 @@ begin
             iec_dev_listening <= '0';
             iec_state <= 400;
             iec_busy <= '1';
+            send_eoi <= '0';
 
             wait_clk_high <= '0'; wait_clk_low <= '0';
             wait_data_high <= '0'; wait_data_low <= '0';
@@ -483,7 +486,19 @@ begin
             wait_usec <= 0; wait_msec <= 0;
             
           when x"33" => -- Send EOI without byte
-          when x"34" => -- Send byte with EOI
+            -- XXX How do we do this? There is a way, I read about it somewhere.
+            -- But can I find it now? Oh no.
+          when x"34" => -- Send byte with EOI (don't touch ATN)
+            iec_dev_listening <= '0';
+            iec_state <= 400;
+            iec_busy <= '1';
+            send_eoi <= '1';
+
+            wait_clk_high <= '0'; wait_clk_low <= '0';
+            wait_data_high <= '0'; wait_data_low <= '0';
+            wait_srq_high <= '0'; wait_srq_low <= '0';
+            wait_usec <= 0; wait_msec <= 0;
+            
           when x"35" => -- Turn around from talk to listen
             report "IEC: TURNAROUND COMMAND received";
             iec_dev_listening <= '0';
@@ -996,39 +1011,56 @@ begin
             -- ready to receive of ~ 40 usec, based on disassembly of 1541 ROM.
             -- It can't be too long, or it will be interpretted as an EOI.
             -- 70usec for example, seems to cause problems, even though it shouldn't.
-            micro_wait(40);            
-            
-          when 403 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
-                      report "IEC: Sending bit 0 = " & std_logic'image(iec_data_out(0));
-          when 404 => c('1'); micro_wait(20);
-          when 405 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
-                      report "IEC: Sending bit 1 = " & std_logic'image(iec_data_out(0));
-          when 406 => c('1'); micro_wait(20);
+            -- However, if it's EOI, then we expect the drive to pull DATA low
+            -- after about 200 usec
+            if send_eoi='0' then
+              micro_wait(40);
+            else
+              report "IEC: Sending byte with EOI: Waiting for device to pulse DATA to ACK";
+              wait_data_low <= '1';
+            end if;
+          when 403 => null;
+          when 404 =>
+            if send_eoi='1' then
+              wait_data_high <= '1';
+              send_eoi <= '0';
+            else
+              iec_state <= iec_state + 3;
+            end if;
+          when 405 => wait_data_low <= '1';   -- wait for low edge of EOI ACK pulse
+          when 406 => wait_data_high <= '1';  -- wait for high edge of EOI ACK pulse
+                      
           when 407 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
-                      report "IEC: Sending bit 2 = " & std_logic'image(iec_data_out(0));
+                      report "IEC: Sending bit 0 = " & std_logic'image(iec_data_out(0));
           when 408 => c('1'); micro_wait(20);
           when 409 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
-                      report "IEC: Sending bit 3 = " & std_logic'image(iec_data_out(0));
+                      report "IEC: Sending bit 1 = " & std_logic'image(iec_data_out(0));
           when 410 => c('1'); micro_wait(20);
           when 411 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
-                      report "IEC: Sending bit 4 = " & std_logic'image(iec_data_out(0));
+                      report "IEC: Sending bit 2 = " & std_logic'image(iec_data_out(0));
           when 412 => c('1'); micro_wait(20);
           when 413 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
-                      report "IEC: Sending bit 5 = " & std_logic'image(iec_data_out(0));
+                      report "IEC: Sending bit 3 = " & std_logic'image(iec_data_out(0));
           when 414 => c('1'); micro_wait(20);
           when 415 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
-                      report "IEC: Sending bit 6 = " & std_logic'image(iec_data_out(0));
+                      report "IEC: Sending bit 4 = " & std_logic'image(iec_data_out(0));
           when 416 => c('1'); micro_wait(20);
           when 417 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
-                      report "IEC: Sending bit 7 = " & std_logic'image(iec_data_out(0));
+                      report "IEC: Sending bit 5 = " & std_logic'image(iec_data_out(0));
           when 418 => c('1'); micro_wait(20);
-          when 419 => c('0'); d('1');
+          when 419 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
+                      report "IEC: Sending bit 6 = " & std_logic'image(iec_data_out(0));
+          when 420 => c('1'); micro_wait(20);
+          when 421 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
+                      report "IEC: Sending bit 7 = " & std_logic'image(iec_data_out(0));
+          when 422 => c('1'); micro_wait(20);
+          when 423 => c('0'); d('1');
             -- Allow device 1000usec = 1ms to acknowledge byte by
             -- pulling data low
                       micro_wait(1000);
                       wait_data_low <= '0';
                       report "IEC: Waiting for device to acknowledge byte";
-          when 420 =>
+          when 424 =>
             if iec_data_i='0' then
               report "IEC: Device acknowledged receipt of byte";
               iec_state <= iec_state + 2;
@@ -1036,7 +1068,7 @@ begin
             else
               report "IEC: Timedout waiting for device to acknowledge receipt of byte";
             end if;
-          when 421 =>
+          when 425 =>
             -- Timeout detected acknowledging byte
             
             -- Timeout has occurred: DEVICE NOT PRESENT
@@ -1056,7 +1088,7 @@ begin
             a('1');
             c('1');
             
-          when 422 =>
+          when 426 =>
             -- Successfully sent byte
             report "IEC: Successfully completed sending byte under attention";
             iec_devinfo(7) <= '1';
