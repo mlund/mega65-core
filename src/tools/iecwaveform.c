@@ -378,7 +378,7 @@ int getUpdate(void)
 	    }
 
 	    if (strstr(line,"IEC:")) { fprintf(stderr,"%s\n",&line[99]); fflush(stderr); }
-	    if (strstr(line,"MOS6522:")) {
+	    if (strstr(line,": MOS6522")) {
 	      int ofs=0;
 	      int colons=5;
 	      while(colons) if (line[ofs++]==':') colons--;
@@ -387,7 +387,6 @@ int getUpdate(void)
 	    
 	    if (sscanf(line,"/home/paul/Projects/mega65/mega65-core/src/vhdl/simple_cpu6502.vhdl:%*d:%*d:@%lld%[^:]:(report note): Instr#:%d PC: $%x",
 		       &time_val,time_units,&instr_num,&pc)==4) {
-	      int show_pc=1;
 
 	      pc=pc &0xffff;
 	      
@@ -413,10 +412,11 @@ int getUpdate(void)
 	      case 0xEA2E: fprintf(stderr,"$%04X            1541: LISTEN (Starting to receive a byte)\n",pc); break;
 	      case 0xEA41: fprintf(stderr,"$%04X            1541: LISTEN BAD CHANNEL (abort listening, due to lack of active channel)\n",pc); break;
 	      case 0xEA44: fprintf(stderr,"$%04X            1541: LISTEN OPEN  (abort listening, due to lack of active channel)\n",pc); break;
+	      case 0xEB34: fprintf(stderr,"$%04X            1541: Write to $180D\n",pc); break;
 	      case 0xEBE7: fprintf(stderr,"$%04X            1541: Enter IDLE loop\n",pc); break;
 	      case 0xFF0D: fprintf(stderr,"$%04X            1541: NNMI10 (Set C64/VIC20 speed)\n",pc); break;
 	      default:
-		show_pc=0;
+		break;
 	      }
 
 	    }
@@ -474,7 +474,7 @@ int iecDataTrace(char *msg)
     double time_diff = time_norm - prev_time;
     prev_time = time_norm;
     
-    printf(" % +12.3f : ATN=%d, DATA=%s, CLK=%s\n",
+    printf(" %+12.3f : ATN=%d, DATA=%s, CLK=%s\n",
 	   time_diff,
 	   atn,
 	   describe_line(data_c64,data_1541,data_dummy),
