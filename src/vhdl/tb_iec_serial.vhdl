@@ -363,7 +363,9 @@ begin
       fastio_write <= '0';
       
       -- Allow time for everything to happen
-      for i in 1 to 800000 loop
+      -- We need extra time when sending EOI for the EOI handshake
+      -- to occur.
+      for i in 1 to 12000000 loop
         clock_tick;
       end loop;
       report "IEC state reached = $" & to_hexstring(iec_state_reached) & " = " & integer'image(to_integer(iec_state_reached));
