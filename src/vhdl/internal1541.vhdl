@@ -11,7 +11,7 @@ use work.victypes.all;
 entity internal1541 is
   port (
     clock : in std_logic;
-    
+        
     -- CPU side interface to read/write both the 16KB drive "ROM" and the 2KB
     -- drive RAM.    
     fastio_read : in std_logic;
@@ -63,6 +63,8 @@ end entity internal1541;
 
 architecture romanesque_revival of internal1541 is
 
+  signal phi_2_1mhz_counter : integer := 0;
+  
   -- signals here
   signal address : unsigned(15 downto 0) := x"0000";
   signal rdata : unsigned(7 downto 0);
@@ -281,6 +283,17 @@ begin
     ram_write_enable <= not cpu_write_n;
   
     if rising_edge(clock) then
+
+      -- Generate exactly 1MHz strobes
+      if phi_2_1mhz_counter < (405 - 10) then
+        phi_2_1mhz_counter <= phi_2_1mhz_counter + 10;
+        via_phase2_clock <= '0';
+      else
+        phi_2_1mhz_counter <= phi_2_1mhz_counter + 10 - 405;
+        via_phase2_clock <= '1';
+        -- report "MOS6522: 1MHz tick";
+      end if;
+      
       -- report "1541TICK: address = $" & to_hexstring(address) & ", drive_cycle = "
       --   & std_logic'image(drive_clock_cycle_strobe) & ", reset=" & std_logic'image(drive_reset_n);
       
