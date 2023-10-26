@@ -1022,13 +1022,13 @@ begin
           when 403 => null;
           when 404 =>
             if send_eoi='1' then
-              wait_data_high <= '1';
+              wait_data_low <= '1';
               send_eoi <= '0';
             else
               iec_state <= iec_state + 3;
             end if;
-          when 405 => wait_data_low <= '1';   -- wait for low edge of EOI ACK pulse
-          when 406 => wait_data_high <= '1';  -- wait for high edge of EOI ACK pulse
+          when 405 => wait_data_high <= '1';  -- wait for high edge of EOI ACK pulse
+          when 406 => null;
                       
           when 407 => c('0'); d(iec_data_out(0)); iec_data_out_rotate; micro_wait(70);
                       report "IEC: Sending bit 0 = " & std_logic'image(iec_data_out(0));
@@ -1084,10 +1084,6 @@ begin
             
             iec_busy <= '0';
             
-            -- Release all IEC lines
-            a('1');
-            c('1');
-            
           when 426 =>
             -- Successfully sent byte
             report "IEC: Successfully completed sending byte under attention";
@@ -1103,12 +1099,6 @@ begin
             iec_state_reached <= to_unsigned(iec_state,12);
             iec_state <= 0;
 
-          
-            
-
-
-                      
-            
           when others => iec_state <= 0; iec_busy <= '0';
                          iec_state_reached <= to_unsigned(iec_state,12);
                          
