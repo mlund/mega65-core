@@ -643,14 +643,11 @@ begin
   begin
     wait until rising_edge(CLK);
     if (ENA_4 = '1') then
-      report "MOS6522: Phase = " & to_string(phase);
       if t1_load_counter or (t1_reload_counter and phase = "11") then
-        report "MOS6522: Load counter 1";
         t1c( 7 downto 0) <= r_t1l_l;
         t1c(15 downto 8) <= r_t1l_h;
       elsif (phase="11") then
         t1c <= t1c - "1";
-        report "MOS6522: Timer 1 tick. Counter = " & to_hexstring(t1c) & " - 1";
       end if;
 
       if t1_load_counter or t1_reload_counter then
