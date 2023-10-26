@@ -643,11 +643,15 @@ begin
   begin
     wait until rising_edge(CLK);
     if (ENA_4 = '1') then
+      -- report "MOS6522: phase = " & to_string(phase);
       if t1_load_counter or (t1_reload_counter and phase = "11") then
         t1c( 7 downto 0) <= r_t1l_l;
         t1c(15 downto 8) <= r_t1l_h;
       elsif (phase="11") then
-        t1c <= t1c - "1";
+        if to_integer(unsigned(t1c)) /= 0 then
+          report "MOS6522: Decrementing t1c from " & integer'image(to_integer(unsigned(t1c)));
+          t1c <= std_logic_vector(to_unsigned(to_integer(unsigned(t1c)) - 1,16));
+        end if;
       end if;
 
       if t1_load_counter or t1_reload_counter then
