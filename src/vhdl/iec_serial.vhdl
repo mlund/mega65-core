@@ -1023,7 +1023,6 @@ begin
           when 404 =>
             if send_eoi='1' then
               wait_data_low <= '1';
-              send_eoi <= '0';
             else
               iec_state <= iec_state + 3;
             end if;
@@ -1086,7 +1085,7 @@ begin
             
           when 426 =>
             -- Successfully sent byte
-            report "IEC: Successfully completed sending byte under attention";
+            report "IEC: Successfully completed sending byte without attention";
             iec_devinfo(7) <= '1';
             iec_busy <= '0';
             
@@ -1099,6 +1098,13 @@ begin
             iec_state_reached <= to_unsigned(iec_state,12);
             iec_state <= 0;
 
+            -- If sending EOI, then we should release CLK as well, so that the
+            -- device doesn't keep waiting for us to send something.
+            if send_eoi='1' then
+              send_eoi <= '0';
+              c('1');
+            end if;
+              
           when others => iec_state <= 0; iec_busy <= '0';
                          iec_state_reached <= to_unsigned(iec_state,12);
                          
