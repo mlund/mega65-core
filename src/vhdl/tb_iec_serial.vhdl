@@ -831,6 +831,9 @@ begin
                             -- here, but that yields device not present on the
                             -- VHDL 1541 for some reason?  $6F seems to work, though?
 
+        report "Clearing ATN";
+        atn_release;       
+        
         report "IEC: Sending UI- command";
         iec_tx(x"55");  -- U
         iec_tx(x"49");  -- I
@@ -841,6 +844,14 @@ begin
 
         report "Clearing ATN";
         atn_release;
+
+        -- Processing the command takes quite a while, because we have to do
+        -- that whole computationally expensive retrieval of error message text
+        -- from tokens thing.
+        report "IEC: Allow 1541 time to process the UI+ command.";
+        for i in 1 to 300000 loop
+          clock_tick;
+        end loop;         
         
         report "IEC: Request read command channel 15 of device 11";
         atn_tx_byte(x"4b");
@@ -851,10 +862,11 @@ begin
 
         report "IEC: Trying to receive a byte";
 
-        -- Check for first 4 bytes of "00,OK..." message
+        -- Check for first 5 bytes of "00, OK..." message
         iec_rx(x"30");
         iec_rx(x"30");
-        iec_rx(x"2c");
+        iec_rx(x"2C");
+        iec_rx(x"20");
         iec_rx(x"4F");
         
       end if;
