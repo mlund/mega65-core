@@ -78,6 +78,7 @@ architecture questionable of iec_serial is
   signal iec_busy : std_logic := '0';
   signal iec_under_attention : std_logic := '0';
   signal send_eoi : std_logic := '0';
+  signal eoi_detected : std_logic := '0';
 
   
   signal wait_clk_high : std_logic := '0';
@@ -137,7 +138,7 @@ begin
   -- @IO:GS $D697.0 AUTOIEC:IRQTOEN Enable timeout interrupt source if set
   
   -- @IO:GS $D698.7 AUTOIEC:STNODEV Device not present
-  -- @IO:GS $D698.6 AUTOIEC:STNOEOF End of file
+  -- @IO:GS $D698.6 AUTOIEC:STNOEOI End of Indicate (EOI/EOF)
   -- @IO:GS $D698.5 AUTOIEC:STSRQ State of SRQ line
   -- @IO:GS $D698.4 AUTOIEC:STVERIFY Verify error occurred
   -- @IO:GS $D698.3 AUTOIEC:STC State of CLK line
@@ -884,8 +885,16 @@ begin
 
           -- RECEIVE BYTE FROM THE IEC BUS
           when 300 => wait_clk_high <= '1';
-          when 301 => d('1'); wait_clk_low <= '1';
-          when 302 =>
+          when 301 => d('1');
+                      wait_clk_low <= '1';
+                      micro_wait(100);
+          when 302 => if iec_data_i='0' and iec_clk_i='1' then
+                        eoi_detected <= '1';
+                        wait_data_high <= '1'; wait_clk_low <= '1';
+                      else
+                        eoi_detected <= '0';
+                      end if;
+          when 303 =>
             -- Get ready to receive first bit
             -- If CLK goes high first, it's slow protocol.
             -- But if SRQ goes low first, it's fast protocol
@@ -901,39 +910,41 @@ begin
               
               iec_state <= iec_state + 1;
             end if;
-          when 303 => wait_clk_low <= '1';
-          when 304 => wait_clk_high <= '1';
-          when 305 => iec_data(7) <= iec_data_i;
+          when 304 => wait_clk_low <= '1';
+          when 305 => wait_clk_high <= '1';
+          when 306 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 306 => wait_clk_high <= '1';
-          when 307 => iec_data(7) <= iec_data_i;
+          when 307 => wait_clk_high <= '1';
+          when 308 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 308 => wait_clk_high <= '1';
-          when 309 => iec_data(7) <= iec_data_i;
+          when 309 => wait_clk_high <= '1';
+          when 310 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 310 => wait_clk_high <= '1';
-          when 311 => iec_data(7) <= iec_data_i;
+          when 311 => wait_clk_high <= '1';
+          when 312 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 312 => wait_clk_high <= '1';
-          when 313 => iec_data(7) <= iec_data_i;
+          when 313 => wait_clk_high <= '1';
+          when 314 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 314 => wait_clk_high <= '1';
-          when 315 => iec_data(7) <= iec_data_i;
+          when 315 => wait_clk_high <= '1';
+          when 316 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 316 => wait_clk_high <= '1';
-          when 317 => iec_data(7) <= iec_data_i;
+          when 317 => wait_clk_high <= '1';
+          when 318 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 318 =>
+          when 319 =>
             d('0');
             report "IEC: Successfully completed receiving SLOW byte = $" & to_hexstring(iec_data);
             iec_devinfo(7) <= '1';
+            iec_devinfo(6) <= eoi_detected;
+            
             iec_busy <= '0';
             
             iec_dev_listening <= '0';
