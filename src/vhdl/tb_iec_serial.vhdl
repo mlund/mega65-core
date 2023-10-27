@@ -520,9 +520,88 @@ begin
         assert false report "Expected to not see TIMEOUT indicated in bit 1 of $D698, but it was";
       end if;
       if fastio_rdata(6)='1' then
-        report "Saw EOI";
+        assert false report "Character unexpectedly received with EOI";
       else
         report "Character received without EOI";
+      end if;
+
+      -- Read data byte and check against expected
+      fastio_addr(3 downto 0) <= x"9";
+      fastio_read <= '1';
+      for i in 1 to 8 loop
+        clock_tick;
+      end loop;
+      fastio_read <= '0';
+      report "IEC data byte = $" & to_hexstring(fastio_rdata) & " (expected $" & to_hexstring(expected) & ")";
+      if fastio_rdata /= expected then
+        assert false report "Data byte value was different to expected value";
+      end if;      
+    end procedure;
+
+    procedure iec_rx_eoi(expected : unsigned(7 downto 0)) is
+    begin
+      report "IEC: iec_rx($" & to_hexstring(expected) & ")";
+      fastio_write <= '1';
+      fastio_addr(3 downto 0) <= x"8";
+      fastio_wdata <= x"32"; -- Trigger RECEIVE BYTE
+      for i in 1 to 4 loop
+        clock_tick;
+      end loop;
+      fastio_write <= '0';
+      
+      -- Allow a little time and check status goes busy
+      for i in 1 to 100 loop
+        clock_tick;
+      end loop;
+      
+      -- Expect BUSY flag to have set
+      fastio_addr(3 downto 0) <= x"7";
+      fastio_read <= '1';
+      for i in 1 to 8 loop
+        clock_tick;
+      end loop;
+      fastio_read <= '0';
+      report "IEC IRQ status byte = $" & to_hexstring(fastio_rdata);
+      if fastio_rdata(5)='1' then
+        assert false report "Expected to see IEC bus busy in bit 5 of $D697, but it wasn't";
+      end if;
+      
+      -- Allow time for everything to happen
+      for i in 1 to 800000 loop
+        clock_tick;
+      end loop;
+      report "IEC state reached = $" & to_hexstring(iec_state_reached) & " = " & integer'image(to_integer(iec_state_reached));
+      
+      -- Expect BUSY flag to have cleared
+      fastio_addr(3 downto 0) <= x"7";
+      fastio_read <= '1';
+      for i in 1 to 8 loop
+        clock_tick;
+      end loop;
+      fastio_read <= '0';
+      report "IEC IRQ status byte = $" & to_hexstring(fastio_rdata);
+      if fastio_rdata(5)='0' then
+        assert false report "Expected to see ready for command indicated in bit 5 of $D697, but it wasn't";
+      end if;
+      
+      -- Read status byte
+      fastio_addr(3 downto 0) <= x"8";
+      fastio_read <= '1';
+      for i in 1 to 8 loop
+        clock_tick;
+      end loop;
+      fastio_read <= '0';
+      report "IEC status byte = $" & to_hexstring(fastio_rdata);
+      if fastio_rdata(7)='1' then
+        assert false report "Expected to not see DEVICE NOT PRESENT indicated in bit 7 of $D698, but it was";
+      end if;
+      if fastio_rdata(1)='1' then
+        assert false report "Expected to not see TIMEOUT indicated in bit 1 of $D698, but it was";
+      end if;
+      if fastio_rdata(6)='1' then
+        report "Saw EOI";
+      else
+        assert false report "Character received without EOI";
       end if;
 
       -- Read data byte and check against expected
@@ -880,7 +959,8 @@ begin
         iec_rx(x"2C");
         iec_rx(x"30");
         iec_rx(x"30");
-        iec_rx(x"0D");
+        iec_rx_eoi(x"0D");
+        
         
       end if;
     end loop;
