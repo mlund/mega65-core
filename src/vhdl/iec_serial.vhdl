@@ -893,7 +893,7 @@ begin
                       eoi_detected <= '0';
                       micro_wait(200);
                       wait_clk_low <= '1';
-          when 302 => if wait_usec = 0 then
+          when 302 => if iec_clk_i='1' then
                         report "Acknowledging EOI";
                         eoi_detected <= '1';
                         d('0');
@@ -947,9 +947,9 @@ begin
                       wait_clk_low <= '1';
           when 320 =>
             d('0');
-            report "IEC: Successfully completed receiving SLOW byte = $" & to_hexstring(iec_data);
+            report "IEC: Successfully completed receiving SLOW byte = $" & to_hexstring(iec_data) & ", EOI=" & std_logic'image(eoi_detected);
             iec_devinfo(7) <= '1';
-            iec_devinfo(6) <= eoi_detected;
+            iec_status(6) <= eoi_detected;
             
             iec_busy <= '0';
             
