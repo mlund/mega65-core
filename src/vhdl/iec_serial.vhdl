@@ -889,6 +889,7 @@ begin
                       wait_clk_low <= '1';
                       micro_wait(100);
           when 302 => if iec_data_i='0' and iec_clk_i='1' then
+                        report "EOI detected";
                         eoi_detected <= '1';
                         wait_data_high <= '1'; wait_clk_low <= '1';
                       else
