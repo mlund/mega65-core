@@ -523,6 +523,10 @@ begin
           wait_usec <= wait_usec - 1;
           if wait_usec = 1 then
             not_waiting_usec <= true;
+            -- timeout occurred: Cancel any signal waiting
+            wait_clk_high <= '0'; wait_clk_low <= '0';
+            wait_data_high <= '0'; wait_data_low <= '0';
+            wait_srq_high <= '0'; wait_srq_low <= '0';
           end if;
         end if;
         usec_toggle <= last_usec_toggle;
@@ -886,16 +890,16 @@ begin
           -- RECEIVE BYTE FROM THE IEC BUS
           when 300 => wait_clk_high <= '1';
           when 301 => d('1');
+                      eoi_detected <= '0';
+                      micro_wait(200);
                       wait_clk_low <= '1';
-                      micro_wait(100);
-          when 302 => if iec_data_i='0' and iec_clk_i='1' then
-                        report "EOI detected";
-                        eoi_detected <= '1';
-                        wait_data_high <= '1'; wait_clk_low <= '1';
-                      else
-                        eoi_detected <= '0';
+          when 302 => if wait_usec = 0 then
+                        report "Acknowledging EOI";
+                        d('0');
+                        micro_wait(80);
                       end if;
-          when 303 =>
+          when 303 => d('1'); wait_clk_low <= '1';
+          when 304 =>
             -- Get ready to receive first bit
             -- If CLK goes high first, it's slow protocol.
             -- But if SRQ goes low first, it's fast protocol
@@ -911,36 +915,36 @@ begin
               
               iec_state <= iec_state + 1;
             end if;
-          when 304 => wait_clk_low <= '1';
-          when 305 => wait_clk_high <= '1';
-          when 306 => iec_data(7) <= iec_data_i;
+          when 305 => wait_clk_low <= '1';
+          when 306 => wait_clk_high <= '1';
+          when 307 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 307 => wait_clk_high <= '1';
-          when 308 => iec_data(7) <= iec_data_i;
+          when 308 => wait_clk_high <= '1';
+          when 309 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 309 => wait_clk_high <= '1';
-          when 310 => iec_data(7) <= iec_data_i;
+          when 310 => wait_clk_high <= '1';
+          when 311 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 311 => wait_clk_high <= '1';
-          when 312 => iec_data(7) <= iec_data_i;
+          when 312 => wait_clk_high <= '1';
+          when 313 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 313 => wait_clk_high <= '1';
-          when 314 => iec_data(7) <= iec_data_i;
+          when 314 => wait_clk_high <= '1';
+          when 315 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 315 => wait_clk_high <= '1';
-          when 316 => iec_data(7) <= iec_data_i;
+          when 316 => wait_clk_high <= '1';
+          when 317 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 317 => wait_clk_high <= '1';
-          when 318 => iec_data(7) <= iec_data_i;
+          when 318 => wait_clk_high <= '1';
+          when 319 => iec_data(7) <= iec_data_i;
                       iec_data(6 downto 0) <= iec_data(7 downto 1);
                       wait_clk_low <= '1';
-          when 319 =>
+          when 320 =>
             d('0');
             report "IEC: Successfully completed receiving SLOW byte = $" & to_hexstring(iec_data);
             iec_devinfo(7) <= '1';
