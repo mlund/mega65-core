@@ -573,6 +573,13 @@ architecture behavioral of iomapper is
   signal iec_clk_fromcia : std_logic := '1';
   signal iec_data_fromcia : std_logic := '1';
 
+  -- Hardware-accelerated IEC interface
+  signal iec_hwa_reset : std_logic;
+  signal iec_hwa_atn : std_logic;
+  signal iec_hwa_clk : std_logic;
+  signal iec_hwa_data : std_logic;
+  signal iec_hwa_srq : std_logic;
+ 
   signal suppress_key_glitches : std_logic;
   signal suppress_key_retrigger : std_logic;
   signal ascii_key_event_count : unsigned(15 downto 0) := x"0000";
@@ -580,6 +587,7 @@ architecture behavioral of iomapper is
   signal cia1_irq : std_logic;
   signal ethernet_irq : std_logic;
   signal uart_irq : std_logic;
+  signal iec_irq : std_logic;
 
   signal audio_mix_reg : unsigned(7 downto 0) := x"FF";
   signal audio_mix_write : std_logic := '0';
@@ -669,7 +677,7 @@ begin
 
 
   -- IRQ line is wire-anded together as if it had a pullup.
-  irq <= cia1_irq and ethernet_irq and uart_irq;
+  irq <= cia1_irq and ethernet_irq and uart_irq and iec_irq;
 
   block2: block
   begin
@@ -793,6 +801,35 @@ begin
     );
   end block;
 
+  iec0: if target = megaphoner4 or target = megaphoner3 generate
+    iecserial0: entity work.iec_serial
+      generic map ( cpu_frequency => cpu_frequency )
+      port map (
+        clock => cpuclock,
+        clock81 => pixelclock,
+        irq => iec_irq,
+        
+        fastio_addr => fastio_addr,
+        fastio_write => fastio_write,
+        fastio_read => fastio_read,
+        fastio_rdata => fastio_rdata,
+        fastio_wdata => fastio_wdata,
+        
+        iec_reset => iec_hwa_reset,
+        iec_atn => iec_hwa_atn,
+        iec_clk_en_n => iec_hwa_clk,
+        iec_data_en_n => iec_data_data,
+        iec_srq_en_n => iec_hwa_srq,
+--      iec_clk_o => ,
+--      iec_data_o => ,
+--      iec_srq_o => ,
+        iec_clk_i => iec_clk_external,
+        iec_data_i => iec_data_external,
+        iec_srq_i => iec_srq_external 
+        
+        );
+    end generate;
+    
   block4: block
   begin
     ciatwo: entity work.cia6526
@@ -1649,7 +1686,7 @@ begin
   process(reset)
   begin
     reset_high <= not reset;
-    iec_reset <= reset;
+    iec_reset <= reset and iec_hwa_reset;
   end process;
 
   -- Allow taking over of SD interface for bitbashing and debugging
@@ -1871,12 +1908,12 @@ begin
           & std_logic'image(iec_atn_fromcia)
           & " to iec_atn_reflect.";
       end if;
-      iec_clk_reflect <= iec_clk_fromcia;
-      iec_data_reflect <= iec_data_fromcia;
-      iec_atn_reflect <= iec_atn_fromcia;
-      iec_clk_o <= iec_clk_fromcia;
-      iec_data_o <= iec_data_fromcia;
-      iec_atn_o <= iec_atn_fromcia;
+      iec_clk_reflect <= iec_clk_fromcia and (not iec_hwa_clk);
+      iec_data_reflect <= iec_data_fromcia and (not iec_hwa_data);
+      iec_atn_reflect <= iec_atn_fromcia and iec_hwa_atn;
+      iec_clk_o <= iec_clk_fromcia and (not iec_hwa_clk);
+      iec_data_o <= iec_data_fromcia and (not iec_hwa_data);
+      iec_atn_o <= iec_atn_fromcia and iec_hwa_atn;
 
       seg_led(12) <= eth_scancode_toggle;
       seg_led(11) <= last_scan_code(12);
