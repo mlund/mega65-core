@@ -801,24 +801,24 @@ begin
     );
   end block;
 
-  iec0: if target = megaphoner4 or target = megaphoner3 generate
+  iec0: if target = mega65r5 or target = mega65r4 or target = mega65r3 generate
     iecserial0: entity work.iec_serial
       generic map ( cpu_frequency => cpu_frequency )
       port map (
         clock => cpuclock,
-        clock81 => pixelclock,
+        clock81 => pixelclk,
         irq => iec_irq,
         
-        fastio_addr => fastio_addr,
-        fastio_write => fastio_write,
-        fastio_read => fastio_read,
-        fastio_rdata => fastio_rdata,
-        fastio_wdata => fastio_wdata,
+        fastio_addr => unsigned(address),
+        fastio_write => w,
+        fastio_read => r,
+        std_logic_vector(fastio_rdata) => data_o,
+        fastio_wdata => unsigned(data_i),
         
         iec_reset => iec_hwa_reset,
         iec_atn => iec_hwa_atn,
         iec_clk_en_n => iec_hwa_clk,
-        iec_data_en_n => iec_data_data,
+        iec_data_en_n => iec_hwa_data,
         iec_srq_en_n => iec_hwa_srq,
 --      iec_clk_o => ,
 --      iec_data_o => ,
