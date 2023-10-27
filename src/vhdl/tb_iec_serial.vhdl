@@ -873,6 +873,7 @@ begin
         iec_rx(x"2C");
         iec_rx(x"20");
         iec_rx(x"4F");
+        iec_rx(x"4B");
         iec_rx(x"2C");
         iec_rx(x"30");
         iec_rx(x"30");
