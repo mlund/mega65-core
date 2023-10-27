@@ -103,6 +103,8 @@ architecture vapourware of cpu6502 is
     idecode,
     byte2_fetch,
     byte3_fetch,
+    jmp_vector,
+    jmp_vector2,
     load,
     store,
     jsrhi,
@@ -606,6 +608,18 @@ begin
           when byte3_fetch =>
             reg_addr(15 downto 8) <= data_i;
             case reg_mode is
+              when M_INNNN =>
+                case reg_instruction is
+                  when I_JMP =>                               
+                    address(15 downto 8) <= data_i;
+                    address(7 downto 0) <= reg_addr(7 downto 0);
+                    reg_addr(15 downto 8) <= data_i;
+                    cpu_state <= jmp_vector;
+                  when others =>
+                    assert false report "Unimplemented ($nnnn) instruction " & instruction'image(reg_instruction);
+                end case;
+                
+
               when M_NNNN | M_NNNNX | M_NNNNY =>
 
                 -- Default to absolute unindexed addressing mode
@@ -647,12 +661,21 @@ begin
                   when I_STY => data_o <= reg_y; write_n <= '0'; cpu_state <= opcode_fetch;
                   when others =>
                     assert false report "Unimplemented absolute mode instruction " & instruction'image(reg_instruction);
-                end case;
+                end case;                
               when others =>
                 assert false report "Hit unimplemented addressing mode " & addressingmode'image(reg_mode);
                 null;
             end case;          
 
+          when jmp_vector =>
+            reg_pc(7 downto 0) <= data_i;
+            address <= reg_addr + 1;
+            cpu_state <= jmp_vector2;
+          when jmp_vector2 =>
+            reg_pc(7 downto 0) <= reg_pc(7 downto 0);
+            reg_pc(15 downto 8) <= data_i;
+            cpu_state <= opcode_fetch;
+            
           when load =>
 
             cpu_state <= idecode;
