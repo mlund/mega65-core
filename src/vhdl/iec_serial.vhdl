@@ -895,6 +895,7 @@ begin
                       wait_clk_low <= '1';
           when 302 => if wait_usec = 0 then
                         report "Acknowledging EOI";
+                        eoi_detected <= '1';
                         d('0');
                         micro_wait(80);
                       end if;
