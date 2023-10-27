@@ -519,6 +519,11 @@ begin
       if fastio_rdata(1)='1' then
         assert false report "Expected to not see TIMEOUT indicated in bit 1 of $D698, but it was";
       end if;
+      if fastio_rdata(6)='1' then
+        report "Saw EOI";
+      else
+        report "Character received without EOI";
+      end if;
 
       -- Read data byte and check against expected
       fastio_addr(3 downto 0) <= x"9";
@@ -862,12 +867,19 @@ begin
 
         report "IEC: Trying to receive a byte";
 
-        -- Check for first 5 bytes of "00, OK..." message
+        -- Check for "00, OK,00,00" message
         iec_rx(x"30");
         iec_rx(x"30");
         iec_rx(x"2C");
         iec_rx(x"20");
         iec_rx(x"4F");
+        iec_rx(x"2C");
+        iec_rx(x"30");
+        iec_rx(x"30");
+        iec_rx(x"2C");
+        iec_rx(x"30");
+        iec_rx(x"30");
+        iec_rx(x"0D");
         
       end if;
     end loop;
