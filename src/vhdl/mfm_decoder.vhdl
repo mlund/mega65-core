@@ -444,9 +444,11 @@ begin
           -- with odd and even bytes separately, so we only see the top half in
           -- the upper nybl. Then the even bits of the track number in the lower
           -- nybl. So we have to check only the top 4 bits.
-          if byte_in(7 downto 4) = x"F0" then
+          report "Saw byte $" & to_hexstring(byte_in) & " after 2 syncs";
+          if byte_in(7 downto 4) = x"F" then
             -- Amiga sector marker.
             -- See info block at top of file for how we have to handle these
+            report "AMIGA: Looks like an Amiga sector.";
             amiga_byte_0 <= byte_in;
             state <= AmigaByte1;
           end if;
@@ -526,45 +528,50 @@ begin
               state <= AmigaByte3;
             when AmigaByte3 =>
               -- Decode the Amiga bytes
-              amiga_byte_0(7) <= amiga_byte_2(7);
-              amiga_byte_0(6) <= amiga_byte_0(7);
-              amiga_byte_0(5) <= amiga_byte_2(6);
-              amiga_byte_0(4) <= amiga_byte_0(6);
-              amiga_byte_0(3) <= amiga_byte_2(5);
-              amiga_byte_0(2) <= amiga_byte_0(5);
-              amiga_byte_0(1) <= amiga_byte_2(4);
-              amiga_byte_0(0) <= amiga_byte_0(4);
+              amiga_byte_0(6) <= amiga_byte_2(7);
+              amiga_byte_0(7) <= amiga_byte_0(7);
+              amiga_byte_0(4) <= amiga_byte_2(6);
+              amiga_byte_0(5) <= amiga_byte_0(6);
+              amiga_byte_0(2) <= amiga_byte_2(5);
+              amiga_byte_0(3) <= amiga_byte_0(5);
+              amiga_byte_0(0) <= amiga_byte_2(4);
+              amiga_byte_0(1) <= amiga_byte_0(4);
 
-              amiga_byte_1(7) <= amiga_byte_2(3);
-              amiga_byte_1(6) <= amiga_byte_0(3);
-              amiga_byte_1(5) <= amiga_byte_2(2);
-              amiga_byte_1(4) <= amiga_byte_0(2);
-              amiga_byte_1(3) <= amiga_byte_2(1);
-              amiga_byte_1(2) <= amiga_byte_0(1);
-              amiga_byte_1(1) <= amiga_byte_2(0);
-              amiga_byte_1(0) <= amiga_byte_0(0);
+              amiga_byte_1(6) <= amiga_byte_2(3);
+              amiga_byte_1(7) <= amiga_byte_0(3);
+              amiga_byte_1(4) <= amiga_byte_2(2);
+              amiga_byte_1(5) <= amiga_byte_0(2);
+              amiga_byte_1(2) <= amiga_byte_2(1);
+              amiga_byte_1(3) <= amiga_byte_0(1);
+              amiga_byte_1(0) <= amiga_byte_2(0);
+              amiga_byte_1(1) <= amiga_byte_0(0);
 
-              amiga_byte_2(7) <= amiga_byte_3(7);
-              amiga_byte_2(6) <= amiga_byte_1(7);
-              amiga_byte_2(5) <= amiga_byte_3(6);
-              amiga_byte_2(4) <= amiga_byte_1(6);
-              amiga_byte_2(3) <= amiga_byte_3(5);
-              amiga_byte_2(2) <= amiga_byte_1(5);
-              amiga_byte_2(1) <= amiga_byte_3(4);
-              amiga_byte_2(0) <= amiga_byte_1(4);
+              amiga_byte_2(6) <= amiga_byte_3(7);
+              amiga_byte_2(7) <= amiga_byte_1(7);
+              amiga_byte_2(4) <= amiga_byte_3(6);
+              amiga_byte_2(5) <= amiga_byte_1(6);
+              amiga_byte_2(2) <= amiga_byte_3(5);
+              amiga_byte_2(3) <= amiga_byte_1(5);
+              amiga_byte_2(0) <= amiga_byte_3(4);
+              amiga_byte_2(1) <= amiga_byte_1(4);
 
-              amiga_byte_3(7) <= amiga_byte_3(3);
-              amiga_byte_3(6) <= amiga_byte_1(3);
-              amiga_byte_3(5) <= amiga_byte_3(2);
-              amiga_byte_3(4) <= amiga_byte_1(2);
-              amiga_byte_3(3) <= amiga_byte_3(1);
-              amiga_byte_3(2) <= amiga_byte_1(1);
-              amiga_byte_3(1) <= amiga_byte_3(0);
-              amiga_byte_3(0) <= amiga_byte_1(0);
+              amiga_byte_3(6) <= amiga_byte_3(3);
+              amiga_byte_3(7) <= amiga_byte_1(3);
+              amiga_byte_3(4) <= amiga_byte_3(2);
+              amiga_byte_3(5) <= amiga_byte_1(2);
+              amiga_byte_3(2) <= amiga_byte_3(1);
+              amiga_byte_3(3) <= amiga_byte_1(1);
+              amiga_byte_3(0) <= amiga_byte_3(0);
+              amiga_byte_3(1) <= amiga_byte_1(0);
 
               state <= AmigaDecodeHeader;
 
             when AmigaDecodeHeader =>
+              report "AMIGA: Decoded header bytes ="
+                & " $" & to_hexstring(amiga_byte_0)
+                & " $" & to_hexstring(amiga_byte_1)
+                & " $" & to_hexstring(amiga_byte_2)
+                & " $" & to_hexstring(amiga_byte_3);
               if amiga_byte_0 = x"FF" then
                 seen_sector <= amiga_byte_2;
                 seen_track <= amiga_byte_1;
