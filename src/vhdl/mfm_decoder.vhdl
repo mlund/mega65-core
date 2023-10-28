@@ -546,22 +546,22 @@ begin
               amiga_byte_1(0) <= amiga_byte_2(0);
               amiga_byte_1(1) <= amiga_byte_0(0);
 
-              amiga_byte_2(6) <= amiga_byte_3(7);
+              amiga_byte_2(6) <= byte_in(7);
               amiga_byte_2(7) <= amiga_byte_1(7);
-              amiga_byte_2(4) <= amiga_byte_3(6);
+              amiga_byte_2(4) <= byte_in(6);
               amiga_byte_2(5) <= amiga_byte_1(6);
-              amiga_byte_2(2) <= amiga_byte_3(5);
+              amiga_byte_2(2) <= byte_in(5);
               amiga_byte_2(3) <= amiga_byte_1(5);
-              amiga_byte_2(0) <= amiga_byte_3(4);
+              amiga_byte_2(0) <= byte_in(4);
               amiga_byte_2(1) <= amiga_byte_1(4);
 
-              amiga_byte_3(6) <= amiga_byte_3(3);
+              amiga_byte_3(6) <= byte_in(3);
               amiga_byte_3(7) <= amiga_byte_1(3);
-              amiga_byte_3(4) <= amiga_byte_3(2);
+              amiga_byte_3(4) <= byte_in(2);
               amiga_byte_3(5) <= amiga_byte_1(2);
-              amiga_byte_3(2) <= amiga_byte_3(1);
+              amiga_byte_3(2) <= byte_in(1);
               amiga_byte_3(3) <= amiga_byte_1(1);
-              amiga_byte_3(0) <= amiga_byte_3(0);
+              amiga_byte_3(0) <= byte_in(0);
               amiga_byte_3(1) <= amiga_byte_1(0);
 
               state <= AmigaDecodeHeader;
@@ -573,6 +573,7 @@ begin
                 & " $" & to_hexstring(amiga_byte_2)
                 & " $" & to_hexstring(amiga_byte_3);
               if amiga_byte_0 = x"FF" then
+                report "AMIGA: Data type field = $FF, treating as Amiga data sector. Reading 25 bytes of header data.";
                 seen_sector <= amiga_byte_2;
                 seen_track <= amiga_byte_1;
                 seen_side <= x"00"; -- Amiga disks don't encode the side
@@ -597,9 +598,12 @@ begin
                   sector_found <= '1';
                   seen_valid <= '1';
                   byte_count <= 0;
+                  report "AMIGA: Found sector to satisfy request: track $" & to_hexstring(seen_track) & ", sector $" & to_hexstring(seen_sector)
+                    & ". Proceeding to read sector data.";
                   state <= AmigaSectorData;
                 else
                   seen_valid <= '0';
+                  report "AMIGA: Track and sector do not match requested. Ignoring sector.";
                   state <= WaitingForSync;
                 end if;
               end if;
@@ -614,11 +618,13 @@ begin
               if byte_count < sector_size then
                 byte_count <= byte_count + 1;
               else
+                report "AMIGA: Read complete sector. Signalling sector_end and clearing crc_error.";
                 -- We ignore CRC for Amiga disks for now.
                 crc_error <= '0';
                 -- Report end of sector
                 sector_end <= '1';
                 sector_found <= '0';
+                state <= WaitingForSync;
               end if;
             when TrackNumber =>
               seen_track <= byte_in;
