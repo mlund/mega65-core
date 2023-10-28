@@ -45,20 +45,20 @@ begin
       crc_ready <= ready;
       crc_value <= value;
       if ready='1' and (last_crc /= value) then
-        report "CRC" & integer'image(id) & " value is $" & to_hstring(value);
+        -- report "CRC" & integer'image(id) & " value is $" & to_hstring(value);
         last_crc := value;
       end if;
 
       if crc_feed='1' then
-        report "CRC" & integer'image(id) & " buffering byte $" & to_hstring(crc_byte);
+        -- report "CRC" & integer'image(id) & " buffering byte $" & to_hstring(crc_byte);
         byte_buffered <= '1';
         buffered_byte <= crc_byte;
       end if;
       
       last_crc_reset <= crc_reset;
-      if crc_reset='1'  and last_crc_reset='0' then
-        report "CRC" & integer'image(id) & " reset asserted";
-      end if;
+--      if crc_reset='1'  and last_crc_reset='0' then
+--        report "CRC" & integer'image(id) & " reset asserted";
+--      end if;
       
       if crc_reset = '1' then
         value <= crc_init;
@@ -96,9 +96,9 @@ begin
 
         byte(7 downto 1) <= byte(6 downto 0);
 
-        report "CRC" & integer'image(id) & " feeding bit "
-          & std_logic'image(byte(7))
-          &" bits_left=" & integer'image(bits_left);
+--        report "CRC" & integer'image(id) & " feeding bit "
+--          & std_logic'image(byte(7))
+--          &" bits_left=" & integer'image(bits_left);
         
         bits_left <= bits_left - 1;
       else
@@ -107,7 +107,7 @@ begin
           bits_left <= 8;
           byte <= buffered_byte;
           ready <= '0';
-          report "CRC" & integer'image(id) & " fed with $" & to_hstring(crc_byte);
+--          report "CRC" & integer'image(id) & " fed with $" & to_hstring(crc_byte);
           byte_buffered <= '0';
         else
           ready <= '1';          

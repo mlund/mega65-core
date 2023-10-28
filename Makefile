@@ -517,9 +517,10 @@ MFMTESTSRCS=	$(VHDLSRCDIR)/mfm_test.vhdl $(VHDLSRCDIR)/mfm_bits_to_gaps.vhdl $(V
 simulatemfm:	$(GHDL_DEPEND) $(MFMTESTSRCS)
 	$(info =============================================================)
 	$(info ~~~~~~~~~~~~~~~~> Making: $@)
-	$(GHDL) -i $(MFMTESTSRCS)
-	$(GHDL) -m mfm_test
-	$(GHDL) -r mfm_test --assert-level=warning
+	$(NVC) -M 256m -L . -a --relaxed src/vhdl/cputypes.vhdl src/vhdl/crc1581.vhdl src/vhdl/mfm_bits_to_gaps.vhdl src/vhdl/mfm_gaps.vhdl src/vhdl/mfm_quantise_gaps.vhdl src/vhdl/mfm_gaps_to_bits.vhdl src/vhdl/mfm_bits_to_bytes.vhdl src/vhdl/raw_bits_to_gaps.vhdl src/vhdl/rll27_bits_to_gaps.vhdl src/vhdl/rll27_quantise_gaps.vhdl src/vhdl/rll27_quantise_gaps.vhdl src/vhdl/rll27_gaps_to_bits.vhdl src/vhdl/cputypes.vhdl src/vhdl/debugtools.vhdl src/vhdl/mfm_decoder.vhdl src/vhdl/mfm_test.vhdl -e mfm_test -r
+#	$(GHDL) -i $(MFMTESTSRCS)
+#	$(GHDL) -m mfm_test
+#	$(GHDL) -r mfm_test --assert-level=warning
 # for non-mcode ghdl
 #	$(GHDL) -i $(MFMTESTSRCS)
 #	$(GHDL) -m -g mfm_test

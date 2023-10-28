@@ -46,7 +46,7 @@ begin
           bit_count <= 0;
         else
           -- We have the next bit
-          report "B2B: Latching bit " & std_logic'image(bit_in);
+          -- report "B2B: Latching bit " & std_logic'image(bit_in);
           byte_valid <= '0';
           bit_count <= bit_count + 1;
           partial_byte(6 downto 1) <= partial_byte(5 downto 0);
