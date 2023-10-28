@@ -49,8 +49,8 @@ architecture behavior of mfm_test is
   signal last_crc_error : std_logic := '0';
   
   -- The track/sector/side we are being asked to find
-  signal target_track : unsigned(7 downto 0) := x"28";
-  signal target_sector : unsigned(7 downto 0) := x"01";
+  signal target_track : unsigned(7 downto 0) := x"01";
+  signal target_sector : unsigned(7 downto 0) := x"00";
   signal target_side : unsigned(7 downto 0) := x"01";
   signal target_any : std_logic := '0';
 
@@ -331,7 +331,7 @@ begin
 
     wait for 3 ns;
     
-    for i in 1 to 2000000 loop
+    for i in 1 to 20000000 loop
 
       clock325 <= '0';
       pixelclock <= '0';
