@@ -588,13 +588,20 @@ begin
               if amiga_skip_bytes /= 0 then
                 amiga_skip_bytes <= amiga_skip_bytes - 1;
               else
+                found_track <= seen_track;
+                found_sector <= seen_sector;
+                found_side <= seen_side;
+                if to_integer(target_track) = to_integer(seen_track) then
+                  found_track(7) <= '1';
+                end if;
+                if to_integer(target_sector) = to_integer(seen_sector) then
+                  found_sector(7) <= '1';
+                end if;
+                found_side(7) <= '1';
                 if (target_any='1')
                   or (
                     (to_integer(target_track) = to_integer(seen_track))
                     and (to_integer(target_sector) = to_integer(seen_sector))) then
-                  found_track <= seen_track;
-                  found_sector <= seen_sector;
-                  found_side <= seen_side;
                   sector_found <= '1';
                   seen_valid <= '1';
                   byte_count <= 0;
