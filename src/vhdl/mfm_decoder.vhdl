@@ -153,6 +153,10 @@ architecture behavioural of mfm_decoder is
   signal crc_value : unsigned(15 downto 0);
 
   signal amiga_skip_bytes : integer := 0;
+  signal amiga_byte_0 : unsigned(7 downto 0);
+  signal amiga_byte_1 : unsigned(7 downto 0);
+  signal amiga_byte_2 : unsigned(7 downto 0);
+  signal amiga_byte_3 : unsigned(7 downto 0);
   
   type MFMState is (
     WaitingForSync,
@@ -166,8 +170,10 @@ architecture behavioural of mfm_decoder is
     SectorData,
     DataCRC1,
     DataCRC2,
-    AmigaTrackNum,
-    AmigaSectorNum,
+    AmigaByte1,
+    AmigaByte2,
+    AmigaByte3,
+    AmigaDecodeHeader,
     AmigaSkipBytes,
     AmigaSectorData,
     TrackInfo,
@@ -433,10 +439,16 @@ begin
       elsif byte_valid_in='1' then
         sync_count <= 0;
         if sync_count = 2 then
-          if byte_in = x"FF" then
+          -- Well, Amiga disks are the only ones we support that have only 2
+          -- sync words before the data. Then it has a $FF, but that is encoded
+          -- with odd and even bytes separately, so we only see the top half in
+          -- the upper nybl. Then the even bits of the track number in the lower
+          -- nybl. So we have to check only the top 4 bits.
+          if byte_in(7 downto 4) = x"F0" then
             -- Amiga sector marker.
             -- See info block at top of file for how we have to handle these
-            state <= AmigaTrackNum;
+            amiga_byte_0 <= byte_in;
+            state <= AmigaByte1;
           end if;
         end if;
         if sync_count = 3 then
@@ -506,15 +518,64 @@ begin
                 track_info_valid <= '1';
               end if;
               state <= WaitingForSync;
-            when AmigaTrackNum =>
-              seen_track <= byte_in;
-              seen_side <= x"00"; -- Amiga disks don't encode the side
-              sector_size <= 512; -- Amiga disks have fixed sector size
-              state <= AmigaSectorNum;
-            when AmigaSectorNum =>
-              seen_sector <= byte_in;
-              amiga_skip_bytes <= 25;
-              state <= AmigaSkipBytes;
+            when AmigaByte1 =>
+              amiga_byte_1 <= byte_in;
+              state <= AmigaByte2;
+            when AmigaByte2 =>
+              amiga_byte_2 <= byte_in;
+              state <= AmigaByte3;
+            when AmigaByte3 =>
+              -- Decode the Amiga bytes
+              amiga_byte_0(7) <= amiga_byte_2(7);
+              amiga_byte_0(6) <= amiga_byte_0(7);
+              amiga_byte_0(5) <= amiga_byte_2(6);
+              amiga_byte_0(4) <= amiga_byte_0(6);
+              amiga_byte_0(3) <= amiga_byte_2(5);
+              amiga_byte_0(2) <= amiga_byte_0(5);
+              amiga_byte_0(1) <= amiga_byte_2(4);
+              amiga_byte_0(0) <= amiga_byte_0(4);
+
+              amiga_byte_1(7) <= amiga_byte_2(3);
+              amiga_byte_1(6) <= amiga_byte_0(3);
+              amiga_byte_1(5) <= amiga_byte_2(2);
+              amiga_byte_1(4) <= amiga_byte_0(2);
+              amiga_byte_1(3) <= amiga_byte_2(1);
+              amiga_byte_1(2) <= amiga_byte_0(1);
+              amiga_byte_1(1) <= amiga_byte_2(0);
+              amiga_byte_1(0) <= amiga_byte_0(0);
+
+              amiga_byte_2(7) <= amiga_byte_3(7);
+              amiga_byte_2(6) <= amiga_byte_1(7);
+              amiga_byte_2(5) <= amiga_byte_3(6);
+              amiga_byte_2(4) <= amiga_byte_1(6);
+              amiga_byte_2(3) <= amiga_byte_3(5);
+              amiga_byte_2(2) <= amiga_byte_1(5);
+              amiga_byte_2(1) <= amiga_byte_3(4);
+              amiga_byte_2(0) <= amiga_byte_1(4);
+
+              amiga_byte_3(7) <= amiga_byte_3(3);
+              amiga_byte_3(6) <= amiga_byte_1(3);
+              amiga_byte_3(5) <= amiga_byte_3(2);
+              amiga_byte_3(4) <= amiga_byte_1(2);
+              amiga_byte_3(3) <= amiga_byte_3(1);
+              amiga_byte_3(2) <= amiga_byte_1(1);
+              amiga_byte_3(1) <= amiga_byte_3(0);
+              amiga_byte_3(0) <= amiga_byte_1(0);
+
+              state <= AmigaDecodeHeader;
+
+            when AmigaDecodeHeader =>
+              if amiga_byte_0 = x"FF" then
+                seen_sector <= amiga_byte_2;
+                seen_track <= amiga_byte_1;
+                seen_side <= x"00"; -- Amiga disks don't encode the side
+                sector_size <= 512; -- Amiga disks have fixed sector size
+                amiga_skip_bytes <= 25;
+                state <= AmigaSkipBytes;
+              else
+                state <= WaitingForSync;
+              end if;
+              
             when AmigaSkipBytes =>
               if amiga_skip_bytes /= 0 then
                 amiga_skip_bytes <= amiga_skip_bytes - 1;
