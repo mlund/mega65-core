@@ -57,7 +57,7 @@ entity container is
          iec_clk_en : out std_logic;
          iec_data_en : out std_logic;
          iec_srq_en : out std_logic;
-         iec_clk_o : out std_logic;
+         iec_clk_o : out std_logic := '0';
          iec_data_o : out std_logic;
          iec_srq_o : out std_logic;
          iec_clk_i : in std_logic;
@@ -424,38 +424,6 @@ begin
       boot_address => icape2_read_val
       );
 
-  iec0: entity work.iec_serial
-    generic map ( cpu_frequency => 40_500_000,
-                  with_debug => true)
-    port map (
-      clock => cpuclock,
-      clock81 => pixelclock,
-
-      fastio_addr => fastio_addr,
-      fastio_write => fastio_write,
-      fastio_read => fastio_read,
-      fastio_wdata => fastio_wdata,
-      fastio_rdata => fastio_rdata,
-
-      debug_state => iec_state,
-      debug_usec => usec,
-      debug_msec => msec,
-      debug_waits => debug_waits,
-      iec_state_reached => iec_state_reached,
-      
-      iec_reset => iec_reset,
-      iec_atn => iec_atn,
-      iec_clk_en => iec_clk_en,
-      iec_data_en => iec_data_en,
-      iec_srq_en => iec_srq_en,
-      iec_clk_o => iec_clk_o,
-      iec_data_o => iec_data_o,
-      iec_srq_o => iec_srq_o,
-      iec_clk_i => iec_clk_i,
-      iec_data_i => iec_data_i,
-      iec_srq_i => iec_srq_i
-      );
-  
   process (pixelclock,cpuclock,clock270,clock27,clock74p22) is
     function nybl2char(n : unsigned(3 downto 0)) return unsigned is
     begin
@@ -613,6 +581,11 @@ begin
             write_val <= val(7 downto 0);
             wcount <= wcount + 1;
 
+--          when x"21" => iec_clk_o <= '1';
+--          when x"22" => iec_clk_o <= '0';
+          when x"23" => iec_clk_en <= '1';
+          when x"24" => iec_clk_en <= '0';
+            
           when others => null;                         
         end case;        
       else

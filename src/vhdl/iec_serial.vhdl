@@ -41,14 +41,11 @@ entity iec_serial is
     --------------------------------------------------
     -- CBM floppy serial port
     --------------------------------------------------
-    iec_reset : out std_logic := '1';
-    iec_atn : out std_logic := '1';
+    iec_reset_n : out std_logic := '1';
+    iec_atn_en_n : out std_logic := '1';
     iec_clk_en_n : out std_logic := '1';
     iec_data_en_n : out std_logic := '1';
     iec_srq_en_n : out std_logic := '1';
-    iec_clk_o : out std_logic;
-    iec_data_o : out std_logic;
-    iec_srq_o : out std_logic;
     iec_clk_i : in std_logic;
     iec_data_i : in std_logic;
     iec_srq_i : in std_logic
@@ -187,7 +184,7 @@ begin
         report "SIGNAL: Setting DATA to " & std_logic'image(v);
         last_iec_data <= v;
       end if;
-      iec_data_o <= v; iec_data_en_n <= v;
+      iec_data_en_n <= v;
       iec_data_o_int <= v;
     end procedure;
     procedure c(v : std_logic) is
@@ -196,7 +193,7 @@ begin
         report "SIGNAL: Setting CLK to " & std_logic'image(v);
         last_iec_clk <= v;
       end if;
-      iec_clk_o <= v; iec_clk_en_n <= v;
+      iec_clk_en_n <= v;
       iec_clk_o_int <= v;
     end procedure;
     procedure s(v : std_logic) is
@@ -205,13 +202,13 @@ begin
         report "SIGNAL: Setting SRQ to " & std_logic'image(v);
         last_iec_srq <= v;
       end if;
-      iec_srq_o <= v; iec_srq_en_n <= v;
+      iec_srq_en_n <= v;
       iec_srq_o_int <= v;
     end procedure;
     procedure a(v : std_logic) is
     begin
       report "SIGNAL: Setting ATN to " & std_logic'image(v);
-      iec_atn <= v;
+      iec_atn_en_n <= v;
       iec_atn_int <= v;
     end procedure;
     procedure iec_data_out_rotate is
@@ -442,11 +439,11 @@ begin
           when x"73" => -- Pull SRQ line low to 0V (bitbashing)
             s('0');
           when x"52" => -- Drive IEC reset pin 5V
-            iec_reset <= '1';
+            iec_reset_n <= '1';
             iec_reset_int <= '1';
             iec_dev_listening <= '0';
           when x"72" => -- Drive IEC reset pin 0V
-            iec_reset <= '0';
+            iec_reset_n <= '0';
             iec_reset_int <= '0';            
             iec_dev_listening <= '0';
 
