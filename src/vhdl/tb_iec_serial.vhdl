@@ -30,7 +30,7 @@ architecture test_arch of tb_iec_serial is
 
   signal drive_cycle_countdown : integer := 0;
 
-  signal iec_reset : std_logic;
+  signal iec_reset_n : std_logic;
   signal iec_atn : std_logic;
   signal iec_clk_en_n : std_logic;
   signal iec_data_en_n : std_logic;
@@ -83,14 +83,11 @@ begin
 
     iec_state_reached => iec_state_reached,
 
-    iec_reset => iec_reset,
-    iec_atn => iec_atn,
+    iec_reset_n => iec_reset_n,
+    iec_atn_en_n => iec_atn,
     iec_clk_en_n => iec_clk_en_n,
     iec_data_en_n => iec_data_en_n,
     iec_srq_en_n => iec_srq_en_n,
-    iec_clk_o => iec_clk_o,
-    iec_data_o => iec_data_o,
-    iec_srq_o => iec_srq_o,
     iec_clk_i => iec_clk_i,
     iec_data_i => iec_data_i,
     iec_srq_i => iec_srq_i
