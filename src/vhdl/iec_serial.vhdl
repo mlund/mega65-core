@@ -142,7 +142,7 @@ begin
   -- @IO:GS $D698.5 AUTOIEC:STSRQ State of SRQ line
   -- @IO:GS $D698.4 AUTOIEC:STVERIFY Verify error occurred
   -- @IO:GS $D698.3 AUTOIEC:STC State of CLK line
-  -- @IO:GS $D698.2 AUTOIEC:STD Sate of DATA line
+  -- @IO:GS $D698.2 AUTOIEC:STD State of DATA line
   -- @IO:GS $D698.1 AUTOIEC:STTO Timeout occurred
   -- @IO:GS $D698.0 AUTOIEC:STDDIR Data direction when timeout occurred.
   

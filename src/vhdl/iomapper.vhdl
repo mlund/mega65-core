@@ -849,7 +849,6 @@ begin
     fastio_wdata => unsigned(data_i),
 
     -- CIA port a (VIC-II bank select + IEC serial port)
-    -- XXX Implement connection to internal 1541 drive if drive_connect is asserted
     portain(2 downto 0) => (others => '1'),
     portain(3) => iec_atn_reflect, -- IEC serial ATN
     -- We reflect the output values for CLK and DATA straight back in,
@@ -1914,6 +1913,7 @@ begin
       iec_clk_o <= iec_clk_fromcia and (not iec_hwa_clk);
       iec_data_o <= iec_data_fromcia and (not iec_hwa_data);
       iec_atn_o <= iec_atn_fromcia and iec_hwa_atn;
+      iec_srq_o <= iec_srq_o and (not iec_hwa_srq);
 
       seg_led(12) <= eth_scancode_toggle;
       seg_led(11) <= last_scan_code(12);
