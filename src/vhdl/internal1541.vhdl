@@ -137,9 +137,9 @@ begin
   via2: entity work.mos6522
     generic map ( name => "@$1C00" )
     port map (
-    I_RS   => std_logic_vector(via_address),
-    I_DATA => std_logic_vector(via_data_in),
-    unsigned(O_DATA) => via2_data_out,
+    I_RS   => via_address,
+    I_DATA => via_data_in,
+    O_DATA => via2_data_out,
 
     I_RW_L => cpu_write_n,
     I_CS1  => cs_via2,
@@ -187,9 +187,9 @@ begin
   via1: entity work.mos6522
     generic map ( name => "@$1800" )
     port map (
-    I_RS   => std_logic_vector(via_address),
-    I_DATA => std_logic_vector(via_data_in),
-    unsigned(O_DATA) => via1_data_out,
+    I_RS   => via_address,
+    I_DATA => via_data_in,
+    O_DATA => via1_data_out,
 
     I_RW_L => cpu_write_n,
     I_CS1  => cs_via1,

@@ -335,6 +335,7 @@ PERIPHVHDL=		$(VHDLSRCDIR)/i2c_master.vhdl \
 			$(VHDLSRCDIR)/expansion_port_controller.vhdl \
 			$(VHDLSRCDIR)/slow_devices.vhdl \
 			$(VHDLSRCDIR)/sdcardio.vhdl \
+			$(VHDLSRCDIR)/iec_serial.vhdl \
 			$(AUDIOVHDL) \
 			$(KBDVHDL)
 
@@ -358,6 +359,7 @@ OVERLAYVHDL=		$(VHDLSRCDIR)/lfsr16.vhdl \
 1541VHDL=		$(VHDLSRCDIR)/driverom.vhdl \
 			$(VHDLSRCDIR)/dpram8x4096.vhdl \
 			$(VHDLSRCDIR)/simple_cpu6502.vhdl \
+			$(VHDLSRCDIR)/m6522.vhdl \
 			$(VHDLSRCDIR)/internal1541.vhdl \
 
 SERMONVHDL=		$(VHDLSRCDIR)/ps2_to_uart.vhdl \
@@ -466,9 +468,9 @@ OPL3VERILOG=		$(VERILOGSRCDIR)/calc_phase_inc.v \
 simulate:	$(GHDL_DEPEND) $(SIMULATIONVHDL) $(ASSETS)/synthesised-60ns.dat
 	$(info =============================================================)
 	$(info ~~~~~~~~~~~~~~~~> Making: $@)
-	$(GHDL) -i --work=unisim src/vhdl/my_vcomponents.vhdl src/vhdl/my_bufg.vhdl
-	$(GHDL) -i $(SIMULATIONVHDL)
-	$(GHDL) -m cpu_test
+	$(GHDL) -i -fsynopsys --work=unisim src/vhdl/my_vcomponents.vhdl src/vhdl/my_bufg.vhdl
+	$(GHDL) -i -fsynopsys $(SIMULATIONVHDL)
+	$(GHDL) -m -fsynopsys cpu_test
 	$(GHDL) -r cpu_test # --assert-level=warning
 
 UNISIM_VHDL=/opt/Xilinx/Vivado/2019.2/ids_lite/ISE/vhdl/src/unisims/*.vhd /opt/Xilinx/Vivado/2019.2/ids_lite/ISE/vhdl/src/unisims/primitive/*.vhd
