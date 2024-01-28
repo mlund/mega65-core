@@ -923,7 +923,7 @@ void fetch_rdid(void)
 
   unsigned short i;
 
-#if 1
+#if 0
   // Hardware acclerated CFI block read
   POKE(0xd6cd, 0x02);
   spi_cs_high();
