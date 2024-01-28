@@ -131,8 +131,9 @@ unsigned char j, k;
 unsigned short flash_time = 0, crc_time = 0, load_time = 0;
 
 void flash_inspector(void)
-{
+{  
 #ifdef QSPI_FLASH_INSPECT
+  mhx_set_xy(0, 0);
   addr = 0;
   read_data(addr);
   mhx_writef("Flash @ $%08x:\n", addr);
@@ -140,11 +141,11 @@ void flash_inspector(void)
     if (!(i & 15))
       mhx_writef("+%03x : ", i);
     mhx_writef("%02x", data_buffer[i]);
-    if ((i & 15) == 15)
+    if ((i & 15) == 15) 
       mhx_writef("\n");
   }
 
-  mhx_writef("page_size=%d\n", page_size);
+  mhx_writef("page-size=%d\n", page_size);
 
   while (1) {
     x = 0;
@@ -224,7 +225,9 @@ void flash_inspector(void)
       }
 
       read_data(addr);
-      mhx_writef("%cFlash @ $%08lx:\n", 0x93, addr);
+      mhx_set_xy(0, 0);
+      mhx_clearscreen(' ', mhx_curattr);      
+      mhx_writef("Flash @ $%08lx:\n", addr);
       for (i = 0; i < 256; i++) {
         if (!(i & 15))
           mhx_writef("+%03x : ", i);
@@ -644,9 +647,11 @@ void query_flash_protection(unsigned long addr)
 // TODO: needs return code, as it can fail!
 void erase_sector(unsigned long address_in_sector)
 {
+  //  mhx_writef("Erasing sector at $%08lX", address_in_sector);
+  
   unprotect_flash(address_in_sector);
   //  query_flash_protection(address_in_sector);
-
+  
   // XXX Send Write Enable command (0x06 ?)
   //  mhx_writef("activating write enable...\n");
   spi_write_enable();
@@ -665,6 +670,7 @@ void erase_sector(unsigned long address_in_sector)
     read_sr1();
   }
 
+  
   // XXX Erase 64/256kb (0xdc ?)
   // XXX Erase 4kb sector (0x21 ?)
   //  mhx_writef("erasing sector...\n");
