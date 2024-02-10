@@ -20,7 +20,7 @@ architecture test_arch of tb_cartridges is
     ------------------------------------------------------------------------
     -- CPU side interface
     ------------------------------------------------------------------------
-  signal reset : std_logic;
+  signal reset : std_logic := '1';
 
     
     ------------------------------------------------------------------------
@@ -87,17 +87,24 @@ architecture test_arch of tb_cartridges is
   signal cart_dotclock : std_logic;
   signal cart_reset : std_logic;
 
-  signal cart_nmi : std_logic;
-  signal cart_irq : std_logic;
-  signal cart_dma : std_logic;
+  signal last_cart_phi2 : std_logic := '0';
+  signal last_cart_dotclock : std_logic := '0';
+  signal cart_phi2_ticks : integer := 0;
+  signal cart_dotclock_ticks : integer := 0;
+
+
+  -- Signals on the expansion port
+  signal cart_nmi : std_logic := '1';
+  signal cart_irq : std_logic := '1';
+  signal cart_dma : std_logic := '1';
     
-  signal cart_exrom : std_logic;
+  signal cart_exrom : std_logic := '1';
   signal cart_ba : std_logic;
   signal cart_rw : std_logic;
   signal cart_roml : std_logic;
   signal cart_romh : std_logic;
   signal cart_io1 : std_logic;
-  signal cart_game : std_logic;
+  signal cart_game : std_logic := '1';
   signal cart_io2 : std_logic;
     
   signal cart_d_in : unsigned(7 downto 0);
@@ -185,6 +192,18 @@ begin
         clock41 <= not clock41;
       end if;
       wait for 6.173 ns;
+
+      -- Watch for edges on cartridge clock lines
+      if last_cart_phi2 = '0' and cart_phi2='1' then
+        cart_phi2_ticks <= cart_phi2_ticks + 1;
+      end if;
+      last_cart_phi2 <= cart_phi2;
+
+      if last_cart_dotclock = '0' and cart_dotclock='1' then
+        cart_dotclock_ticks <= cart_dotclock_ticks + 1;
+      end if;
+      last_cart_dotclock <= cart_dotclock;
+      
     end procedure;
 
   begin
@@ -193,7 +212,24 @@ begin
     while test_suite loop
 
       if run("Expansion port PHI2 ticks at ~1MHz") then
-
+        -- Run for 10000 x 6.173 ns = 61730 ns = 61 -- 62 usec
+        for i in 1 to 10000 loop
+          clock_tick;
+        end loop;
+        report integer'image(cart_phi2_ticks) & " PHI2 ticks observed";
+        if cart_phi2_ticks < 61 or cart_phi2_ticks > 62 then
+          assert false report "Expected to see 61 or 62 PHI2 ticks in 61,730ns time-frame";
+        end if;
+      elsif run("Expansion port DOTCLOCK ticks at ~8MHz") then
+        -- Run for 10000 x 6.173 ns = 61730 ns = 488 -- 496 8MHz ticks
+        for i in 1 to 10000 loop
+          clock_tick;
+        end loop;
+        report integer'image(cart_dotclock_ticks) & " DOTCLOCK ticks observed";
+        if cart_dotclock_ticks < 488 or cart_dotclock_ticks > 496 then
+          assert false report "Expected to see 488 to 496 DOTCLOCK ticks in 61,730ns time-frame";
+        end if;
+        
       end if;
     end loop;
     test_runner_cleanup(runner);
