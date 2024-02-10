@@ -445,6 +445,9 @@ begin
 
             cart_busy <= '1';
             cart_a <= cart_access_address(15 downto 0);
+            if target /= mega65r1 then
+              cart_ctrl_dir <= '0'; -- make R/W, /IO1, /IO2 etc output
+            end if;
             cart_rw <= '1';
             cart_data_dir <= not '1';
             cart_data_en <= '0'; -- negative sense on these lines: low = enable
@@ -493,6 +496,9 @@ begin
                   
             if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
             
+              if target /= mega65r1 then
+                cart_ctrl_dir <= '0'; -- make R/W, /IO1, /IO2 etc output
+              end if;
               cart_a <= cart_access_address(15 downto 0);
               cart_rw <= cart_access_read;
               cart_data_dir <= not cart_access_read;
@@ -568,6 +574,9 @@ begin
               cart_io1 <= '1';
               cart_io2 <= '1';
               cart_rw <= '1';
+              if target /= mega65r1 then
+                cart_ctrl_dir <= '0'; -- make R/W, /IO1, /IO2 etc output
+              end if;
             end if;
             read_in_progress <= '0';
             cart_busy <= '0';            
