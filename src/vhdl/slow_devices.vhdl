@@ -198,7 +198,7 @@ begin
       );
 
   cartport0: entity work.expansion_port_controller
-    generic map ( pixelclock_frequency => 80,
+    generic map ( pixelclock_frequency => 81_000_000,
                   target => target
                   )
     port map (
