@@ -117,9 +117,29 @@ architecture behavioural of expansion_port_controller is
   signal joy_counter : integer range 0 to 50 := 0;
   
   -- XXX - Allow varying the bus speed if we know we have a fast
-  -- peripheral
-  -- Workout
-  constant dotclock_increment : unsigned(16 downto 0) := to_unsigned(65536*8*2/pixelclock_frequency,17);
+  -- peripheral.
+  -- But first, we just need this to work properly.
+  -- The old calculation was 1M / pixelclock_frequency, which was 1/81,
+  -- i.e., 0.
+  -- What we really want to know is the ratio of the 8MHz pixel clock
+  -- to the pixel clock, so that we know what fraction of the accumulator
+  -- to add each pixelclock cycle.  We need two edges per dotclock cycle
+  -- so we need two events per 8MHz cycle.
+  -- Because the cartridge port on the MEGA65 is not closely coupled to
+  -- the VIC-IV, we don't have to be too precise here: Just make sure that
+  -- it is at least 8x NTSC C64 speed, so that it can service a 1MHz C64
+  -- cartridge-based program, and not so fast that it causes problems.
+  -- For the normal case, we have 81MHz pixelclock, and we want 8MHz out,
+  -- we should be dividing by about 5 to get the 16 edges per micro-second
+  -- that we need (remember two edges per clock cycle, thus 16/2 = 8 MHz,
+  -- which is what we want).
+  -- Thus we want (pixelclock in MHz)/4 x 2^16 to get the fraction of 2^16 to add to
+  -- a 16-bit counter that we want to overflow whenever a new clock edge should
+  -- occur.  But that requires >32 bits during the calculation.
+  constant pixelclock_mhz : real := Real(pixelclock_frequency) / 1_000_000.0;
+  constant dotclock_increment_real : real := 65536.0/(pixelclock_mhz/(8.0*2.0));
+  constant dotclock_increment : unsigned(16 downto 0) := to_unsigned(Integer(dotclock_increment_real),17);
+
   signal ticker : unsigned(16 downto 0) := to_unsigned(0,17);
   signal phi2_ticker : unsigned(7 downto 0) := to_unsigned(0,8);
   signal reset_counter : integer range 0 to 15 := 0;
@@ -163,7 +183,6 @@ begin
   process (pixelclock)
   begin
     if rising_edge(pixelclock) then
-
 
       ----------------------------------------------------------------------
       -- Allow cartridges to cause interrupts or DMA
@@ -300,7 +319,7 @@ begin
       end if;
       cpu_exrom <= cart_exrom;
       cpu_game <= cart_game;
-      
+
       ticker <= ('0'&ticker(15 downto 0)) + dotclock_increment;
       if ticker(16) = '0' then
         cart_access_read_strobe <= '0';
