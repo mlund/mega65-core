@@ -429,7 +429,8 @@ begin
               cart_probe_count <= (others => '0');
             end if;
             cart_flags <= cart_exrom & cart_game;
-            cart_ctrl_dir <= '1';
+            cart_ctrl_dir <= '1'; -- XXX Is sense the same on R1? This would
+                                  -- make those lines output?
           end if;
           if (reprobe_exrom = '1') and (reset='1') and (reset_counter=0) then
             -- But first, if necessary, re-probe the cartridge control lines
@@ -444,9 +445,11 @@ begin
             -- make R/W open-collector and have a separate read sense on it.
             report "EXROM: Tri-stating cart_exrom,game, setting cart_ctrl_dir=0";
             reprobe_exrom <= '0';
-            cart_ctrl_dir <= '0';
---            cart_exrom <= 'H';
---            cart_game <= 'H';
+            if target = mega65r1 then
+              cart_ctrl_dir <= '0';  -- make R/W, /IO1, /IO2 etc become input
+              cart_exrom <= 'H';
+              cart_game <= 'H';
+            end if;
             probing_exrom <= '1';
           elsif (fake_reset_sequence_phase < 8 ) and (cart_phi2_internal='0') then
             -- Provide fake power-on reset
@@ -465,7 +468,7 @@ begin
             cart_busy <= '1';
             cart_a <= cart_access_address(15 downto 0);
             if target /= mega65r1 then
-              cart_ctrl_dir <= '0'; -- make R/W, /IO1, /IO2 etc output
+              cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
             end if;
             cart_rw <= '1';
             cart_data_dir <= not '1';
@@ -516,7 +519,7 @@ begin
             if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
             
               if target /= mega65r1 then
-                cart_ctrl_dir <= '0'; -- make R/W, /IO1, /IO2 etc output
+                cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
               end if;
               cart_a <= cart_access_address(15 downto 0);
               cart_rw <= cart_access_read;
@@ -594,7 +597,7 @@ begin
               cart_io2 <= '1';
               cart_rw <= '1';
               if target /= mega65r1 then
-                cart_ctrl_dir <= '0'; -- make R/W, /IO1, /IO2 etc output
+                cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
               end if;
             end if;
             read_in_progress <= '0';
