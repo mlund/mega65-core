@@ -42,11 +42,6 @@ architecture test_arch of tb_cartridges is
   signal joya : std_logic_vector(4 downto 0);
   signal joyb : std_logic_vector(4 downto 0);
     
-    ------------------------------------------------------------------------
-    -- Suppress mapping of IO at $DE00-$DFFF if sector buffer mapped
-    ------------------------------------------------------------------------
-  signal sector_buffer_mapped : std_logic := '0';
-
   signal cart_busy : std_logic;
   signal cart_access_count : unsigned(7 downto 0);
     
@@ -137,8 +132,6 @@ begin
       joya => joya,
       joyb => joyb,
 
-      sector_buffer_mapped => sector_buffer_mapped,
-
       cart_busy => cart_busy,
       cart_access_count => cart_access_count,
 
@@ -217,6 +210,14 @@ begin
       for i in 1 to 1400 loop
         clock_tick;
       end loop;
+
+      if cart_ctrl_dir /= '1' then
+        assert false report "cart_ctrl_dir=" & std_logic'image(cart_ctrl_dir) & " instead of 1.";
+      end if;
+      if cart_ctrl_en /= '0' then
+        assert false report "cart_ctrl_en=" & std_logic'image(cart_ctrl_en) & " instead of 0.";
+      end if;
+    
     end procedure;
     
     procedure request_cart_read(addr : unsigned(31 downto 0)) is
