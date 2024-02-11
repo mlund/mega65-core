@@ -208,8 +208,6 @@ architecture Behavioral of container is
   signal slow_prefetched_data : unsigned(7 downto 0);
   signal slow_prefetched_request_toggle : std_logic;
   
-  signal sector_buffer_mapped : std_logic;  
-
   signal pmoda_dummy :  std_logic_vector(7 downto 0) := (others => '1');
 
   signal v_vga_hsync : std_logic;
@@ -596,7 +594,6 @@ begin
         reset => iec_reset_drive,
         cpu_exrom => cpu_exrom,
         cpu_game => cpu_game,
-        sector_buffer_mapped => sector_buffer_mapped,
         
         cart_nmi => '1',
         cart_irq => '1',
@@ -714,7 +711,6 @@ begin
       irq => irq_combined,
       nmi => nmi_combined,
       restore_key => restore_key,
-      sector_buffer_mapped => sector_buffer_mapped,
 
       qspi_clock => qspi_clock,
       qspicsn => qspicsn,

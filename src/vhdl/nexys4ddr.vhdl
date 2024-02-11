@@ -206,9 +206,6 @@ architecture Behavioral of container is
   signal slow_access_wdata : unsigned(7 downto 0);
   signal slow_access_rdata : unsigned(7 downto 0);
 
-  signal sector_buffer_mapped : std_logic;
-
-  
   signal vgaredignore : unsigned(3 downto 0);
   signal vgagreenignore : unsigned(3 downto 0);
   signal vgablueignore : unsigned(3 downto 0);
@@ -438,7 +435,6 @@ begin
       reset => reset_out,
       cpu_exrom => cpu_exrom,
       cpu_game => cpu_game,
-      sector_buffer_mapped => sector_buffer_mapped,
 
       joya => joy3,
       joyb => joy4,
@@ -501,7 +497,6 @@ begin
       irq => irq,
       nmi => nmi,
       restore_key => restore_key,
-      sector_buffer_mapped => sector_buffer_mapped,
 
       eth_load_enable => eth_load_enable,
       

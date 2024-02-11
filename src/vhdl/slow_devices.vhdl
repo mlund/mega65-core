@@ -25,7 +25,6 @@ ENTITY slow_devices IS
     reset : in std_logic;
     cpu_exrom : out std_logic;
     cpu_game : out std_logic;
-    sector_buffer_mapped : in std_logic;
 
     irq_out : out std_logic := '1';
     nmi_out : out std_logic := '1';
@@ -207,7 +206,6 @@ begin
     reset => reset,
     cpu_game => cpu_game,
     cpu_exrom => cpu_exrom,
-    sector_buffer_mapped => sector_buffer_mapped,
     joya => joya,
     joyb => joyb,
 

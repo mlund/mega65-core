@@ -234,8 +234,6 @@ architecture Behavioral of container is
   signal slow_prefetched_data : unsigned(7 downto 0);
   signal slow_prefetched_request_toggle : std_logic;
 
-  signal sector_buffer_mapped : std_logic;
-
   signal kbd_datestamp : unsigned(13 downto 0)  := to_unsigned(0,14);
   signal kbd_commit : unsigned(31 downto 0) := to_unsigned(0,32);
 
@@ -462,7 +460,6 @@ begin
       reset => reset_out,
       cpu_exrom => cpu_exrom,
       cpu_game => cpu_game,
-      sector_buffer_mapped => sector_buffer_mapped,
 
       qspidb => qspidb,
       qspicsn => qspicsn,
@@ -554,7 +551,6 @@ begin
       restore_key => restore_key,
       joyswap_key => joyswap_key,
       osk_toggle_key => osk_toggle_key,
-      sector_buffer_mapped => sector_buffer_mapped,
 
       hyper_addr => hyper_addr,
       hyper_request_toggle => hyper_request_toggle,

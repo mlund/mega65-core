@@ -43,11 +43,6 @@ ENTITY expansion_port_controller IS
     joya : out std_logic_vector(4 downto 0) := "11111";
     joyb : out std_logic_vector(4 downto 0) := "11111";
     
-    ------------------------------------------------------------------------
-    -- Suppress mapping of IO at $DE00-$DFFF if sector buffer mapped
-    ------------------------------------------------------------------------
-    sector_buffer_mapped : in std_logic;
-
     cart_busy : out std_logic := '0';
     cart_access_count : out unsigned(7 downto 0);
     
@@ -465,12 +460,12 @@ begin
               cart_data_dir <= not cart_access_read;
               cart_data_en <= '0'; -- negative sense on these lines: low = enable
               cart_addr_en <= '0'; -- negative sense on these lines: low = enable
-              if cart_access_address(15 downto 8) = x"DE" and sector_buffer_mapped='0' then
+              if cart_access_address(15 downto 8) = x"DE" then
                 cart_io1 <= '0';
               else
                 cart_io1 <= '1';
               end if;
-              if cart_access_address(15 downto 8) = x"DF" and sector_buffer_mapped='0' then
+              if cart_access_address(15 downto 8) = x"DF" then
                 cart_io2 <= '0';
               else
                 cart_io2 <= '1';
