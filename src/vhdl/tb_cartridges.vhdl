@@ -214,7 +214,7 @@ begin
       -- Allow enough time for reset counter to go to zero
       -- in expansion_port_controller, and then for it do do
       -- the simulated C64 reset sequence
-      for i in 1 to 1300 loop
+      for i in 1 to 1400 loop
         clock_tick;
       end loop;
     end procedure;
@@ -243,7 +243,7 @@ begin
       cart_access_address <= addr;
 
       -- Wait for request to be accepted
-      for i in 1 to 100 loop
+      for i in 1 to 1000 loop
         if cart_access_accept_strobe = '1' then
           exit;
         else
@@ -311,8 +311,14 @@ begin
         for addr in 16#8000# to 16#9fff# loop
           request_cart_read(to_unsigned(addr,32));
           saw_signal <= '0';
-          for i in 1 to 100 loop
-            if cart_roml = '0' then
+          -- Each clock_tick is 1/2 a pixelclock tick. This means we need
+          -- at least 2x pixelclock (in Mhz) ticks for a single cart port
+          -- transaction to happen. But we might be part way through a 1MHz
+          -- cycle at that point, so should allow double again, i.e.,
+          -- 81MHz x 4 = 324 cycles
+          for i in 1 to 324 loop
+            if cart_roml = '0' and saw_signal='0' then
+              report "Saw /ROML go low after " & integer'image(i) & " half-ticks.";
               saw_signal <= '1';
             end if;
             if cart_romh = '0' or cart_io1 = '0' or cart_io2 = '0' then
@@ -324,6 +330,9 @@ begin
             end if;
             if last_cart_access_read_toggle /= cart_access_read_toggle then
               last_cart_access_read_toggle <= cart_access_read_toggle;
+              report "cart_access_read_toggle changed from " & std_logic'image(last_cart_access_read_toggle)
+                & " to " & std_logic'image(cart_access_read_toggle)
+                & " after " & integer'image(i) & " ticks.";
               exit;
             else
               clock_tick;

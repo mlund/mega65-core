@@ -62,7 +62,7 @@ ENTITY expansion_port_controller IS
     cart_access_address : in unsigned(31 downto 0);
     cart_access_wdata : in unsigned(7 downto 0);
     cart_access_accept_strobe : out std_logic;
-    cart_access_read_toggle: out std_logic;
+    cart_access_read_toggle: out std_logic := '0';
     
     ------------------------------------------------------------------------
     -- Strobe indicates when we have read data in response to a request
