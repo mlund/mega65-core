@@ -343,6 +343,117 @@ begin
           end if;
             
         end loop;    
+      elsif run("/ROMH is pulled low when accessing $A000-$BFFF") then
+        expansion_port_init;
+        for addr in 16#a000# to 16#bfff# loop
+          request_cart_read(to_unsigned(addr,32));
+          saw_signal <= '0';
+          -- Each clock_tick is 1/2 a pixelclock tick. This means we need
+          -- at least 2x pixelclock (in Mhz) ticks for a single cart port
+          -- transaction to happen. But we might be part way through a 1MHz
+          -- cycle at that point, so should allow double again, i.e.,
+          -- 81MHz x 4 = 324 cycles
+          for i in 1 to 324 loop
+            if cart_romh = '0' and saw_signal='0' then
+              report "Saw /ROMH go low after " & integer'image(i) & " half-ticks.";
+              saw_signal <= '1';
+            end if;
+            if cart_roml = '0' or cart_io1 = '0' or cart_io2 = '0' then
+              assert false report "Saw unexpected activity for address $" & to_hexstring(to_unsigned(addr,32))
+                & ": /ROML=" & std_logic'image(cart_roml)
+                & ", /ROMH=" & std_logic'image(cart_romh)
+                & ", /IO1=" & std_logic'image(cart_io1)
+                & ", /IO2=" & std_logic'image(cart_io2);
+            end if;
+            if last_cart_access_read_toggle /= cart_access_read_toggle then
+              last_cart_access_read_toggle <= cart_access_read_toggle;
+              report "cart_access_read_toggle changed from " & std_logic'image(last_cart_access_read_toggle)
+                & " to " & std_logic'image(cart_access_read_toggle)
+                & " after " & integer'image(i) & " ticks.";
+              exit;
+            else
+              clock_tick;
+            end if;
+          end loop;
+          if saw_signal='0' then
+            assert false report "/ROMH did not go low when accessing address $" & to_hexstring(to_unsigned(addr,32));
+          end if;
+            
+        end loop;    
+      elsif run("/IO1 is pulled low when accessing $DE00-$DEFF") then
+        expansion_port_init;
+        for addr in 16#de00# to 16#deff# loop
+          request_cart_read(to_unsigned(addr,32));
+          saw_signal <= '0';
+          -- Each clock_tick is 1/2 a pixelclock tick. This means we need
+          -- at least 2x pixelclock (in Mhz) ticks for a single cart port
+          -- transaction to happen. But we might be part way through a 1MHz
+          -- cycle at that point, so should allow double again, i.e.,
+          -- 81MHz x 4 = 324 cycles
+          for i in 1 to 324 loop
+            if cart_io1 = '0' and saw_signal='0' then
+              report "Saw /IO1 go low after " & integer'image(i) & " half-ticks.";
+              saw_signal <= '1';
+            end if;
+            if cart_roml = '0' or cart_romh = '0' or cart_io2 = '0' then
+              assert false report "Saw unexpected activity for address $" & to_hexstring(to_unsigned(addr,32))
+                & ": /ROML=" & std_logic'image(cart_roml)
+                & ", /ROMH=" & std_logic'image(cart_romh)
+                & ", /IO1=" & std_logic'image(cart_io1)
+                & ", /IO2=" & std_logic'image(cart_io2);
+            end if;
+            if last_cart_access_read_toggle /= cart_access_read_toggle then
+              last_cart_access_read_toggle <= cart_access_read_toggle;
+              report "cart_access_read_toggle changed from " & std_logic'image(last_cart_access_read_toggle)
+                & " to " & std_logic'image(cart_access_read_toggle)
+                & " after " & integer'image(i) & " ticks.";
+              exit;
+            else
+              clock_tick;
+            end if;
+          end loop;
+          if saw_signal='0' then
+            assert false report "/IO1 did not go low when accessing address $" & to_hexstring(to_unsigned(addr,32));
+          end if;
+            
+        end loop;    
+      elsif run("/IO2 is pulled low when accessing $DE00-$DEFF") then
+        expansion_port_init;
+        for addr in 16#df00# to 16#dfff# loop
+          request_cart_read(to_unsigned(addr,32));
+          saw_signal <= '0';
+          -- Each clock_tick is 1/2 a pixelclock tick. This means we need
+          -- at least 2x pixelclock (in Mhz) ticks for a single cart port
+          -- transaction to happen. But we might be part way through a 1MHz
+          -- cycle at that point, so should allow double again, i.e.,
+          -- 81MHz x 4 = 324 cycles
+          for i in 1 to 324 loop
+            if cart_io2 = '0' and saw_signal='0' then
+              report "Saw /IO2 go low after " & integer'image(i) & " half-ticks.";
+              saw_signal <= '1';
+            end if;
+            if cart_roml = '0' or cart_romh = '0' or cart_io1 = '0' then
+              assert false report "Saw unexpected activity for address $" & to_hexstring(to_unsigned(addr,32))
+                & ": /ROML=" & std_logic'image(cart_roml)
+                & ", /ROMH=" & std_logic'image(cart_romh)
+                & ", /IO1=" & std_logic'image(cart_io1)
+                & ", /IO2=" & std_logic'image(cart_io2);
+            end if;
+            if last_cart_access_read_toggle /= cart_access_read_toggle then
+              last_cart_access_read_toggle <= cart_access_read_toggle;
+              report "cart_access_read_toggle changed from " & std_logic'image(last_cart_access_read_toggle)
+                & " to " & std_logic'image(cart_access_read_toggle)
+                & " after " & integer'image(i) & " ticks.";
+              exit;
+            else
+              clock_tick;
+            end if;
+          end loop;
+          if saw_signal='0' then
+            assert false report "/IO2 did not go low when accessing address $" & to_hexstring(to_unsigned(addr,32));
+          end if;
+            
+        end loop;    
             
       end if;
     end loop;
