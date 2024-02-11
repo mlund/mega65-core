@@ -173,6 +173,14 @@ architecture behavioural of expansion_port_controller is
   signal oride_io2 : std_logic := '0';
   signal oride_romh : std_logic := '0';
   signal oride_roml: std_logic := '0';
+
+  signal next_rw : std_logic := '1';
+  signal next_io1 : std_logic := '1';
+  signal next_io2 : std_logic := '1';
+  signal next_data_dir : std_logic := '1';
+  signal next_data_en : std_logic := '1';
+  signal next_d : unsigned(7 downto 0) := x"ff";
+  signal next_ctrl_dir : std_logic := '1';
   
 begin
 
@@ -224,7 +232,7 @@ begin
 
       if (not_joystick_cartridge = '0' or force_joystick_cartridge='1') and (disable_joystick_cartridge='0') then
         -- Set data lines to input
-        cart_data_en <= '0'; -- negative sense on these lines: low = enable
+        next_data_en <= '0'; -- negative sense on these lines: low = enable
         cart_addr_en <= '0'; -- negative sense on these lines: low = enable
         cart_a <= (others => 'Z');
 
@@ -267,17 +275,17 @@ begin
               joyb <= "11111";
             end if;
           end if;
-          cart_d <= (others => 'Z');
-          cart_data_dir <= '1';
+          next_d <= (others => 'Z');
+          next_data_dir <= '1';
           cart_laddr_dir <= '1';
-          cart_d(7 downto 0) <= (others => '1');
+          next_d(7 downto 0) <= (others => '1');
           cart_a(7 downto 0) <= (others => '1');
         end if;
         if joy_counter = 5 then
           -- Tristate lines to allow time for them to be pulled low again if
           -- required
-          cart_data_dir <= '0';
-          cart_d <= (others => 'Z');
+          next_data_dir <= '0';
+          next_d <= (others => 'Z');
           cart_laddr_dir <= '0';
           cart_a(7 downto 0) <= (others => 'Z');
         end if;
@@ -306,6 +314,20 @@ begin
       else
         -- Tick dot clock
         report "dotclock tick";
+
+        cart_rw <= next_rw;
+        cart_io1 <= next_io1;
+        cart_io2 <= next_io2;
+        if next_data_dir='1' then
+          cart_d <= (others => 'Z');
+        else
+          cart_d <= next_d;
+        end if;
+        cart_data_dir <= next_data_dir;
+        cart_data_en <= next_data_en;
+        cart_ctrl_dir <= next_ctrl_dir;
+        
+        
         cart_dotclock <= not cart_dotclock_internal;
         cart_dotclock_internal <= not cart_dotclock_internal;
         if phi2_ticker /= 7 then
@@ -388,8 +410,9 @@ begin
           else
             cart_access_read_strobe <= '0';
           end if;         
+
           -- Tri-state the bus when not active
-          cart_data_en <= '1';
+          next_data_en <= '1';
           cart_addr_en <= '1';
 
           -- Present next bus request if we have one
@@ -413,9 +436,9 @@ begin
             cart_busy <= '1';
             cart_a <= cart_access_address(15 downto 0);
             cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
-            cart_rw <= '1';
-            cart_data_dir <= not '1';
-            cart_data_en <= '0'; -- negative sense on these lines: low = enable
+            next_rw <= '1';
+            next_data_dir <= not '1';
+            next_data_en <= '0'; -- negative sense on these lines: low = enable
             cart_addr_en <= '0'; -- negative sense on these lines: low = enable
 
             -- Count number of cartridge accesses to aid debugging
@@ -472,19 +495,19 @@ begin
             
               cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
               cart_a <= cart_access_address(15 downto 0);
-              cart_rw <= cart_access_read;
-              cart_data_dir <= not cart_access_read;
-              cart_data_en <= '0'; -- negative sense on these lines: low = enable
+              next_rw <= cart_access_read;
+              next_data_dir <= not cart_access_read;
+              next_data_en <= '0'; -- negative sense on these lines: low = enable
               cart_addr_en <= '0'; -- negative sense on these lines: low = enable
               if cart_access_address(15 downto 8) = x"DE" then
-                cart_io1 <= '0';
+                next_io1 <= '0';
               else
-                cart_io1 <= '1';
+                next_io1 <= '1';
               end if;
               if cart_access_address(15 downto 8) = x"DF" then
-                cart_io2 <= '0';
+                next_io2 <= '0';
               else
-                cart_io2 <= '1';
+                next_io2 <= '1';
               end if;
 
               -- Drive ROML and ROMH
@@ -527,10 +550,10 @@ begin
               cart_a <= (others => 'Z');
               cart_roml <= '1';
               cart_romh <= '1';
-              cart_io1 <= '1';
-              cart_io2 <= '1';
-              cart_rw <= '1';
-              cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
+              next_io1 <= '1';
+              next_io2 <= '1';
+              next_rw <= '1';
+              next_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
             end if;
             read_in_progress <= '0';
             cart_busy <= '0';            
