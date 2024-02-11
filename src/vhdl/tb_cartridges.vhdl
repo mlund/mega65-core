@@ -109,6 +109,8 @@ architecture test_arch of tb_cartridges is
 
   signal saw_signal : std_logic := '0';
   signal last_cart_access_read_toggle : std_logic := '0';
+
+  signal cm_last_phi2 : std_logic := '0';
   
 begin
 
@@ -181,6 +183,25 @@ begin
 
     variable v : unsigned(15 downto 0);
 
+    procedure model_64k_cart is
+    begin
+      cm_last_phi2 <= cart_phi2;
+      if cm_last_phi2='0' and cart_phi2='1' then
+        if cart_rw='1' then
+          report "CART64K: PHI2 rising edge: READ $" & to_hexstring(cart_a);
+          if cart_roml='0' then
+            cart_d <= cart_a(7 downto 0);
+          else
+            cart_d <= (others => 'Z');
+          end if;            
+        else
+          report "CART64K: PHI2 rising edge: WRITE $" & to_hexstring(cart_a) & " <- $" & to_hexstring(cart_d_in);
+          cart_d <= (others => 'Z');
+        end if;          
+      end if;
+      
+    end procedure;    
+      
     procedure clock_tick is
     begin
       pixelclock <= not pixelclock;
@@ -199,6 +220,9 @@ begin
         cart_dotclock_ticks <= cart_dotclock_ticks + 1;
       end if;
       last_cart_dotclock <= cart_dotclock;
+
+      -- And model a simple 64KB cartridge
+      model_64k_cart;
       
     end procedure;
 
@@ -219,7 +243,7 @@ begin
       end if;
     
     end procedure;
-    
+
     procedure request_cart_read(addr : unsigned(31 downto 0)) is
     begin
 
@@ -476,6 +500,50 @@ begin
             
         end loop;    
             
+      elsif run("Reading ROML region reads correct values") then
+        expansion_port_init;
+        for addr in 16#8000# to 16#9fff# loop
+          request_cart_read(to_unsigned(addr,32));
+          saw_signal <= '0';
+          -- Each clock_tick is 1/2 a pixelclock tick. This means we need
+          -- at least 2x pixelclock (in Mhz) ticks for a single cart port
+          -- transaction to happen. But we might be part way through a 1MHz
+          -- cycle at that point, so should allow double again, i.e.,
+          -- 81MHz x 4 = 324 cycles
+          for i in 1 to 324 loop
+            if cart_roml = '0' and saw_signal='0' then
+              report "Saw /ROML go low after " & integer'image(i) & " half-ticks.";
+              saw_signal <= '1';
+            end if;
+            if cart_romh = '0' or cart_io1 = '0' or cart_io2 = '0' then
+              assert false report "Saw unexpected activity for address $" & to_hexstring(to_unsigned(addr,32))
+                & ": /ROML=" & std_logic'image(cart_roml)
+                & ", /ROMH=" & std_logic'image(cart_romh)
+                & ", /IO1=" & std_logic'image(cart_io1)
+                & ", /IO2=" & std_logic'image(cart_io2);
+            end if;
+            if last_cart_access_read_toggle /= cart_access_read_toggle then
+              last_cart_access_read_toggle <= cart_access_read_toggle;
+              report "cart_access_read_toggle changed from " & std_logic'image(last_cart_access_read_toggle)
+                & " to " & std_logic'image(cart_access_read_toggle)
+                & " after " & integer'image(i) & " ticks.";
+              exit;
+            else
+              clock_tick;
+            end if;
+          end loop;          
+          if saw_signal='0' then
+            assert false report "/ROML did not go low when accessing address $" & to_hexstring(to_unsigned(addr,32));
+          end if;
+
+          report "Reading $" & to_hexstring(to_unsigned(addr,32)) & ". Value read = $" & to_hexstring(cart_d)
+            & " (" & to_01UXstring(std_logic_vector(cart_d)) & ").";
+          
+          if cart_d /= to_unsigned(addr,8) then
+            assert false report "Expected to read $" & to_hexstring(to_unsigned(addr,8));
+          end if;
+            
+        end loop;    
       end if;
     end loop;
     test_runner_cleanup(runner);

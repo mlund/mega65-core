@@ -12,6 +12,7 @@ package debugtools is
     function to_hexstring(sv: Std_Logic_Vector) return string;
     function to_hexstring(sv: unsigned) return string;
     function to_hexstring(sv: signed) return string;
+    function to_01UXstring(sv : std_logic_vector) return string;
     function safe_to_integer(sv : unsigned) return integer;
     procedure HWRITE(L:inout LINE; VALUE:in BIT_VECTOR;
     JUSTIFIED:in SIDE := RIGHT; FIELD:in WIDTH := 0);
@@ -19,7 +20,7 @@ package debugtools is
 end debugtools;
 
 package body debugtools is
-
+  
       procedure HWRITE(L:inout LINE; VALUE:in BIT_VECTOR;
     JUSTIFIED:in SIDE := RIGHT; FIELD:in WIDTH := 0) is      
       variable quad: bit_vector(0 to 3);
@@ -56,7 +57,34 @@ package body debugtools is
       end loop;
       write(L, s, JUSTIFIED, FIELD);
     end HWRITE; 
-    
+
+    function to_char(s : std_logic) return character is
+    begin
+      case s is
+        when '0' => return '0';
+        when '1' => return '1';
+        when 'U' => return 'U';
+        when 'X' => return 'X';
+        when 'L' => return 'L';
+        when 'H' => return 'H';
+        when 'Z' => return 'Z';
+        when others => return '?';
+      end case;
+    end;
+      
+    function to_01UXstring(sv : std_logic_vector) return string is
+      use Std.TextIO.all;
+      
+      constant ne:   integer := (sv'length);
+      variable s:    string(0 to ne-1);
+
+    begin
+      for i in 0 to ne-1 loop
+        s(i) := to_char(sv(i));
+      end loop;
+      return s;
+    end;
+        
     function to_string(sv: Std_Logic_Vector) return string is
       use Std.TextIO.all;
       
