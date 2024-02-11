@@ -144,12 +144,6 @@ architecture behavioural of expansion_port_controller is
   signal phi2_ticker : unsigned(7 downto 0) := to_unsigned(0,8);
   signal reset_counter : integer range 0 to 15 := 0;
 
-  -- Asserted whenever we need to re-probe the EXROM and GAME lines
-  -- We do this on reset, or whenever $DExx or $DFxx is accessed, so that
-  -- cartridges with memory banking can work.
-  signal reprobe_exrom : std_logic := '1';
-  signal probing_exrom : std_logic := '0';
-
   -- Are we already servicing a read?
   signal read_in_progress : std_logic := '0';
   signal cart_access_read_toggle_internal : std_logic := '0';
@@ -159,7 +153,6 @@ architecture behavioural of expansion_port_controller is
   signal cart_dotclock_internal : std_logic := '0';
   signal cart_phi2_internal : std_logic := '0';
 
-  signal cart_probe_count : unsigned(5 downto 0) := "000000";
   signal cart_flags : std_logic_vector(1 downto 0) := "00";
 
   signal cart_force_reset : std_logic := '0';
@@ -271,12 +264,7 @@ begin
               joyb <= "11111";
             end if;
           end if;
-          if target = mega65r1 then
-            -- Precharge lines read for next reading on M65R1 that lacks pull-ups
-            cart_d <= (others => '1');
-          else
-            cart_d <= (others => 'Z');
-          end if;
+          cart_d <= (others => 'Z');
           cart_data_dir <= '1';
           cart_laddr_dir <= '1';
           cart_d(7 downto 0) <= (others => '1');
@@ -301,22 +289,10 @@ begin
         report "Asserting RESET on cartridge port";
         cart_reset <= '0';
         reset_counter <= 15;
-        if target = mega65r1 then
-          reprobe_exrom <= '1';
-        else
-          reprobe_exrom <= '0';
-        end if;
         cpu_exrom <= '1';
         cpu_game <= '1';
       end if;
 
-      -- Only the R1 PCB needs to probe the /EXROM and /GAME pins dynamically because
-      -- the lines were put through birectional buffer, so we had to set to output
-      if target /= mega65r1 then
-        reprobe_exrom <= '0';
---        cart_exrom <= 'Z';
---        cart_game <= 'Z';
-      end if;
       cpu_exrom <= cart_exrom;
       cpu_game <= cart_game;
 
@@ -365,8 +341,8 @@ begin
                 cart_access_rdata(7 downto 6) <= unsigned(cart_flags);
                 -- @IO:GS $7010000.5 - Read cartridge force reset (1=reset)
                 cart_access_rdata(5) <= cart_force_reset;
-                -- @IO:GS $7010000.4-0 - Read /EXROM & /GAME signal probe count (MEGA65 R1 PCB only)
-                cart_access_rdata(4 downto 0) <= cart_probe_count(4 downto 0);
+                -- @IO:GS $7010000.4-0 - UNUSUED (was R1 probe count)
+                cart_access_rdata(4 downto 0) <= (others => '0');
               when x"0001" =>
                 -- @IO:GS $7010001.7 - Expansion port mode: 1=normal mode, 0=joystick expansion mode
                 cart_access_rdata(7) <= not_joystick_cartridge;
@@ -414,44 +390,7 @@ begin
           cart_addr_en <= '1';
 
           -- Present next bus request if we have one
-          if probing_exrom = '1' and reprobe_exrom='0' and target = mega65r1 then
-            -- Update CPU's view of cartridge config lines
---            report "EXROM: Read exrom as " & std_logic'image(cart_exrom)
---              & " and game as " & std_logic'image(cart_game)
---              & " (cart_ctrl_dir=" & std_logic'image(cart_ctrl_dir) & ").";
-            probing_exrom <= '0';
-            cpu_exrom <= cart_exrom;
-            cpu_game <= cart_game;
-            -- XXX Debug, keep track of cartridge flag probing etc
-            if cart_probe_count /= x"3f" then
-              cart_probe_count <= cart_probe_count + 1;
-            else
-              cart_probe_count <= (others => '0');
-            end if;
-            cart_flags <= cart_exrom & cart_game;
-            cart_ctrl_dir <= '1'; -- XXX Is sense the same on R1? This would
-                                  -- make those lines output?
-          end if;
-          if (reprobe_exrom = '1') and (reset='1') and (reset_counter=0) then
-            -- But first, if necessary, re-probe the cartridge control lines
-            -- (Hopefully on rev2 PCB these lines will be input and can be read
-            -- continuously without wasting bus cycles.)
-            -- XXX In the meantime, we could improve on this by switching the
-            -- direction for a fraction of a 1MHz cycle, but we need to better
-            -- understand the performance of the buffers to know what latency
-            -- is required.
-            -- XXX On R4/R5/R6 only the R/W line might need to be read instead
-            -- of written to.  Note has been logged for R7 board design to
-            -- make R/W open-collector and have a separate read sense on it.
-            report "EXROM: Tri-stating cart_exrom,game, setting cart_ctrl_dir=0";
-            reprobe_exrom <= '0';
-            if target = mega65r1 then
-              cart_ctrl_dir <= '0';  -- make R/W, /IO1, /IO2 etc become input
-              cart_exrom <= 'H';
-              cart_game <= 'H';
-            end if;
-            probing_exrom <= '1';
-          elsif (fake_reset_sequence_phase < 8 ) and (cart_phi2_internal='0') then
+          if (fake_reset_sequence_phase < 8 ) and (cart_phi2_internal='0') then
             -- Provide fake power-on reset
             -- Sequence from: https://www.pagetable.com/?p=410
             case fake_reset_sequence_phase is
@@ -467,9 +406,7 @@ begin
 
             cart_busy <= '1';
             cart_a <= cart_access_address(15 downto 0);
-            if target /= mega65r1 then
-              cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
-            end if;
+            cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
             cart_rw <= '1';
             cart_data_dir <= not '1';
             cart_data_en <= '0'; -- negative sense on these lines: low = enable
@@ -518,29 +455,19 @@ begin
                   
             if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
             
-              if target /= mega65r1 then
-                cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
-              end if;
+              cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
               cart_a <= cart_access_address(15 downto 0);
               cart_rw <= cart_access_read;
               cart_data_dir <= not cart_access_read;
               cart_data_en <= '0'; -- negative sense on these lines: low = enable
               cart_addr_en <= '0'; -- negative sense on these lines: low = enable
-              -- Reprobe /EXROM and /GAME lines after accesses to IO areas, in
-              -- case the cartridge has banked things in response to IO access
               if cart_access_address(15 downto 8) = x"DE" and sector_buffer_mapped='0' then
                 cart_io1 <= '0';
-                if target = mega65r1 then
-                  reprobe_exrom <= '1';
-                end if;
               else
                 cart_io1 <= '1';
               end if;
               if cart_access_address(15 downto 8) = x"DF" and sector_buffer_mapped='0' then
                 cart_io2 <= '0';
-                if target = mega65r1 then
-                  reprobe_exrom <= '1';
-                end if;
               else
                 cart_io2 <= '1';
               end if;
@@ -570,11 +497,7 @@ begin
               if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
                 -- Tri-state with pull-up
                 report "Tristating cartridge port data lines.";
-                if target = mega65r1 then
-                  cart_d <= (others => 'H');
-                else
-                  cart_d <= (others => 'Z');
-                end if;
+                cart_d <= (others => 'Z');
               end if;
             else
               read_in_progress <= '0';
@@ -586,19 +509,13 @@ begin
           else
             if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
               cart_access_accept_strobe <= '0';
-              if target = mega65r1 then
-                cart_a <= (others => 'H');
-              else
-                cart_a <= (others => 'Z');
-              end if;              
+              cart_a <= (others => 'Z');
               cart_roml <= '1';
               cart_romh <= '1';
               cart_io1 <= '1';
               cart_io2 <= '1';
               cart_rw <= '1';
-              if target /= mega65r1 then
-                cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
-              end if;
+              cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
             end if;
             read_in_progress <= '0';
             cart_busy <= '0';            
