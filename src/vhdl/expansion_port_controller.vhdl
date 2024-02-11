@@ -320,8 +320,10 @@ begin
         cart_io2 <= next_io2;
         if next_data_dir='1' then
           cart_d <= (others => 'Z');
+          report "PORT: cart_d: TRi-state";
         else
           cart_d <= next_d;
+          report "PORT: cart_d: set to " & to_01UXstring(next_d);
         end if;
         cart_data_dir <= next_data_dir;
         cart_data_en <= next_data_en;
@@ -497,7 +499,7 @@ begin
               cart_a <= cart_access_address(15 downto 0);
               next_rw <= cart_access_read;
               next_data_dir <= not cart_access_read;
-              next_data_en <= '0'; -- negative sense on these lines: low = enable
+              next_data_en <= cart_access_read; -- negative sense on these lines: low = enable
               cart_addr_en <= '0'; -- negative sense on these lines: low = enable
               if cart_access_address(15 downto 8) = x"DE" then
                 next_io1 <= '0';
@@ -535,7 +537,8 @@ begin
               if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
                 -- Tri-state with pull-up
                 report "Tristating cartridge port data lines.";
-                cart_d <= (others => 'Z');
+                next_d <= (others => 'Z');
+                next_data_en <= '1';
               end if;
             else
               read_in_progress <= '0';

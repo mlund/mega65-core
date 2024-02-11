@@ -191,8 +191,10 @@ begin
           report "CART64K: PHI2 rising edge: READ $" & to_hexstring(cart_a);
           if cart_roml='0' then
             cart_d <= cart_a(7 downto 0);
+          report "CART: cart_d: set to " & to_01UXstring(cart_a(7 downto 0));
           else
             cart_d <= (others => 'Z');
+          report "CART: cart_d: Tri-state";
           end if;            
         else
           report "CART64K: PHI2 rising edge: WRITE $" & to_hexstring(cart_a) & " <- $" & to_hexstring(cart_d_in);

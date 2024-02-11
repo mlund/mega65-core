@@ -13,6 +13,7 @@ package debugtools is
     function to_hexstring(sv: unsigned) return string;
     function to_hexstring(sv: signed) return string;
     function to_01UXstring(sv : std_logic_vector) return string;
+    function to_01UXstring(sv : unsigned) return string;
     function safe_to_integer(sv : unsigned) return integer;
     procedure HWRITE(L:inout LINE; VALUE:in BIT_VECTOR;
     JUSTIFIED:in SIDE := RIGHT; FIELD:in WIDTH := 0);
@@ -84,7 +85,12 @@ package body debugtools is
       end loop;
       return s;
     end;
-        
+
+    function to_01UXstring(sv : unsigned) return string is
+    begin
+      return to_01UXstring(std_logic_vector(sv));
+    end function;
+      
     function to_string(sv: Std_Logic_Vector) return string is
       use Std.TextIO.all;
       
