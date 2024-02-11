@@ -45,7 +45,7 @@ architecture test_arch of tb_cartridges is
     ------------------------------------------------------------------------
     -- Suppress mapping of IO at $DE00-$DFFF if sector buffer mapped
     ------------------------------------------------------------------------
-  signal sector_buffer_mapped : std_logic;
+  signal sector_buffer_mapped : std_logic := '0';
 
   signal cart_busy : std_logic;
   signal cart_access_count : unsigned(7 downto 0);
