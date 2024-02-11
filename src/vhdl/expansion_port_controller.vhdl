@@ -165,6 +165,14 @@ architecture behavioural of expansion_port_controller is
   signal last_cart_dma : std_logic := '1';
   signal last_cart_exrom : std_logic := '1';
   signal last_cart_game : std_logic := '1';
+
+  signal oride_enable : std_logic := '0';
+  signal oride_ctrl_en : std_logic := '0';
+  signal oride_ctrl_dir : std_logic := '0';
+  signal oride_io1 : std_logic := '0';
+  signal oride_io2 : std_logic := '0';
+  signal oride_romh : std_logic := '0';
+  signal oride_roml: std_logic := '0';
   
 begin
 
@@ -441,6 +449,14 @@ begin
                 force_joystick_cartridge <= cart_access_wdata(6);
                 disable_joystick_cartridge <= cart_access_wdata(4);
                 invert_joystick <= cart_access_wdata(0);
+              elsif cart_access_address(15 downto 0) = x"0002" then
+                oride_ctrl_en <= cart_access_wdata(0);
+                oride_ctrl_dir <= cart_access_wdata(1);
+                oride_io1 <= cart_access_wdata(2);
+                oride_io2 <= cart_access_wdata(3);
+                oride_romh <= cart_access_wdata(4);
+                oride_roml <= cart_access_wdata(5);
+                oride_enable <= cart_access_wdata(7);
               end if;
             end if;
             cart_busy <= '1';
@@ -521,6 +537,16 @@ begin
           end if;      
         end if;
       end if;
+
+      if oride_enable='1' then
+        cart_ctrl_en <= oride_ctrl_en;
+        cart_ctrl_dir <= oride_ctrl_dir;
+        cart_io2 <= oride_io1;
+        cart_io1 <= oride_io2;
+        cart_roml <= oride_roml;
+        cart_romh <= oride_romh;
+      end if;
+      
     end if;
     
   end process;

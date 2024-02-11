@@ -392,6 +392,16 @@ begin
           -- cycle at that point, so should allow double again, i.e.,
           -- 81MHz x 4 = 324 cycles
           for i in 1 to 324 loop
+
+            -- Make sure that data direction and output enable for /IO1 are set
+            -- correctly
+            if cart_ctrl_dir /= '1' then
+              assert false report "cart_ctrl_dir=" & std_logic'image(cart_ctrl_dir) & " instead of 1.";
+            end if;
+            if cart_ctrl_en /= '0' then
+              assert false report "cart_ctrl_en=" & std_logic'image(cart_ctrl_en) & " instead of 0.";
+            end if;
+            
             if cart_io1 = '0' and saw_signal='0' then
               report "Saw /IO1 go low after " & integer'image(i) & " half-ticks.";
               saw_signal <= '1';
@@ -429,6 +439,16 @@ begin
           -- cycle at that point, so should allow double again, i.e.,
           -- 81MHz x 4 = 324 cycles
           for i in 1 to 324 loop
+
+            -- Make sure that data direction and output enable for /IO1 are set
+            -- correctly
+            if cart_ctrl_dir /= '1' then
+              assert false report "cart_ctrl_dir=" & std_logic'image(cart_ctrl_dir) & " instead of 1.";
+            end if;
+            if cart_ctrl_en /= '0' then
+              assert false report "cart_ctrl_en=" & std_logic'image(cart_ctrl_en) & " instead of 0.";
+            end if;            
+            
             if cart_io2 = '0' and saw_signal='0' then
               report "Saw /IO2 go low after " & integer'image(i) & " half-ticks.";
               saw_signal <= '1';
