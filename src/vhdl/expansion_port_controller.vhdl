@@ -391,6 +391,9 @@ begin
 
           -- Present next bus request if we have one
           if (fake_reset_sequence_phase < 8 ) and (cart_phi2_internal='0') then
+
+            report "FAKERESET: Progressing fake reset sequence #" & integer'image(fake_reset_sequence_phase);
+            
             -- Provide fake power-on reset
             -- Sequence from: https://www.pagetable.com/?p=410
             case fake_reset_sequence_phase is
@@ -451,6 +454,7 @@ begin
             cart_access_count <= cart_access_count_internal + 1;
             cart_access_count_internal <= cart_access_count_internal + 1;
 
+            report "Asserting cart_access_accept_strobe";
             cart_access_accept_strobe <= '1';
                   
             if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then

@@ -111,6 +111,9 @@ architecture test_arch of tb_cartridges is
   signal cart_d : unsigned(7 downto 0);
   signal cart_a : unsigned(15 downto 0);
 
+
+  signal saw_signal : std_logic := '0';
+  signal last_cart_access_read_toggle : std_logic := '0';
   
 begin
 
@@ -206,6 +209,57 @@ begin
       
     end procedure;
 
+    procedure expansion_port_init  is
+    begin
+      -- Allow enough time for reset counter to go to zero
+      -- in expansion_port_controller, and then for it do do
+      -- the simulated C64 reset sequence
+      for i in 1 to 1300 loop
+        clock_tick;
+      end loop;
+    end procedure;
+    
+    procedure request_cart_read(addr : unsigned(31 downto 0)) is
+    begin
+
+      report "request_cart_read($" & to_hexstring(addr)& ") called";
+      
+      -- Don't send request until request accept strobe has cleared
+      for i in 1 to 100 loop
+        if cart_access_accept_strobe = '0' then
+          report "cart_access_accept_strobe low: Request can proceed";
+          exit;
+        else
+          clock_tick;
+        end if;
+      end loop;
+      if cart_access_accept_strobe = '1' then
+        assert false report "cart_access_accept_strobe did not clear within 6.1 usec";
+      end if;
+
+      -- Build request
+      cart_access_request <= '1';
+      cart_access_read <= '1';
+      cart_access_address <= addr;
+
+      -- Wait for request to be accepted
+      for i in 1 to 100 loop
+        if cart_access_accept_strobe = '1' then
+          exit;
+        else
+          clock_tick;
+        end if;
+      end loop;
+      if cart_access_accept_strobe = '0' then
+        assert false report "cart_access_accept_strobe did not assert within 6.1 usec";
+      end if;
+
+      -- Now release request signal
+      cart_access_request <= '0';      
+          
+    end procedure;
+    
+    
   begin
     test_runner_setup(runner, runner_cfg);
 
@@ -229,7 +283,58 @@ begin
         if cart_dotclock_ticks < 488 or cart_dotclock_ticks > 496 then
           assert false report "Expected to see 488 to 496 DOTCLOCK ticks in 61,730ns time-frame";
         end if;
-        
+
+      elsif run("/ROML, /ROMH, /IO1 and /IO2 are high by default") then
+        for i in 1 to 1000 loop
+          clock_tick;
+          if cart_roml='0' then
+            assert false report "Expected to see /ROML stay high, but it was low";
+          end if;
+          if cart_romh='0' then
+            assert false report "Expected to see /ROMH stay high, but it was low";
+          end if;
+          if cart_io1='0' then
+            assert false report "Expected to see /IO1 stay high, but it was low";
+          end if;
+          if cart_io2='0' then
+            assert false report "Expected to see /IO2 stay high, but it was low";
+          end if;
+        end loop;
+      elsif run("Expansion port controller signals busy during requests") then
+        expansion_port_init;
+        request_cart_read(to_unsigned(0,32));
+        if cart_busy='0' then
+          assert false report "cart_busy did not go high to indicate busy status";
+        end if;
+      elsif run("/ROML is pulled low when accessing $8000-$9FFF") then
+        expansion_port_init;
+        for addr in 16#8000# to 16#9fff# loop
+          request_cart_read(to_unsigned(addr,32));
+          saw_signal <= '0';
+          for i in 1 to 100 loop
+            if cart_roml = '0' then
+              saw_signal <= '1';
+            end if;
+            if cart_romh = '0' or cart_io1 = '0' or cart_io2 = '0' then
+              assert false report "Saw unexpected activity for address $" & to_hexstring(to_unsigned(addr,32))
+                & ": /ROML=" & std_logic'image(cart_roml)
+                & ", /ROMH=" & std_logic'image(cart_romh)
+                & ", /IO1=" & std_logic'image(cart_io1)
+                & ", /IO2=" & std_logic'image(cart_io2);
+            end if;
+            if last_cart_access_read_toggle /= cart_access_read_toggle then
+              last_cart_access_read_toggle <= cart_access_read_toggle;
+              exit;
+            else
+              clock_tick;
+            end if;
+          end loop;
+          if saw_signal='0' then
+            assert false report "/ROML did not go low when accessing address $" & to_hexstring(to_unsigned(addr,32));
+          end if;
+            
+        end loop;    
+            
       end if;
     end loop;
     test_runner_cleanup(runner);
