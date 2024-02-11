@@ -315,19 +315,30 @@ begin
         -- Tick dot clock
         report "dotclock tick";
 
-        cart_rw <= next_rw;
-        cart_io1 <= next_io1;
-        cart_io2 <= next_io2;
-        if next_data_dir='1' then
-          cart_d <= (others => 'Z');
-          report "PORT: cart_d: TRi-state";
-        else
-          cart_d <= next_d;
-          report "PORT: cart_d: set to " & to_01UXstring(next_d);
+        -- Ensure /RW, /IO1, /IO2 and DATA lines are held for
+        -- long enough after rising clock edge.
+        -- In theory, 60ns should be long enough, but I'm not
+        -- convinced that that is long enough.
+        -- Tiny Quest on a HUCKY 1.03 64K cart is somewhat
+        -- unreliable with this configuration.
+        -- So instead we delay for 1 complete clock at 8MHz
+        -- = 125ns, which is less than the 6502's maximum rated
+        -- 150ns.
+        if cart_dotclock_internal='1' then
+          cart_rw <= next_rw;
+          cart_io1 <= next_io1;
+          cart_io2 <= next_io2;
+          if next_data_dir='1' then
+            cart_d <= (others => 'Z');
+            report "PORT: cart_d: TRi-state";
+          else
+            cart_d <= next_d;
+            report "PORT: cart_d: set to " & to_01UXstring(next_d);
+          end if;
+          cart_data_dir <= next_data_dir;
+          cart_data_en <= next_data_en;
+          cart_ctrl_dir <= next_ctrl_dir;
         end if;
-        cart_data_dir <= next_data_dir;
-        cart_data_en <= next_data_en;
-        cart_ctrl_dir <= next_ctrl_dir;
         
         
         cart_dotclock <= not cart_dotclock_internal;
