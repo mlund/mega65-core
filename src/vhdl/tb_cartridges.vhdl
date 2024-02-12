@@ -190,8 +190,8 @@ begin
         if cart_rw='1' then
           report "CART64K: PHI2 rising edge: READ $" & to_hexstring(cart_a);
           if cart_roml='0' then
-            cart_d <= cart_a(7 downto 0);
-          report "CART: cart_d: set to " & to_01UXstring(cart_a(7 downto 0));
+            cart_d_in <= cart_a(7 downto 0);
+            report "CART: cart_d_in: set to " & to_01UXstring(cart_a(7 downto 0));
           else
             cart_d <= (others => 'Z');
           report "CART: cart_d: Tri-state";
@@ -538,10 +538,10 @@ begin
             assert false report "/ROML did not go low when accessing address $" & to_hexstring(to_unsigned(addr,32));
           end if;
 
-          report "Reading $" & to_hexstring(to_unsigned(addr,32)) & ". Value read = $" & to_hexstring(cart_d)
-            & " (" & to_01UXstring(std_logic_vector(cart_d)) & ").";
+          report "Reading $" & to_hexstring(to_unsigned(addr,32)) & ". Value read = $" & to_hexstring(cart_access_rdata)
+            & " (" & to_01UXstring(std_logic_vector(cart_access_rdata)) & ").";
           
-          if cart_d /= to_unsigned(addr,8) then
+          if cart_access_rdata /= to_unsigned(addr,8) then
             assert false report "Expected to read $" & to_hexstring(to_unsigned(addr,8));
           end if;
             

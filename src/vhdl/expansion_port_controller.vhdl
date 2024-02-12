@@ -413,8 +413,9 @@ begin
               when x"0009" =>
                 -- @IO:GS $7010009 - Directly read upper 8 cartridge address data lines.
                 cart_access_rdata <= cart_a(15 downto 8);
-              when others =>
-              cart_access_rdata <= cart_d_in;
+              when others =>                
+                cart_access_rdata <= cart_d_in;
+                report "Setting cart_access_rdata to %" & to_01UXstring(cart_d_in) & " from cart_d_in";
             end case;
             cart_access_read_strobe <= '1';
             cart_access_read_toggle <= not cart_access_read_toggle_internal;
