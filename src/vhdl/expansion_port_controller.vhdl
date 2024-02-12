@@ -551,11 +551,13 @@ begin
                 report "Tristating cartridge port data lines.";
                 next_d <= (others => 'Z');
                 next_data_en <= '1';
+                next_data_dir <= '0'; -- set data lines to input
               end if;
             else
               read_in_progress <= '0';
               if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
-                cart_d <= cart_access_wdata;
+                next_d <= cart_access_wdata;
+                next_data_dir <= '1'; -- set data lines to output
                 report "Write data is $" & to_hexstring(cart_access_wdata);
               end if;
             end if;
