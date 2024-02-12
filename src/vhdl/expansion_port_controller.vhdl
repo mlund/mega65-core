@@ -324,7 +324,8 @@ begin
         -- So instead we delay for 1 complete clock at 8MHz
         -- = 125ns, which is less than the 6502's maximum rated
         -- 150ns.
-        if cart_dotclock_internal='1' then
+        if cart_dotclock_internal='1' and phi2_ticker = 1 then
+          report "Propagating next cycle values to expansion port lines";
           cart_rw <= next_rw;
           cart_io1 <= next_io1;
           cart_io2 <= next_io2;

@@ -197,8 +197,8 @@ begin
           report "CART64K: PHI2 rising edge: READ $" & to_hexstring(cart_a);
           if cart_roml='0' then
             -- Correctly model when we are cross-driving cart_d lines
-            if cart_data_dir='0' then
-              report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines";
+            if cart_data_dir='1' then
+              report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines: CROSS DRIVING";
               cart_d_in <= (others => 'X');
             else
               cart_d_in <= cart_a(7 downto 0);
