@@ -111,6 +111,10 @@ architecture test_arch of tb_cartridges is
   signal last_cart_access_read_toggle : std_logic := '0';
 
   signal cm_last_phi2 : std_logic := '0';
+
+
+  signal cart_driving : std_logic := '0';
+  signal host_driving : std_logic := '0';
   
 begin
 
@@ -187,10 +191,19 @@ begin
     begin
       cm_last_phi2 <= cart_phi2;
       if cm_last_phi2='0' and cart_phi2='1' then
+        cart_driving <= '0';
+        host_driving <= cart_data_dir;
         if cart_rw='1' then
           report "CART64K: PHI2 rising edge: READ $" & to_hexstring(cart_a);
           if cart_roml='0' then
-            cart_d_in <= cart_a(7 downto 0);
+            -- Correctly model when we are cross-driving cart_d lines
+            if cart_data_dir='0' then
+              report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines";
+              cart_d_in <= (others => 'X');
+            else
+              cart_d_in <= cart_a(7 downto 0);
+              cart_driving <= '1';
+            end if;
             report "CART: cart_d_in: set to " & to_01UXstring(cart_a(7 downto 0));
           else
             cart_d <= (others => 'Z');
@@ -200,6 +213,18 @@ begin
           report "CART64K: PHI2 rising edge: WRITE $" & to_hexstring(cart_a) & " <- $" & to_hexstring(cart_d_in);
           cart_d <= (others => 'Z');
         end if;          
+      end if;
+      -- Begin indication of cross-driving if we see host start driving
+      -- during a cycle
+      if host_driving='0' and cart_data_dir='1' and cart_driving = '1' then
+        cart_d_in <= (others => 'X');
+        report "CART64K: Detected mid-cycle commencement of cross-driving of cart_d lines";
+        host_driving <= '1';
+      end if;
+      if host_driving='1' and cart_data_dir='0' and cart_driving = '1' then
+        cart_d_in <= cart_a(7 downto 0);
+        report "CART64K: Cross-driving of cart_d lines resolved mid-cycle";
+        host_driving <= '0';
       end if;
       
     end procedure;    
