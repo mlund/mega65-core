@@ -115,6 +115,8 @@ architecture test_arch of tb_cartridges is
 
   signal cart_driving : std_logic := '0';
   signal host_driving : std_logic := '0';
+
+  signal cart_bank : integer := 0;
   
 begin
 
@@ -194,24 +196,40 @@ begin
         cart_driving <= '0';
         host_driving <= cart_data_dir;
         if cart_rw='1' then
-          report "CART64K: PHI2 rising edge: READ $" & to_hexstring(cart_a);
+          report "CART64K: PHI2 rising edge: ROML READ $" & to_hexstring(cart_a);
           if cart_roml='0' then
             -- Correctly model when we are cross-driving cart_d lines
             if cart_data_dir='1' then
               report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines: CROSS DRIVING";
               cart_d_in <= (others => 'X');
             else
-              cart_d_in <= cart_a(7 downto 0);
+              cart_d_in <= to_unsigned(to_integer(cart_a(7 downto 0)) + cart_bank,8);
               cart_driving <= '1';
             end if;
             report "CART: cart_d_in: set to " & to_01UXstring(cart_a(7 downto 0));
+          elsif cart_io1='0' then
+            report "CART64K: PHI2 rising edgle: IO1 READ $" & to_hexstring(cart_a);
+            -- Correctly model when we are cross-driving cart_d lines
+            if cart_data_dir='1' then
+              report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines: CROSS DRIVING";
+              cart_d_in <= (others => 'X');
+            else
+              cart_d_in <= to_unsigned(to_integer(cart_a(7 downto 0)) + cart_bank,8);
+              cart_driving <= '1';
+            end if;
+            report "CART: cart_d_in: set to " & to_01UXstring(cart_a(7 downto 0));            
           else
-            cart_d <= (others => 'Z');
+            cart_d_in <= (others => 'Z');
           report "CART: cart_d: Tri-state";
           end if;            
         else
-          report "CART64K: PHI2 rising edge: WRITE $" & to_hexstring(cart_a) & " <- $" & to_hexstring(cart_d_in);
-          cart_d <= (others => 'Z');
+          report "CART64K: PHI2 rising edge: WRITE $" & to_hexstring(cart_a) & " <- $" & to_hexstring(cart_d);
+          cart_d_in <= (others => 'Z');
+          if cart_io1='0' and cart_a(7 downto 0) = x"00" then
+            -- Write to $DE00
+            cart_bank <= to_integer(cart_d(2 downto 0));
+            report "CART64K: Selected bank #" & integer'image(to_integer(cart_d(2 downto 0)));
+          end if;
         end if;          
       end if;
       -- Begin indication of cross-driving if we see host start driving
@@ -309,6 +327,98 @@ begin
       -- Now release request signal
       cart_access_request <= '0';      
           
+    end procedure;
+
+    procedure request_cart_write(addr : unsigned(31 downto 0); val : unsigned(7 downto 0)) is
+    begin
+
+      report "request_cart_read($" & to_hexstring(addr)& ") called";
+      
+      -- Don't send request until request accept strobe has cleared
+      for i in 1 to 100 loop
+        if cart_access_accept_strobe = '0' then
+          report "cart_access_accept_strobe low: Request can proceed";
+          exit;
+        else
+          clock_tick;
+        end if;
+      end loop;
+      if cart_access_accept_strobe = '1' then
+        assert false report "cart_access_accept_strobe did not clear within 6.1 usec";
+      end if;
+
+      -- Build request
+      cart_access_request <= '1';
+      cart_access_read <= '0';
+      cart_access_address <= addr;
+      cart_access_wdata <= val;
+
+      -- Wait for request to be accepted
+      for i in 1 to 1000 loop
+        if cart_access_accept_strobe = '1' then
+          exit;
+        else
+          clock_tick;
+        end if;
+      end loop;
+      if cart_access_accept_strobe = '0' then
+        assert false report "cart_access_accept_strobe did not assert within 6.1 usec";
+      end if;
+
+      -- Now release request signal
+      cart_access_request <= '0';      
+          
+    end procedure;
+    
+    procedure complete_cart_read(expected : unsigned(7 downto 0)) is
+    begin
+      saw_signal <= '0';
+      -- Each clock_tick is 1/2 a pixelclock tick. This means we need
+      -- at least 2x pixelclock (in Mhz) ticks for a single cart port
+      -- transaction to happen. But we might be part way through a 1MHz
+      -- cycle at that point, so should allow double again, i.e.,
+      -- 81MHz x 4 = 324 cycles
+      for i in 1 to 324 loop
+        if last_cart_access_read_toggle /= cart_access_read_toggle then
+          last_cart_access_read_toggle <= cart_access_read_toggle;
+          report "cart_access_read_toggle changed from " & std_logic'image(last_cart_access_read_toggle)
+            & " to " & std_logic'image(cart_access_read_toggle)
+            & " after " & integer'image(i) & " ticks.";
+          exit;
+        else
+          clock_tick;
+        end if;
+      end loop;          
+
+      report "Value read = $" & to_hexstring(cart_access_rdata)
+        & " (" & to_01UXstring(std_logic_vector(cart_access_rdata)) & ").";
+      
+      if cart_access_rdata /= expected then
+        assert false report "Expected to read $" & to_hexstring(expected);
+      end if;
+    end procedure;
+
+
+    procedure complete_cart_write is
+    begin
+      saw_signal <= '0';
+      -- Each clock_tick is 1/2 a pixelclock tick. This means we need
+      -- at least 2x pixelclock (in Mhz) ticks for a single cart port
+      -- transaction to happen. But we might be part way through a 1MHz
+      -- cycle at that point, so should allow double again, i.e.,
+      -- 81MHz x 4 = 324 cycles
+      for i in 1 to 324 loop
+        if last_cart_access_read_toggle /= cart_access_read_toggle then
+          last_cart_access_read_toggle <= cart_access_read_toggle;
+          report "cart_access_read_toggle changed from " & std_logic'image(last_cart_access_read_toggle)
+            & " to " & std_logic'image(cart_access_read_toggle)
+            & " after " & integer'image(i) & " ticks.";
+          exit;
+        else
+          clock_tick;
+        end if;
+      end loop;          
+
     end procedure;
     
     
@@ -571,6 +681,16 @@ begin
           end if;
             
         end loop;    
+
+      elsif run("Writing to /IO1 region works") then
+        expansion_port_init;
+        request_cart_read(x"00008000");
+        complete_cart_read(x"00");
+        request_cart_write(x"0000de00",x"01");
+        complete_cart_write;
+        request_cart_read(x"00008000");
+        complete_cart_read(x"01");
+
       end if;
     end loop;
     test_runner_cleanup(runner);
