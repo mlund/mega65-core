@@ -193,11 +193,13 @@ begin
     begin
       cm_last_phi2 <= cart_phi2;
       if cm_last_phi2='0' and cart_phi2='1' then
+        report "CART64K: Cart status A=$" & to_hexstring(cart_a) & ", D=$" & to_hexstring(cart_d) & ", R/_W = " & std_logic'image(cart_rw);
+        
         cart_driving <= '0';
         host_driving <= cart_data_dir;
         if cart_rw='1' then
-          report "CART64K: PHI2 rising edge: ROML READ $" & to_hexstring(cart_a);
           if cart_roml='0' then
+            report "CART64K: PHI2 rising edge: ROML READ $" & to_hexstring(cart_a);
             -- Correctly model when we are cross-driving cart_d lines
             if cart_data_dir='1' then
               report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines: CROSS DRIVING";
@@ -332,7 +334,7 @@ begin
     procedure request_cart_write(addr : unsigned(31 downto 0); val : unsigned(7 downto 0)) is
     begin
 
-      report "request_cart_read($" & to_hexstring(addr)& ") called";
+      report "request_cart_write($" & to_hexstring(addr)& ") called";
       
       -- Don't send request until request accept strobe has cleared
       for i in 1 to 100 loop
