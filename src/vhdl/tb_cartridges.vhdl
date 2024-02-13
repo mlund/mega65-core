@@ -278,7 +278,7 @@ begin
       -- Allow enough time for reset counter to go to zero
       -- in expansion_port_controller, and then for it do do
       -- the simulated C64 reset sequence
-      for i in 1 to 1400 loop
+      for i in 1 to 2800 loop
         clock_tick;
       end loop;
 

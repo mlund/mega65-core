@@ -343,19 +343,29 @@ begin
           cart_data_dir <= next_data_dir;
           cart_data_en <= next_data_en;
           cart_ctrl_dir <= next_ctrl_dir;
-        end if;
-        
+        end if;        
+
+        cart_access_read_strobe <= '0';
         
         cart_dotclock <= not cart_dotclock_internal;
         cart_dotclock_internal <= not cart_dotclock_internal;
-        if phi2_ticker /= 7 then
+        if phi2_ticker /= 0 and phi2_ticker /= 15 then
           phi2_ticker <= phi2_ticker + 1;
-          cart_access_read_strobe <= '0';
-          cart_access_accept_strobe <= '0';
-        else
-          -- Tick phi2
-          report "phi2 tick";
-
+        elsif phi2_ticker = 15 then
+          phi2_ticker <= (others => '0');
+        elsif phi2_ticker = 0 then          
+          report "phi2 tick + ~60ns hold time";
+          -- At this point we still have time to accept a new request and
+          -- schedule it immediately, as we hold the values from the previous
+          -- cycle unti ~125ns after phi2 rising edge -- except the address that we change now,
+          -- i.e., at ~60ns after rising edge of phi2.
+          -- One thing I had never realised previously: You can't write to
+          -- things in the C64 or on a cartridge during the VIC-II's half of
+          -- the clock, if the device only uses positive edges of PHI2 to latch
+          -- writes. Weird things may nonetheless happen.
+          
+          phi2_ticker <= phi2_ticker + 1;          
+          
           -- We assert reset on cartridge port for 15 phi2 cycles to give
           -- cartridge time to reset.
           if (reset_counter = 1) and (reset='1') then
@@ -371,9 +381,7 @@ begin
               end if;
             end if;
           end if;
-          
-            
-          phi2_ticker <= (others => '0');
+                      
           cart_phi2 <= not cart_phi2_internal;
           cart_phi2_internal <= not cart_phi2_internal;
 
@@ -457,7 +465,7 @@ begin
 
             cart_busy <= '1';
             cart_a <= cart_access_address(15 downto 0);
-            cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
+            next_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
             next_rw <= '1';
             next_data_dir <= not '1';
             next_data_en <= '0'; -- negative sense on these lines: low = enable
@@ -517,7 +525,6 @@ begin
             
               cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
               cart_a <= cart_access_address(15 downto 0);
-              next_rw <= cart_access_read;
               next_data_dir <= not cart_access_read;
               next_data_en <= cart_access_read; -- negative sense on these lines: low = enable
               cart_addr_en <= '0'; -- negative sense on these lines: low = enable
@@ -581,8 +588,10 @@ begin
               next_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
             end if;
             read_in_progress <= '0';
-            cart_busy <= '0';            
+            cart_busy <= '0';
           end if;      
+        else
+          cart_access_accept_strobe <= '0';
         end if;
       end if;
 
