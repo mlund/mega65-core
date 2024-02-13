@@ -181,6 +181,8 @@ architecture behavioural of expansion_port_controller is
   signal next_data_en : std_logic := '1';
   signal next_d : unsigned(7 downto 0) := x"ff";
   signal next_ctrl_dir : std_logic := '1';
+
+  signal cart_reset_int : std_logic := '1';
   
 begin
 
@@ -243,6 +245,7 @@ begin
         -- with auto-fire (like many on the market) or lights (like the ones I built at
         -- home). 
         cart_reset <= '0';
+        cart_reset_int <= '0';
         
         if joy_counter = 50 then
           joy_counter <= 0;
@@ -299,6 +302,7 @@ begin
       elsif reset = '0' then
         report "Asserting RESET on cartridge port";
         cart_reset <= '0';
+        cart_reset_int <= '0';
         reset_counter <= 15;
         cpu_exrom <= '1';
         cpu_game <= '1';
@@ -361,7 +365,10 @@ begin
           elsif reset_counter = 0 then
             if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
               cart_reset <= reset and (not cart_force_reset);
-              report "Releasing RESET on cartridge port";
+              cart_reset_int <= reset and (not cart_force_reset);
+              if cart_reset_int = '0' then
+                report "Releasing RESET on cartridge port";
+              end if;
             end if;
           end if;
           
