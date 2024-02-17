@@ -174,12 +174,16 @@ architecture behavioural of expansion_port_controller is
   signal oride_romh : std_logic := '0';
   signal oride_roml: std_logic := '0';
 
+  signal next_read_in_progress : std_logic := '0';
   signal next_rw : std_logic := '1';
   signal next_io1 : std_logic := '1';
   signal next_io2 : std_logic := '1';
+  signal next_roml : std_logic := '1';
+  signal next_romh : std_logic := '1';
   signal next_data_dir : std_logic := '1';
   signal next_data_en : std_logic := '1';
   signal next_d : unsigned(7 downto 0) := x"ff";
+  signal next_a : unsigned(15 downto 0) := x"ffff";
   signal next_ctrl_dir : std_logic := '1';
 
   signal cart_reset_int : std_logic := '1';
@@ -236,7 +240,7 @@ begin
         -- Set data lines to input
         next_data_en <= '0'; -- negative sense on these lines: low = enable
         cart_addr_en <= '0'; -- negative sense on these lines: low = enable
-        cart_a <= (others => 'Z');
+        next_a <= (others => 'Z');
 
         -- Pull /RESET low on cartridge port, so that it can be the source of
         -- GND for the joysticks.  Without this, the joysticks will effectively
@@ -280,6 +284,7 @@ begin
           end if;
           next_d <= (others => 'Z');
           next_data_dir <= '1';
+          report "Setting next_data_dir to output (joystick cart mode)";
           cart_laddr_dir <= '1';
           next_d(7 downto 0) <= (others => '1');
           cart_a(7 downto 0) <= (others => '1');
@@ -288,6 +293,7 @@ begin
           -- Tristate lines to allow time for them to be pulled low again if
           -- required
           next_data_dir <= '0';
+          report "Setting next_data_dir to input (joystick cart mode)";
           next_d <= (others => 'Z');
           cart_laddr_dir <= '0';
           cart_a(7 downto 0) <= (others => 'Z');
@@ -319,6 +325,8 @@ begin
         -- Tick dot clock
         report "dotclock tick";
 
+        
+        
         -- Ensure /RW, /IO1, /IO2 and DATA lines are held for
         -- long enough after rising clock edge.
         -- In theory, 60ns should be long enough, but I'm not
@@ -328,11 +336,18 @@ begin
         -- So instead we delay for 1 complete clock at 8MHz
         -- = 125ns, which is less than the 6502's maximum rated
         -- 150ns.
-        if cart_dotclock_internal='1' and phi2_ticker = 1 then
-          report "Propagating next cycle values to expansion port lines (RW=" & std_logic'image(next_rw) & ")";
+        if phi2_ticker = 1 then
+          report "PORT: Propagating next cycle values to expansion port lines (RW=" & std_logic'image(next_rw)
+            & ", addr=$" & to_hexstring(next_a)
+            & ", io1=" & std_logic'image(next_io1)
+            & ", io2=" & std_logic'image(next_io2)
+            & ", roml=" & std_logic'image(next_roml)
+            & ", romh=" & std_logic'image(next_romh)
+            & ")";
           cart_rw <= next_rw;
           cart_io1 <= next_io1;
           cart_io2 <= next_io2;
+          cart_a <= next_a;
           if next_data_dir='1' then
             cart_d <= (others => 'Z');
             report "PORT: cart_d: TRi-state";
@@ -343,17 +358,17 @@ begin
           cart_data_dir <= next_data_dir;
           cart_data_en <= next_data_en;
           cart_ctrl_dir <= next_ctrl_dir;
+          read_in_progress <= next_read_in_progress;
+          report "PORT: Setting read_in_progress to " & std_logic'image(next_read_in_progress);
         end if;        
 
         cart_access_read_strobe <= '0';
         
         cart_dotclock <= not cart_dotclock_internal;
         cart_dotclock_internal <= not cart_dotclock_internal;
-        if phi2_ticker /= 0 and phi2_ticker /= 15 then
-          phi2_ticker <= phi2_ticker + 1;
-        elsif phi2_ticker = 15 then
-          phi2_ticker <= (others => '0');
-        elsif phi2_ticker = 0 then          
+
+
+      elsif phi2_ticker = 0 then          
           report "phi2 tick + ~60ns hold time";
           -- At this point we still have time to accept a new request and
           -- schedule it immediately, as we hold the values from the previous
@@ -386,7 +401,7 @@ begin
           cart_phi2_internal <= not cart_phi2_internal;
 
           -- Record data from bus if we are waiting on it
-          if read_in_progress='1' then
+          if read_in_progress='1' and cart_phi2_internal='0' then
             -- XXX Debug: show stats on probing cartridge flags
             case cart_access_address(15 downto 0) is
               when x"0000" =>
@@ -464,10 +479,11 @@ begin
             fake_reset_sequence_phase <= fake_reset_sequence_phase + 1;
 
             cart_busy <= '1';
-            cart_a <= cart_access_address(15 downto 0);
+            next_a <= cart_access_address(15 downto 0);
             next_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
+            report "Setting cart_a, selecting read, setting next_data_dir to input";
             next_rw <= '1';
-            next_data_dir <= not '1';
+            next_data_dir <= '0'; -- Set data lines to input            
             next_data_en <= '0'; -- negative sense on these lines: low = enable
             cart_addr_en <= '0'; -- negative sense on these lines: low = enable
 
@@ -524,7 +540,8 @@ begin
             if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
             
               cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
-              cart_a <= cart_access_address(15 downto 0);
+              next_a <= cart_access_address(15 downto 0);
+              report "Setting next_data_dir to " & std_logic'image(not cart_access_read) & " from cart_access_read";
               next_data_dir <= not cart_access_read;
               next_data_en <= cart_access_read; -- negative sense on these lines: low = enable
               cart_addr_en <= '0'; -- negative sense on these lines: low = enable
@@ -545,49 +562,52 @@ begin
               -- requested).
               if (cart_access_address(15 downto 12) = x"8")
                 or (cart_access_address(15 downto 12) = x"9") then
-                cart_roml <= '0';
+                next_roml <= '0';
               else
-                cart_roml <= '1';
+                next_roml <= '1';
               end if;
               if (cart_access_address(15 downto 12) = x"A")
                 or (cart_access_address(15 downto 12) = x"B") 
                 or (cart_access_address(15 downto 12) = x"E")
                 or (cart_access_address(15 downto 12) = x"F") then
-                cart_romh <= '0';
+                next_romh <= '0';
               else
-                cart_romh <= '1';
+                next_romh <= '1';
               end if;
             end if;
               
             if cart_access_read='1' then
-              read_in_progress <= '1';
               if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
                 -- Tri-state with pull-up
-                report "Tristating cartridge port data lines.";
+                report "Tristating cartridge port data lines, setting next_data_dir to input.";
                 next_d <= (others => 'Z');
                 next_data_en <= '1';
                 next_data_dir <= '0'; -- set data lines to input
+                next_read_in_progress <= '1';
               end if;
             else
-              read_in_progress <= '0';
+              next_read_in_progress <= '0';
               if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
                 next_d <= cart_access_wdata;
+                report "setting next_data_dir to output";
                 next_data_dir <= '1'; -- set data lines to output
+                next_rw <= '0';
                 report "Write data is $" & to_hexstring(cart_access_wdata);
               end if;
             end if;
           else
             if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
               cart_access_accept_strobe <= '0';
-              cart_a <= (others => 'Z');
-              cart_roml <= '1';
-              cart_romh <= '1';
+              next_a <= (others => 'Z');
+              next_roml <= '1';
+              next_romh <= '1';
               next_io1 <= '1';
               next_io2 <= '1';
               next_rw <= '1';
               next_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
+              report "Tristating cart_a, selecting read";
             end if;
-            read_in_progress <= '0';
+            next_read_in_progress <= '0';
             cart_busy <= '0';
           end if;      
         else

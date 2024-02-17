@@ -192,39 +192,45 @@ begin
     procedure model_64k_cart is
     begin
       cm_last_phi2 <= cart_phi2;
+
+      -- Cartridge reading is asynchronous
+      if cart_rw='1' then
+        if cart_roml='0' then
+          report "CART64K: PHI2 rising edge: ROML READ $" & to_hexstring(cart_a);
+          -- Correctly model when we are cross-driving cart_d lines
+          if cart_data_dir='1' then
+            report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines: CROSS DRIVING";
+            cart_d_in <= (others => 'X');
+          else
+            cart_d_in <= to_unsigned(to_integer(cart_a(7 downto 0)) + cart_bank,8);
+            cart_driving <= '1';
+          end if;
+          report "CART: cart_d_in: set to " & to_01UXstring(cart_a(7 downto 0));
+        elsif cart_io1='0' then
+          report "CART64K: PHI2 rising edgle: IO1 READ $" & to_hexstring(cart_a);
+          -- Correctly model when we are cross-driving cart_d lines
+          if cart_data_dir='1' then
+            report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines: CROSS DRIVING";
+            cart_d_in <= (others => 'X');
+          else
+            cart_d_in <= to_unsigned(to_integer(cart_a(7 downto 0)) + cart_bank,8);
+            cart_driving <= '1';
+          end if;
+          report "CART: cart_d_in: set to " & to_01UXstring(cart_a(7 downto 0));            
+        else
+          cart_d_in <= (others => 'Z');
+          if cart_driving = '1' then
+            report "CART: cart_d: Tri-state";
+            cart_driving <= '0';
+          end if;
+        end if;            
+      end if;
+      
       if cm_last_phi2='0' and cart_phi2='1' then
         report "CART64K: Cart status A=$" & to_hexstring(cart_a) & ", D=$" & to_hexstring(cart_d) & ", R/_W = " & std_logic'image(cart_rw);
         
-        cart_driving <= '0';
         host_driving <= cart_data_dir;
-        if cart_rw='1' then
-          if cart_roml='0' then
-            report "CART64K: PHI2 rising edge: ROML READ $" & to_hexstring(cart_a);
-            -- Correctly model when we are cross-driving cart_d lines
-            if cart_data_dir='1' then
-              report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines: CROSS DRIVING";
-              cart_d_in <= (others => 'X');
-            else
-              cart_d_in <= to_unsigned(to_integer(cart_a(7 downto 0)) + cart_bank,8);
-              cart_driving <= '1';
-            end if;
-            report "CART: cart_d_in: set to " & to_01UXstring(cart_a(7 downto 0));
-          elsif cart_io1='0' then
-            report "CART64K: PHI2 rising edgle: IO1 READ $" & to_hexstring(cart_a);
-            -- Correctly model when we are cross-driving cart_d lines
-            if cart_data_dir='1' then
-              report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines: CROSS DRIVING";
-              cart_d_in <= (others => 'X');
-            else
-              cart_d_in <= to_unsigned(to_integer(cart_a(7 downto 0)) + cart_bank,8);
-              cart_driving <= '1';
-            end if;
-            report "CART: cart_d_in: set to " & to_01UXstring(cart_a(7 downto 0));            
-          else
-            cart_d_in <= (others => 'Z');
-          report "CART: cart_d: Tri-state";
-          end if;            
-        else
+        if cart_rw='0' then
           report "CART64K: PHI2 rising edge: WRITE $" & to_hexstring(cart_a) & " <- $" & to_hexstring(cart_d);
           cart_d_in <= (others => 'Z');
           if cart_io1='0' and cart_a(7 downto 0) = x"00" then
