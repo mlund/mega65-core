@@ -602,6 +602,7 @@ begin
           else
             -- Normal cart read request
             cart_read_queued <= '1';
+            cart_busy <= '1';
           end if;
         else
           -- Write request to expansion port controller
