@@ -147,10 +147,6 @@ architecture behavioural of expansion_port_controller is
   signal cart_access_read_toggle_internal : std_logic := '0';
   signal cart_access_count_internal : unsigned(7 downto 0) := x"00";
   
-  -- Internal state
-  signal cart_dotclock_internal : std_logic := '0';
-  signal cart_phi2_internal : std_logic := '0';
-
   signal cart_flags : std_logic_vector(1 downto 0) := "00";
 
   signal cart_force_reset : std_logic := '0';
@@ -361,11 +357,17 @@ begin
         commence_any_pending_write_request := false;
         count_cart_access := false;
 
+        -- Create the 8MHz dotclock signal
+        case phi2_ticker is
+          when 0 | 2 | 4 | 6 | 8 | 10 | 12 | 14 => cart_dotclock <= '1';
+          when others => cart_dotclock <= '0';
+        end case;
+        
         -- Then check where we are upto in the cycle phase to work out what
         -- we should do.
         case phi2_ticker is
           when 0 =>
-            cart_phi2_internal <= '1'; cart_phi2 <= '1';
+            cart_phi2 <= '1';
             -- Finish any read in progress
             if cart_read_in_progress='1' then
               complete_read_request := true;
@@ -395,7 +397,7 @@ begin
             null;
           when 8 =>
             -- Begin low-half of PHI2
-            cart_phi2_internal <= '0'; cart_phi2 <= '0';
+            cart_phi2 <= '0';
             do_release_lines := true;
             if cart_read_in_progress='1' then
               complete_read_request := true;
