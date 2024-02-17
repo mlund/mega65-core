@@ -136,11 +136,14 @@ architecture behavioural of expansion_port_controller is
   constant dotclock_increment : unsigned(16 downto 0) := to_unsigned(Integer(dotclock_increment_real),17);
 
   signal ticker : unsigned(16 downto 0) := to_unsigned(0,17);
-  signal phi2_ticker : unsigned(7 downto 0) := to_unsigned(0,8);
+  signal phi2_ticker : integer range 0 to 15 := 0;
   signal reset_counter : integer range 0 to 15 := 0;
 
   -- Are we already servicing a read?
-  signal read_in_progress : std_logic := '0';
+  signal cart_read_queued : std_logic := '0';
+  signal cart_write_queued : std_logic := '0';
+  signal cart_read_in_progress : std_logic := '0';
+  signal cart_write_in_progress : std_logic := '0';
   signal cart_access_read_toggle_internal : std_logic := '0';
   signal cart_access_count_internal : unsigned(7 downto 0) := x"00";
   
@@ -174,23 +177,33 @@ architecture behavioural of expansion_port_controller is
   signal oride_romh : std_logic := '0';
   signal oride_roml: std_logic := '0';
 
-  signal next_read_in_progress : std_logic := '0';
-  signal next_rw : std_logic := '1';
-  signal next_io1 : std_logic := '1';
-  signal next_io2 : std_logic := '1';
-  signal next_roml : std_logic := '1';
-  signal next_romh : std_logic := '1';
-  signal next_data_dir : std_logic := '1';
-  signal next_data_en : std_logic := '1';
-  signal next_d : unsigned(7 downto 0) := x"ff";
-  signal next_a : unsigned(15 downto 0) := x"ffff";
-  signal next_ctrl_dir : std_logic := '1';
-
   signal cart_reset_int : std_logic := '1';
   
 begin
 
   process (pixelclock)
+    variable set_bank_lines : boolean := false;
+    variable do_fake_reset_access : boolean := false;
+    variable do_release_lines : boolean := false;
+    variable release_lines_or_start_read : boolean := false;
+    variable complete_read_request : boolean := false;
+    variable commence_any_pending_read_request : boolean := false;
+    variable commence_any_pending_write_request : boolean := false;
+    variable count_cart_access : boolean := false;
+
+    procedure release_lines is
+    begin
+      cart_a <= (others => 'Z');
+      cart_d <= (others => 'Z');
+      cart_data_dir <= '0';  -- active high, so disable output
+      cart_data_en <= '1';  -- active low, so disable output
+      cart_addr_en <= '1';   -- active low, so disable output
+      cart_romh <= '1';
+      cart_roml <= '1';
+      cart_io1 <= '1';
+      cart_io2 <= '1';
+    end procedure;      
+    
   begin
     if rising_edge(pixelclock) then
 
@@ -223,8 +236,7 @@ begin
       end if;
       if cart_game = '0' and last_cart_game = '1' then
         game_count <= game_count + 1;
-      end if;
-      
+      end if;      
       
       ----------------------------------------------------------------------
       -- Support for simple passive cartridge with 3rd and 4th joystick ports
@@ -238,9 +250,9 @@ begin
 
       if (not_joystick_cartridge = '0' or force_joystick_cartridge='1') and (disable_joystick_cartridge='0') then
         -- Set data lines to input
-        next_data_en <= '0'; -- negative sense on these lines: low = enable
+        cart_data_en <= '0'; -- negative sense on these lines: low = enable
         cart_addr_en <= '0'; -- negative sense on these lines: low = enable
-        next_a <= (others => 'Z');
+        cart_a <= (others => 'Z');
 
         -- Pull /RESET low on cartridge port, so that it can be the source of
         -- GND for the joysticks.  Without this, the joysticks will effectively
@@ -282,19 +294,19 @@ begin
               joyb <= "11111";
             end if;
           end if;
-          next_d <= (others => 'Z');
-          next_data_dir <= '1';
-          report "Setting next_data_dir to output (joystick cart mode)";
+          cart_d <= (others => 'Z');
+          cart_data_dir <= '1';
+          report "Setting cart_data_dir to output (joystick cart mode)";
           cart_laddr_dir <= '1';
-          next_d(7 downto 0) <= (others => '1');
+          cart_d(7 downto 0) <= (others => '1');
           cart_a(7 downto 0) <= (others => '1');
         end if;
         if joy_counter = 5 then
           -- Tristate lines to allow time for them to be pulled low again if
           -- required
-          next_data_dir <= '0';
-          report "Setting next_data_dir to input (joystick cart mode)";
-          next_d <= (others => 'Z');
+          cart_data_dir <= '0';
+          report "Setting cart_data_dir to input (joystick cart mode)";
+          cart_d <= (others => 'Z');
           cart_laddr_dir <= '0';
           cart_a(7 downto 0) <= (others => 'Z');
         end if;
@@ -325,84 +337,208 @@ begin
         -- Tick dot clock
         report "dotclock tick";
 
-        
-        
-        -- Ensure /RW, /IO1, /IO2 and DATA lines are held for
-        -- long enough after rising clock edge.
-        -- In theory, 60ns should be long enough, but I'm not
-        -- convinced that that is long enough.
-        -- Tiny Quest on a HUCKY 1.03 64K cart is somewhat
-        -- unreliable with this configuration.
-        -- So instead we delay for 1 complete clock at 8MHz
-        -- = 125ns, which is less than the 6502's maximum rated
-        -- 150ns.
-        if phi2_ticker = 1 then
-          report "PORT: Propagating next cycle values to expansion port lines (RW=" & std_logic'image(next_rw)
-            & ", addr=$" & to_hexstring(next_a)
-            & ", io1=" & std_logic'image(next_io1)
-            & ", io2=" & std_logic'image(next_io2)
-            & ", roml=" & std_logic'image(next_roml)
-            & ", romh=" & std_logic'image(next_romh)
-            & ")";
-          cart_rw <= next_rw;
-          cart_io1 <= next_io1;
-          cart_io2 <= next_io2;
-          cart_a <= next_a;
-          if next_data_dir='1' then
-            cart_d <= (others => 'Z');
-            report "PORT: cart_d: TRi-state";
-          else
-            cart_d <= next_d;
-            report "PORT: cart_d: set to " & to_01UXstring(next_d);
-          end if;
-          cart_data_dir <= next_data_dir;
-          cart_data_en <= next_data_en;
-          cart_ctrl_dir <= next_ctrl_dir;
-          read_in_progress <= next_read_in_progress;
-          report "PORT: Setting read_in_progress to " & std_logic'image(next_read_in_progress);
-        end if;        
+        -- Each phi2_ticker increment is 1/16th of a 1MHz clock cycle,
+        -- so about 64ns.
+        if phi2_ticker /= 15 then
+          phi2_ticker <= phi2_ticker + 1;
+        else
+          phi2_ticker <= 0;
+        end if;
 
-        cart_access_read_strobe <= '0';
-        
-        cart_dotclock <= not cart_dotclock_internal;
-        cart_dotclock_internal <= not cart_dotclock_internal;
+        -- By default, don't do things
+        set_bank_lines := false;
+        do_release_lines := false;
+        do_fake_reset_access := false;
+        release_lines_or_start_read := false;
+        complete_read_request := false;
+        commence_any_pending_read_request := false;
+        commence_any_pending_write_request := false;
+        count_cart_access := false;
 
-
-      elsif phi2_ticker = 0 then          
-          report "phi2 tick + ~60ns hold time";
-          -- At this point we still have time to accept a new request and
-          -- schedule it immediately, as we hold the values from the previous
-          -- cycle unti ~125ns after phi2 rising edge -- except the address that we change now,
-          -- i.e., at ~60ns after rising edge of phi2.
-          -- One thing I had never realised previously: You can't write to
-          -- things in the C64 or on a cartridge during the VIC-II's half of
-          -- the clock, if the device only uses positive edges of PHI2 to latch
-          -- writes. Weird things may nonetheless happen.
-          
-          phi2_ticker <= phi2_ticker + 1;          
-          
-          -- We assert reset on cartridge port for 15 phi2 cycles to give
-          -- cartridge time to reset.
-          if (reset_counter = 1) and (reset='1') then
-            reset_counter <= 0;
-          elsif reset_counter /= 0 then
-            reset_counter <= reset_counter - 1;
-          elsif reset_counter = 0 then
-            if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
-              cart_reset <= reset and (not cart_force_reset);
-              cart_reset_int <= reset and (not cart_force_reset);
-              if cart_reset_int = '0' then
-                report "Releasing RESET on cartridge port";
+        -- Then check where we are upto in the cycle phase to work out what
+        -- we should do.
+        case phi2_ticker is
+          when 0 =>
+            cart_phi2_internal <= '1'; cart_phi2 <= '1';
+            -- Finish any read in progress
+            if cart_read_in_progress='1' then
+              complete_read_request := true;
+            end if;
+            -- Writes don't get finished until the next tick,
+            -- when we release all the lines, after having first
+            -- conformed to the required T_HT of the 6502 bus (>60ns)
+          when 1 | 2 =>
+            -- Release key bus lines after a short hold time, and start any new
+            -- access we have under way, but only if we don't already have an
+            -- access happening.
+            if cart_read_in_progress = '0' and cart_write_in_progress='0' then
+              do_release_lines := true;
+              commence_any_pending_read_request := true;
+            end if;
+          when 3 | 4 | 5 | 6 | 7  =>
+            -- We are in the middle of the high-half of a PHI2 cycle.
+            -- We are either continuing a read or write, or idle.
+            -- We don't start doing anything else.
+            -- We _could_ start a read now, and satisfy all timing by waiting
+            -- the correct number of phi2_ticker ticks, and thus get data back
+            -- to the CPU a few cycles earlier, but the benefit is relatively
+            -- small, and it might not be compatible with some cartridges.
+            null;
+          when 8 =>
+            -- Begin low-half of PHI2
+            cart_phi2_internal <= '0'; cart_phi2 <= '0';
+            do_release_lines := true;
+            if cart_read_in_progress='1' then
+              complete_read_request := true;
+            end if;
+          when 9 | 10 =>
+            if cart_read_in_progress = '0' and cart_write_in_progress='0' then
+              do_release_lines := true;
+              commence_any_pending_read_request := true;
+              commence_any_pending_write_request := true;
+            end if;
+          when 11 | 12 | 13 | 14 =>
+            -- We are in the middle of the low-half of a PHI2 cycle.
+            -- We are either continuing a read or write, or idle.
+            -- We don't start doing anything else.
+            -- We could in theory start a read, but not a write, as there
+            -- would not be enough time before the rising edge of PHI2.
+            -- But as for the during the high-half, we don't want to implement
+            -- any really weird timing.
+            null;
+          when 15 =>
+            -- End of cycle: Check if we need to update /RESET
+            -- We assert reset on cartridge port for 15 phi2 cycles to give
+            -- cartridge time to reset.
+            if (reset_counter = 1) and (reset='1') then
+              reset_counter <= 0;
+            elsif reset_counter /= 0 then
+              reset_counter <= reset_counter - 1;
+            elsif reset_counter = 0 then
+              if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
+                cart_reset <= reset and (not cart_force_reset);
+                cart_reset_int <= reset and (not cart_force_reset);
+                if cart_reset_int = '0' then
+                  report "Releasing RESET on cartridge port";
+                end if;
               end if;
             end if;
-          end if;
-                      
-          cart_phi2 <= not cart_phi2_internal;
-          cart_phi2_internal <= not cart_phi2_internal;
+          when others =>
+            null;
+        end case;
 
+        if do_release_lines then
+          release_lines;
+        end if;
+
+        if commence_any_pending_read_request then          
+          if cart_read_queued='1' then
+            cart_a <= cart_access_address(15 downto 0);
+            cart_addr_en <= '0'; -- active low, so enable output
+            cart_d <= (others => 'Z');
+            set_bank_lines := true;
+
+            cart_read_in_progress <= '1';
+            cart_read_queued <= '0';
+
+            count_cart_access := true;
+          end if;
+        end if;
+
+        cart_access_read_strobe <= '0';
+        if complete_read_request then
+          cart_access_rdata <= cart_d_in;
+          cart_access_read_strobe <= '1';
+          cart_access_read_toggle <= not cart_access_read_toggle_internal;
+          cart_access_read_toggle_internal <= not cart_access_read_toggle_internal;
+          report "Read data from expansion port data pins = $" & to_hexstring(cart_d_in);
+          cart_read_in_progress <= '0';
+          cart_busy <= '0';
+        end if;
+        
+        if commence_any_pending_write_request then
+          if cart_write_queued='1' then
+            cart_a <= cart_access_address(15 downto 0);
+            cart_addr_en <= '0'; -- active low, so enable output
+            set_bank_lines := true;
+            cart_data_dir <= '1'; -- active high, so set to output
+            cart_data_en <= '0'; -- active low, so set to output
+            cart_d <= cart_access_wdata;
+
+            cart_write_in_progress <= '1';
+            cart_write_queued <= '0';
+
+            count_cart_access := true;
+
+            report "Presenting legacy C64 expansion port access request to port, address=$"
+              & to_hexstring(cart_access_address)
+              & " rw=" & std_logic'image(cart_access_read)
+              & " wdata=$" & to_hexstring(cart_access_wdata);
+            
+          elsif fake_reset_sequence_phase /= 8 then
+            do_fake_reset_access := true;
+          end if;
+        end if;
+
+        if count_cart_access then
+          -- Count number of cartridge accesses to aid debugging
+          cart_access_count <= cart_access_count_internal + 1;
+          cart_access_count_internal <= cart_access_count_internal + 1;
+        end if;
+        
+        if do_fake_reset_access then
+          report "FAKERESET: Progressing fake reset sequence #" & integer'image(fake_reset_sequence_phase);
+          fake_reset_sequence_phase <= fake_reset_sequence_phase + 1;
+          
+          -- Provide fake power-on reset
+          -- Sequence from: https://www.pagetable.com/?p=410
+          case fake_reset_sequence_phase is
+            when 0 | 1 | 2 => cart_a(15 downto 0) <= x"00FF"; cart_rw <= '0';
+            when 3 => cart_a(15 downto 0) <= x"0100"; cart_rw <= '0';
+            when 4 => cart_a(15 downto 0) <= x"01FF"; cart_rw <= '1';
+            when 5 => cart_a(15 downto 0) <= x"01FE"; cart_rw <= '1';
+            when 6 => cart_a(15 downto 0) <= x"FFFC"; cart_rw <= '1';
+            when 7 => cart_a(15 downto 0) <= x"FFFD"; cart_rw <= '1';
+            when others => null;
+          end case;
+
+          cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
+          cart_ctrl_en <= '0';  -- make R/W, /IO1, /IO2 etc output
+
+          cart_data_dir <= '0'; -- make data lines input
+          cart_data_en <= '1';  -- make data lines input
+          
+          cart_haddr_dir <= '1'; -- make address lines output
+          cart_laddr_dir <= '1'; -- make address lines output
+          cart_addr_en <= '0';  -- make address lines output
+
+          -- Pretend we are writing to keep the bus cycle busy during both halves.
+          cart_write_in_progress <= '1';
+        end if;
+        
+        if set_bank_lines then
+          cart_romh <= '1'; cart_roml <= '1'; cart_io1 <= '1'; cart_io2 <= '1';
+          case cart_access_address(15 downto 12) is
+            when x"8" | x"9" => cart_roml <= '0';
+            when x"A" | x"B" | x"E" | x"F" => cart_romh <= '0';
+            when x"D" =>
+              case cart_access_address(11 downto 8) is
+                when x"E" => cart_io1 <= '0';
+                when x"F" => cart_io2 <= '0';
+                when others => null;
+              end case;
+            when others => null;
+          end case;
+        end if;
+      end if;
+
+      if cart_access_request='1' and cart_read_queued='0' and cart_write_queued='0' then
+        report "Asserting cart_access_accept_strobe";
+        cart_access_accept_strobe <= '1';
+        if cart_access_read='1' then
           -- Record data from bus if we are waiting on it
-          if read_in_progress='1' and cart_phi2_internal='0' then
-            -- XXX Debug: show stats on probing cartridge flags
+          if cart_access_address(31 downto 0) = x"0701" then
+            -- Expansion port debug and control registers
             case cart_access_address(15 downto 0) is
               when x"0000" =>
                 -- @IO:GS $7010000.7 - Read cartridge /EXROM flag
@@ -448,60 +584,15 @@ begin
                 cart_access_rdata <= cart_d_in;
                 report "Setting cart_access_rdata to %" & to_01UXstring(cart_d_in) & " from cart_d_in";
             end case;
-            cart_access_read_strobe <= '1';
             cart_access_read_toggle <= not cart_access_read_toggle_internal;
             cart_access_read_toggle_internal <= not cart_access_read_toggle_internal;
             report "Read data from expansion port data pins = $" & to_hexstring(cart_d_in);
-          else
-            cart_access_read_strobe <= '0';
-          end if;         
-
-          -- Tri-state the bus when not active
-          next_data_en <= '1';
-          cart_addr_en <= '1';
-
-          -- Present next bus request if we have one
-          if (fake_reset_sequence_phase < 8 ) and (cart_phi2_internal='0') then
-
-            report "FAKERESET: Progressing fake reset sequence #" & integer'image(fake_reset_sequence_phase);
-            
-            -- Provide fake power-on reset
-            -- Sequence from: https://www.pagetable.com/?p=410
-            case fake_reset_sequence_phase is
-              when 0 | 1 | 2 => cart_a(15 downto 0) <= x"00FF";
-              when 3 => cart_a(15 downto 0) <= x"0100";
-              when 4 => cart_a(15 downto 0) <= x"01FF";
-              when 5 => cart_a(15 downto 0) <= x"01FE";
-              when 6 => cart_a(15 downto 0) <= x"FFFC";
-              when 7 => cart_a(15 downto 0) <= x"FFFD";
-              when others => null;
-            end case;
-            fake_reset_sequence_phase <= fake_reset_sequence_phase + 1;
-
-            cart_busy <= '1';
-            next_a <= cart_access_address(15 downto 0);
-            next_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
-            report "Setting cart_a, selecting read, setting next_data_dir to input";
-            next_rw <= '1';
-            next_data_dir <= '0'; -- Set data lines to input            
-            next_data_en <= '0'; -- negative sense on these lines: low = enable
-            cart_addr_en <= '0'; -- negative sense on these lines: low = enable
-
-            -- Count number of cartridge accesses to aid debugging
-            cart_access_count <= cart_access_count_internal + 1;
-            cart_access_count_internal <= cart_access_count_internal + 1;
-            
-          elsif (cart_access_request='1') and (reset_counter = 0)
-            -- Check that clock will be high during this request, i.e.,
-            -- currently low.
-            and (cart_phi2_internal='0') then            
-            report "Presenting legacy C64 expansion port access request to port, address=$"
-              & to_hexstring(cart_access_address)
-              & " rw=" & std_logic'image(cart_access_read)
-              & " wdata=$" & to_hexstring(cart_access_wdata);
-
-            if cart_access_read='0' then
-              if cart_access_address(15 downto 0) = x"0000" then
+          end if;
+        else
+          -- Write request to expansion port controller
+          if cart_access_address(31 downto 0) = x"0701" then
+            case cart_access_address(15 downto 0) is
+              when  x"0000" =>
                 -- @ IO:GS $7010000.5 - Force assertion of /RESET on cartridge port
                 cart_force_reset <= cart_access_wdata(5);
                 if cart_force_reset <= '1' and cart_access_wdata(5) = '0' then
@@ -511,14 +602,14 @@ begin
                   -- reset sequence.
                   fake_reset_sequence_phase <= 0;
                 end if;
-              elsif cart_access_address(15 downto 0) = x"0001" then
+              when x"0001" =>
                 -- @ IO:GS $7010001.4 - Force disabling of joystick expander cartridge
                 -- @ IO:GS $7010001.6 - Force enabling of joystick expander cartridge
                 -- @ IO:GS $7010001.0 - Invert joystick line polarity for joystick expander cartridge
                 force_joystick_cartridge <= cart_access_wdata(6);
                 disable_joystick_cartridge <= cart_access_wdata(4);
                 invert_joystick <= cart_access_wdata(0);
-              elsif cart_access_address(15 downto 0) = x"0002" then
+              when x"0002" =>
                 oride_ctrl_en <= cart_access_wdata(0);
                 oride_ctrl_dir <= cart_access_wdata(1);
                 oride_io1 <= cart_access_wdata(2);
@@ -526,95 +617,15 @@ begin
                 oride_romh <= cart_access_wdata(4);
                 oride_roml <= cart_access_wdata(5);
                 oride_enable <= cart_access_wdata(7);
-              end if;
-            end if;
-            cart_busy <= '1';
-
-            -- Count number of cartridge accesses to aid debugging
-            cart_access_count <= cart_access_count_internal + 1;
-            cart_access_count_internal <= cart_access_count_internal + 1;
-
-            report "Asserting cart_access_accept_strobe";
-            cart_access_accept_strobe <= '1';
-                  
-            if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
-            
-              cart_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
-              next_a <= cart_access_address(15 downto 0);
-              report "Setting next_data_dir to " & std_logic'image(not cart_access_read) & " from cart_access_read";
-              next_data_dir <= not cart_access_read;
-              next_data_en <= cart_access_read; -- negative sense on these lines: low = enable
-              cart_addr_en <= '0'; -- negative sense on these lines: low = enable
-              if cart_access_address(15 downto 8) = x"DE" then
-                next_io1 <= '0';
-              else
-                next_io1 <= '1';
-              end if;
-              if cart_access_address(15 downto 8) = x"DF" then
-                next_io2 <= '0';
-              else
-                next_io2 <= '1';
-              end if;
-
-              -- Drive ROML and ROMH
-              -- (Note here we are operating after the CPU has decided if something
-              -- is mapped, therefore we assert /ROML and /ROMH based on address
-              -- requested).
-              if (cart_access_address(15 downto 12) = x"8")
-                or (cart_access_address(15 downto 12) = x"9") then
-                next_roml <= '0';
-              else
-                next_roml <= '1';
-              end if;
-              if (cart_access_address(15 downto 12) = x"A")
-                or (cart_access_address(15 downto 12) = x"B") 
-                or (cart_access_address(15 downto 12) = x"E")
-                or (cart_access_address(15 downto 12) = x"F") then
-                next_romh <= '0';
-              else
-                next_romh <= '1';
-              end if;
-            end if;
-              
-            if cart_access_read='1' then
-              if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
-                -- Tri-state with pull-up
-                report "Tristating cartridge port data lines, setting next_data_dir to input.";
-                next_d <= (others => 'Z');
-                next_data_en <= '1';
-                next_data_dir <= '0'; -- set data lines to input
-                next_read_in_progress <= '1';
-              end if;
-            else
-              next_read_in_progress <= '0';
-              if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
-                next_d <= cart_access_wdata;
-                report "setting next_data_dir to output";
-                next_data_dir <= '1'; -- set data lines to output
-                next_rw <= '0';
-                report "Write data is $" & to_hexstring(cart_access_wdata);
-              end if;
-            end if;
+              when others => null;
+            end case;
           else
-            if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
-              cart_access_accept_strobe <= '0';
-              next_a <= (others => 'Z');
-              next_roml <= '1';
-              next_romh <= '1';
-              next_io1 <= '1';
-              next_io2 <= '1';
-              next_rw <= '1';
-              next_ctrl_dir <= '1'; -- make R/W, /IO1, /IO2 etc output
-              report "Tristating cart_a, selecting read";
-            end if;
-            next_read_in_progress <= '0';
-            cart_busy <= '0';
-          end if;      
-        else
-          cart_access_accept_strobe <= '0';
+            cart_write_queued <= '1';
+            cart_busy <= '1';
+          end if;
         end if;
       end if;
-
+      
       if oride_enable='1' then
         cart_ctrl_en <= oride_ctrl_en;
         cart_ctrl_dir <= oride_ctrl_dir;
