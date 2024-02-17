@@ -335,7 +335,12 @@ begin
         cart_access_accept_strobe <= '0';
       else
         -- Tick dot clock
-        report "dotclock tick";
+        if cart_read_in_progress='1' then
+          report "dotclock tick during READ";
+        end if;
+        if cart_write_in_progress='1' then
+          report "dotclock tick during WRITE";
+        end if;
 
         -- Each phi2_ticker increment is 1/16th of a 1MHz clock cycle,
         -- so about 64ns.
@@ -366,7 +371,10 @@ begin
             end if;
             -- Writes don't get finished until the next tick,
             -- when we release all the lines, after having first
-            -- conformed to the required T_HT of the 6502 bus (>60ns)
+            -- conformed to the required T_HT of the 6502 bus (>60ns).
+            -- But we mark the write complete now, so that back-to-back
+            -- writes can be scheduled with max timing margin
+            cart_write_in_progress <= '0';
           when 1 | 2 =>
             -- Release key bus lines after a short hold time, and start any new
             -- access we have under way, but only if we don't already have an
