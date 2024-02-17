@@ -111,7 +111,7 @@ architecture test_arch of tb_cartridges is
   signal last_cart_access_read_toggle : std_logic := '0';
 
   signal cm_last_phi2 : std_logic := '0';
-
+  signal cm_last_a : unsigned(15 downto 0);
 
   signal cart_driving : std_logic := '0';
   signal host_driving : std_logic := '0';
@@ -193,10 +193,14 @@ begin
     begin
       cm_last_phi2 <= cart_phi2;
 
+      cm_last_a <= cart_a;
+      
       -- Cartridge reading is asynchronous
       if cart_rw='1' then
         if cart_roml='0' then
-          report "CART64K: PHI2 rising edge: ROML READ $" & to_hexstring(cart_a);
+          if cm_last_a /= cart_a then
+            report "CART64K: PHI2 rising edge: ROML READ $" & to_hexstring(cart_a);
+          end if;
           -- Correctly model when we are cross-driving cart_d lines
           if cart_data_dir='1' then
             report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines: CROSS DRIVING";
@@ -205,7 +209,9 @@ begin
             cart_d_in <= to_unsigned(to_integer(cart_a(7 downto 0)) + cart_bank,8);
             cart_driving <= '1';
           end if;
-          report "CART: cart_d_in: set to " & to_01UXstring(cart_a(7 downto 0));
+          if cm_last_a /= cart_a then
+            report "CART: cart_d_in: set to " & to_01UXstring(cart_a(7 downto 0));
+          end if;
         elsif cart_io1='0' then
           report "CART64K: PHI2 rising edgle: IO1 READ $" & to_hexstring(cart_a);
           -- Correctly model when we are cross-driving cart_d lines

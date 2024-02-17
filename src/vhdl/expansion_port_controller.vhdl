@@ -202,6 +202,7 @@ begin
       cart_roml <= '1';
       cart_io1 <= '1';
       cart_io2 <= '1';
+      cart_rw <= '1';
     end procedure;      
     
   begin
@@ -472,6 +473,7 @@ begin
             cart_data_dir <= '1'; -- active high, so set to output
             cart_data_en <= '0'; -- active low, so set to output
             cart_d <= cart_access_wdata;
+            cart_rw <= '0';
 
             cart_write_in_progress <= '1';
             cart_write_queued <= '0';
@@ -595,6 +597,9 @@ begin
             cart_access_read_toggle <= not cart_access_read_toggle_internal;
             cart_access_read_toggle_internal <= not cart_access_read_toggle_internal;
             report "Read data from expansion port data pins = $" & to_hexstring(cart_d_in);
+          else
+            -- Normal cart read request
+            cart_read_queued <= '1';
           end if;
         else
           -- Write request to expansion port controller
