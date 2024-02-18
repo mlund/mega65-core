@@ -353,7 +353,7 @@ begin
         -- we should do.
         case phi2_ticker is
           when 0 =>
-            cart_phi2 <= '1';
+            cart_phi2 <= '0';
             -- Finish any read in progress
             if cart_read_in_progress='1' then
               complete_read_request := true;
@@ -376,7 +376,7 @@ begin
               commence_any_pending_read_request := true;
             end if;
           when 3 | 4 | 5 | 6 | 7  =>
-            -- We are in the middle of the high-half of a PHI2 cycle.
+            -- We are in the middle of the low-half of a PHI2 cycle.
             -- We are either continuing a read or write, or idle.
             -- We don't start doing anything else.
             -- We _could_ start a read now, and satisfy all timing by waiting
@@ -385,8 +385,8 @@ begin
             -- small, and it might not be compatible with some cartridges.
             null;
           when 8 =>
-            -- Begin low-half of PHI2
-            cart_phi2 <= '0';
+            -- Begin high-half of PHI2
+            cart_phi2 <= '1';
             do_release_lines := true;
             if cart_read_in_progress='1' then
               complete_read_request := true;
@@ -398,11 +398,11 @@ begin
               commence_any_pending_write_request := true;
             end if;
           when 11 | 12 | 13 | 14 =>
-            -- We are in the middle of the low-half of a PHI2 cycle.
+            -- We are in the middle of the high-half of a PHI2 cycle.
             -- We are either continuing a read or write, or idle.
             -- We don't start doing anything else.
             -- We could in theory start a read, but not a write, as there
-            -- would not be enough time before the rising edge of PHI2.
+            -- would not be enough time before the falling edge of PHI2.
             -- But as for the during the high-half, we don't want to implement
             -- any really weird timing.
             null;

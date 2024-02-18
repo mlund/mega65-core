@@ -199,7 +199,7 @@ begin
       if cart_rw='1' then
         if cart_roml='0' then
           if cm_last_a /= cart_a then
-            report "CART64K: PHI2 rising edge: ROML READ $" & to_hexstring(cart_a);
+            report "CART64K: Asynchronous ROML READ $" & to_hexstring(cart_a);
           end if;
           -- Correctly model when we are cross-driving cart_d lines
           if cart_data_dir='1' then
@@ -232,12 +232,12 @@ begin
         end if;            
       end if;
       
-      if cm_last_phi2='0' and cart_phi2='1' then
+      if cm_last_phi2='1' and cart_phi2='0' then
         report "CART64K: Cart status A=$" & to_hexstring(cart_a) & ", D=$" & to_hexstring(cart_d) & ", R/_W = " & std_logic'image(cart_rw);
         
         host_driving <= cart_data_dir;
         if cart_rw='0' then
-          report "CART64K: PHI2 rising edge: WRITE $" & to_hexstring(cart_a) & " <- $" & to_hexstring(cart_d);
+          report "CART64K: PHI2 falling edge: WRITE $" & to_hexstring(cart_a) & " <- $" & to_hexstring(cart_d);
           cart_d_in <= (others => 'Z');
           if cart_io1='0' and cart_a(7 downto 0) = x"00" then
             -- Write to $DE00
