@@ -378,7 +378,10 @@ begin
             -- But we mark the write complete now, so that back-to-back
             -- writes can be scheduled with max timing margin
             cart_write_in_progress <= '0';
-          when 1 | 2 =>
+          when 1 =>
+            -- Allow longer hold time for writes
+            null;
+          when 2 =>
             -- Release key bus lines after a short hold time, and start any new
             -- access we have under way, but only if we don't already have an
             -- access happening.
