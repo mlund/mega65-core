@@ -204,7 +204,13 @@ begin
           -- Correctly model when we are cross-driving cart_d lines
           if cart_data_dir='1' then
             report "CART64K: cart_data_dir set to output when cart was asked to present cart_d lines: CROSS DRIVING";
-            cart_d_in <= (others => 'X');
+            cart_d_in <= (others => 'X'); 
+         elsif cart_data_en='1' then
+            report "CART64K: cart_data_en not asserted";
+            cart_d_in <= (others => 'U');
+         elsif cart_addr_en='1' or cart_haddr_dir='0' or cart_laddr_dir='0' then
+            report "CART64K: Address lines not set to output";
+            cart_d_in <= (others => 'U');
           else
             cart_d_in <= to_unsigned(to_integer(cart_a(7 downto 0)) + cart_bank,8);
             cart_driving <= '1';
