@@ -310,6 +310,8 @@ begin
         report "Asserting RESET on cartridge port";
         cart_reset <= '0';
         cart_reset_int <= '0';
+        -- Don't abort any existing reset count (mainly for ensuring the initial
+        -- cold boot reset is ~25ms long)
         if reset_counter /= 0 then
           reset_counter <= 15;
         end if;
@@ -428,10 +430,8 @@ begin
                 cart_reset <= reset and (not cart_force_reset);
                 cart_reset_int <= reset and (not cart_force_reset);
                 if cart_reset_int = '0' then
-                  report "Releasing RESET on cartridge port";
+                  report "RESET: Releasing RESET on cartridge port";
                 end if;
-                -- And commence 7 cycle fake 6502 reset sequence
-                fake_reset_sequence_phase <= 0;              
               end if;
             end if;
           when others =>
@@ -498,7 +498,7 @@ begin
               & " rw=" & std_logic'image(cart_access_read)
               & " wdata=$" & to_hexstring(cart_access_wdata);
             
-          elsif fake_reset_sequence_phase /= 8 then
+          elsif fake_reset_sequence_phase /= 8 and reset_counter = 0 then
             do_fake_reset_access := true;
           end if;
         end if;

@@ -739,6 +739,8 @@ begin
         -- Now command a reset of the expansion port
         request_cart_write(x"07010000",x"20");
         complete_cart_write;
+        request_cart_write(x"07010000",x"00");
+        complete_cart_write;
 
         if cart_reset = '1' then
           assert false report "/RESET was not asserted by write to bit 5 of $7010000";
