@@ -137,7 +137,12 @@ architecture behavioural of expansion_port_controller is
 
   signal ticker : unsigned(16 downto 0) := to_unsigned(0,17);
   signal phi2_ticker : integer range 0 to 15 := 0;
-  signal reset_counter : integer range 0 to 15 := 0;
+  -- We need to make the initial reset long enough that the cartridge captures
+  -- it, even if the 5V rail for the cartridge port takes a while to come up.
+  -- This is only needed on cold reset (i.e., power on).  The question is how long
+  -- we need to make the sequence.  The R6 DC:DC converters can take ~12ms, so
+  -- we will hold reset for about 25ms just to make sure.
+  signal reset_counter : integer range 0 to 2000000 := 2000000;
 
   -- Are we already servicing a read?
   signal cart_read_queued : std_logic := '0';
