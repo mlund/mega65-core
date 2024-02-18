@@ -309,7 +309,9 @@ begin
         report "Asserting RESET on cartridge port";
         cart_reset <= '0';
         cart_reset_int <= '0';
-        reset_counter <= 15;
+        if reset_counter /= 0 then
+          reset_counter <= 15;
+        end if;
         cpu_exrom <= '1';
         cpu_game <= '1';
       end if;
