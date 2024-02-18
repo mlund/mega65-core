@@ -123,6 +123,7 @@ begin
   expport0: entity work.expansion_port_controller
     generic map (
       pixelclock_frequency => 81_000_000,
+      reset_hold_time => 50,
       target => mega65r6
       )
     port map (
@@ -715,6 +716,44 @@ begin
         request_cart_read(x"00008000");
         complete_cart_read(x"01");
 
+      elsif run("/RESET is asserted at start") then
+        -- Make sure that what we are writing is not the same as the value we
+        -- want to read back later.  This is why we write $F1 to the bank select
+        -- register, rather than $01, as otherwise we would be reading back the
+        -- same value.
+        expansion_port_init;
+        if cart_reset = '1' then
+          assert false report "Cartridge port does not assert /RESET on start";
+        end if;
+        for i in 1 to 10_000 loop
+          clock_tick;
+          if cart_reset = '1' then
+            report "/RESET released after " & integer'image(i) & " half ticks";
+            exit;
+          end if;
+        end loop;
+        if cart_reset = '0' then
+          assert false report "/RESET was not released after initial hold time";
+        end if;
+
+        -- Now command a reset of the expansion port
+        request_cart_write(x"07010000",x"20");
+        complete_cart_write;
+
+        if cart_reset = '1' then
+          assert false report "/RESET was not asserted by write to bit 5 of $7010000";
+        end if;
+        for i in 1 to 10_000 loop
+          clock_tick;
+          if cart_reset = '1' then
+            report "/RESET released after " & integer'image(i) & " half ticks";
+            exit;
+          end if;
+        end loop;
+        if cart_reset = '0' then
+          assert false report "/RESET was not released after forced reset";
+        end if;
+        
       end if;
     end loop;
     test_runner_cleanup(runner);

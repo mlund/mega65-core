@@ -13,6 +13,7 @@ use work.cputypes.all;
 ENTITY expansion_port_controller IS
   generic (
     pixelclock_frequency : in integer;
+    reset_hold_time : in integer := 2000000;
     target : mega65_target_t
     );
   PORT (
@@ -81,7 +82,7 @@ ENTITY expansion_port_controller IS
 
     cart_phi2 : out std_logic;
     cart_dotclock : out std_logic;
-    cart_reset : out std_logic := '1';
+    cart_reset : out std_logic := '0';
 
     cart_nmi : in std_logic;
     cart_irq : in std_logic;
@@ -142,7 +143,7 @@ architecture behavioural of expansion_port_controller is
   -- This is only needed on cold reset (i.e., power on).  The question is how long
   -- we need to make the sequence.  The R6 DC:DC converters can take ~12ms, so
   -- we will hold reset for about 25ms just to make sure.
-  signal reset_counter : integer range 0 to 2000000 := 2000000;
+  signal reset_counter : integer range 0 to 2000000 := reset_hold_time;
 
   -- Are we already servicing a read?
   signal cart_read_queued : std_logic := '0';
@@ -178,7 +179,7 @@ architecture behavioural of expansion_port_controller is
   signal oride_romh : std_logic := '0';
   signal oride_roml: std_logic := '0';
 
-  signal cart_reset_int : std_logic := '1';
+  signal cart_reset_int : std_logic := '0';
   
 begin
 
@@ -421,6 +422,7 @@ begin
               reset_counter <= 0;
             elsif reset_counter /= 0 then
               reset_counter <= reset_counter - 1;
+              report "RESET: Counting reset_counter down from " & integer'image(reset_counter);
             elsif reset_counter = 0 then
               if (not_joystick_cartridge = '1' and force_joystick_cartridge='0') or (disable_joystick_cartridge='1') then
                 cart_reset <= reset and (not cart_force_reset);
