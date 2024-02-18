@@ -431,7 +431,9 @@ begin
           cart_a <= (others => 'Z');
           cart_d <= (others => 'Z');
           cart_data_dir <= '0';  -- active high, so disable output
-          cart_data_en <= '1';  -- active low, so disable output
+          cart_data_en <= '0';  -- active low, so enable output (well,
+                                -- actually, enable input, due to direction
+                                -- being set to input)
           cart_addr_en <= '1';   -- active low, so disable output
           cart_romh <= '1';
           cart_roml <= '1';
@@ -516,7 +518,7 @@ begin
           cart_ctrl_en <= '0';  -- make R/W, /IO1, /IO2 etc output
 
           cart_data_dir <= '0'; -- make data lines input
-          cart_data_en <= '1';  -- make data lines input
+          cart_data_en <= '0';  -- make data lines input
           
           cart_haddr_dir <= '1'; -- make address lines output
           cart_laddr_dir <= '1'; -- make address lines output
