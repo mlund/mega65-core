@@ -156,7 +156,7 @@ architecture behavioural of expansion_port_controller is
 
   signal cart_force_reset : std_logic := '0';
 
-  signal fake_reset_sequence_phase : integer range 0 to 10 := 0;
+  signal fake_reset_sequence_phase : integer range 0 to 10 := 8;
 
   signal nmi_count : unsigned(7 downto 0) := x"00";
   signal irq_count : unsigned(7 downto 0) := x"00";
@@ -428,6 +428,8 @@ begin
                 if cart_reset_int = '0' then
                   report "Releasing RESET on cartridge port";
                 end if;
+                -- And commence 7 cycle fake 6502 reset sequence
+                fake_reset_sequence_phase <= 0;              
               end if;
             end if;
           when others =>
