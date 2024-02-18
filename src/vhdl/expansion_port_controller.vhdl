@@ -560,7 +560,7 @@ begin
         cart_access_accept_strobe <= '1';
         if cart_access_read='1' then
           -- Record data from bus if we are waiting on it
-          if cart_access_address(31 downto 0) = x"0701" then
+          if cart_access_address(31 downto 16) = x"0701" then
             -- Expansion port debug and control registers
             case cart_access_address(15 downto 0) is
               when x"0000" =>
@@ -617,18 +617,25 @@ begin
           end if;
         else
           -- Write request to expansion port controller
-          if cart_access_address(31 downto 0) = x"0701" then
+          report "Detected write to address $" & to_hexstring(cart_access_address);
+          if cart_access_address(31 downto 16) = x"0701" then
+            report "REG: Detected write to expansion port controller register";
             case cart_access_address(15 downto 0) is
               when  x"0000" =>
+                report "REG: Detected write to $7010000";
                 -- @ IO:GS $7010000.5 - Force assertion of /RESET on cartridge port
                 cart_force_reset <= cart_access_wdata(5);
+                if cart_access_wdata(5)='1' then
+                  cart_reset <= '0';
+                  reset_counter <= 15;
+                end if;
                 if cart_force_reset <= '1' and cart_access_wdata(5) = '0' then
                   -- Release of reset
                   -- Some cartridges need to see the CPU do a reset sequence,
                   -- before they will work.  So we will now schedule a fake
                   -- reset sequence.
                   fake_reset_sequence_phase <= 0;
-                end if;
+                end if;                
               when x"0001" =>
                 -- @ IO:GS $7010001.4 - Force disabling of joystick expander cartridge
                 -- @ IO:GS $7010001.6 - Force enabling of joystick expander cartridge
