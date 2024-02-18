@@ -697,10 +697,14 @@ begin
         end loop;    
 
       elsif run("Writing to /IO1 region works") then
+        -- Make sure that what we are writing is not the same as the value we
+        -- want to read back later.  This is why we write $F1 to the bank select
+        -- register, rather than $01, as otherwise we would be reading back the
+        -- same value.
         expansion_port_init;
         request_cart_read(x"00008000");
         complete_cart_read(x"00");
-        request_cart_write(x"0000de00",x"01");
+        request_cart_write(x"0000de00",x"f1");
         complete_cart_write;
         request_cart_read(x"00008000");
         complete_cart_read(x"01");

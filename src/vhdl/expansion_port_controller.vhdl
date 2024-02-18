@@ -187,20 +187,6 @@ begin
     variable commence_any_pending_write_request : boolean := false;
     variable count_cart_access : boolean := false;
 
-    procedure release_lines is
-    begin
-      cart_a <= (others => 'Z');
-      cart_d <= (others => 'Z');
-      cart_data_dir <= '0';  -- active high, so disable output
-      cart_data_en <= '1';  -- active low, so disable output
-      cart_addr_en <= '1';   -- active low, so disable output
-      cart_romh <= '1';
-      cart_roml <= '1';
-      cart_io1 <= '1';
-      cart_io2 <= '1';
-      cart_rw <= '1';
-    end procedure;      
-    
   begin
     if rising_edge(pixelclock) then
 
@@ -442,7 +428,16 @@ begin
         end case;
 
         if do_release_lines then
-          release_lines;
+          cart_a <= (others => 'Z');
+          cart_d <= (others => 'Z');
+          cart_data_dir <= '0';  -- active high, so disable output
+          cart_data_en <= '1';  -- active low, so disable output
+          cart_addr_en <= '1';   -- active low, so disable output
+          cart_romh <= '1';
+          cart_roml <= '1';
+          cart_io1 <= '1';
+          cart_io2 <= '1';
+          cart_rw <= '1';
         end if;
 
         if commence_any_pending_read_request then          
